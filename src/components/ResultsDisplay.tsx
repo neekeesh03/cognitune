@@ -53,32 +53,36 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
   ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom duration-700">
       {/* Verdict Card */}
-      <Card className="shadow-soft border-border/50">
+      <Card className="shadow-soft border-border/50 animate-in zoom-in duration-500">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="flex items-center justify-center gap-3 mb-4 animate-in slide-in-from-top duration-700">
             {getVerdictIcon()}
             <CardTitle className="text-2xl">LTA Readiness Assessment</CardTitle>
           </div>
-          <Badge className={`text-lg py-2 px-4 ${getVerdictColor()}`}>
+          <Badge className={`text-lg py-2 px-4 ${getVerdictColor()} animate-in scale-in duration-500 delay-300`}>
             Drive Score: {results.drive.toFixed(2)}
           </Badge>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-xl text-foreground font-medium">{results.verdict}</p>
+          <p className="text-xl text-foreground font-medium animate-in fade-in duration-700 delay-500">{results.verdict}</p>
         </CardContent>
       </Card>
 
       {/* Detailed Metrics */}
-      <Card className="shadow-soft border-border/50">
+      <Card className="shadow-soft border-border/50 animate-in slide-in-from-left duration-700 delay-200">
         <CardHeader>
-          <CardTitle className="text-xl text-center">Detailed Breakdown</CardTitle>
+          <CardTitle className="text-xl text-center animate-in fade-in duration-500">Detailed Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {metrics.map((metric) => (
-              <div key={metric.label} className="text-center p-4 bg-muted rounded-lg">
+            {metrics.map((metric, index) => (
+              <div 
+                key={metric.label} 
+                className="text-center p-4 bg-muted rounded-lg hover:bg-accent transition-all duration-300 hover:scale-105 cursor-pointer animate-in zoom-in duration-500"
+                style={{ animationDelay: `${index * 100 + 400}ms` }}
+              >
                 <p className="text-sm text-muted-foreground font-medium">{metric.label}</p>
                 <p className="text-2xl font-bold text-primary mt-1">
                   {metric.value.toFixed(2)}
@@ -90,9 +94,9 @@ export function ResultsDisplay({ results }: ResultsDisplayProps) {
       </Card>
 
       {/* Explanation */}
-      <Card className="shadow-soft border-border/50">
+      <Card className="shadow-soft border-border/50 animate-in slide-in-from-right duration-700 delay-400">
         <CardHeader>
-          <CardTitle className="text-lg">Understanding Your Results</CardTitle>
+          <CardTitle className="text-lg animate-in fade-in duration-500">Understanding Your Results</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p><strong>Drive Score &gt; 1.2:</strong> You&apos;re cognitively ready to start the task.</p>

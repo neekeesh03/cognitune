@@ -9,12 +9,13 @@ import { calculateLTAResults } from "@/utils/assessmentCalculations";
 import { UserResponses } from "@/types/assessment";
 import { Brain, RotateCcw } from "lucide-react";
 
-type AppState = 'welcome' | 'assessment' | 'results';
+type AppState = 'welcome' | 'assessment' | 'loading' | 'results';
 
 const Index = () => {
   const [appState, setAppState] = useState<AppState>('welcome');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState<UserResponses>({});
+  const [isAnimating, setIsAnimating] = useState(false);
   
   const questionKeys = Object.keys(assessmentQuestions);
   const currentQuestionKey = questionKeys[currentQuestionIndex];
@@ -27,17 +28,26 @@ const Index = () => {
   };
 
   const handleAnswerSelect = (value: number) => {
+    if (isAnimating) return;
+    
+    setIsAnimating(true);
     const newResponses = { ...responses, [currentQuestionKey]: value };
     setResponses(newResponses);
 
-    // Auto-advance to next question after a short delay
+    // Show selection feedback, then advance
     setTimeout(() => {
       if (currentQuestionIndex < questionKeys.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setIsAnimating(false);
       } else {
-        setAppState('results');
+        // Show loading state before results
+        setAppState('loading');
+        setTimeout(() => {
+          setAppState('results');
+          setIsAnimating(false);
+        }, 2000);
       }
-    }, 300);
+    }, 600);
   };
 
   const handleRestart = () => {
@@ -68,14 +78,22 @@ const Index = () => {
                   Assess your cognitive readiness to begin tasks. This scientific assessment evaluates your current mental state across six key dimensions to determine if you're ready to start productive work.
                 </p>
               </CardHeader>
-              <CardContent className="text-center">
-                <Button 
-                  onClick={handleStartAssessment} 
-                  size="lg" 
-                  className="bg-gradient-primary hover:opacity-90 text-lg px-8 py-6 rounded-xl shadow-soft transition-all duration-200"
-                >
-                  Begin Assessment
-                </Button>
+              <CardContent className="text-center space-y-6">
+                <div className="space-y-4">
+                  <div className="flex justify-center space-x-4 text-sm text-muted-foreground">
+                    <span>🧠 6 Questions</span>
+                    <span>⏱️ 2 minutes</span>
+                    <span>📊 Instant Results</span>
+                  </div>
+                  <Button 
+                    onClick={handleStartAssessment} 
+                    variant="hero"
+                    size="lg" 
+                    className="text-lg px-12 py-6 rounded-xl animate-pulse hover:animate-none"
+                  >
+                    Begin Assessment
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -94,6 +112,27 @@ const Index = () => {
               selectedValue={responses[currentQuestionKey]}
               onSelect={handleAnswerSelect}
             />
+          </div>
+        )}
+
+        {appState === 'loading' && (
+          <div className="min-h-screen flex items-center justify-center">
+            <Card className="w-full max-w-2xl mx-auto shadow-soft border-border/50 animate-pulse">
+              <CardContent className="text-center py-16 space-y-6">
+                <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center animate-spin">
+                  <Brain className="w-8 h-8 text-primary-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-semibold text-primary">Analyzing Your Cognitive State</h2>
+                  <p className="text-muted-foreground">Processing your responses using advanced LTA algorithms...</p>
+                </div>
+                <div className="flex justify-center space-x-2">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
