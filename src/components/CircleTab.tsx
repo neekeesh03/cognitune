@@ -7,13 +7,14 @@ import { suggestReplies, tuneRoomPrompt } from "@/engine/friend";
 import { api } from "@/lib/api";
 import { fetchFileUrl } from "@/net/blobs";
 import { loadKey, safetyCode } from "@/lib/e2ee";
+import type { AvatarSpec } from "@/engine/avatar";
 import { useChat, type ChatMsg } from "@/net/useChat";
 import type { Friend, PeopleApi, Pub } from "@/store/usePeople";
 import type { User } from "@/store/useAuth";
 import type { GameApi } from "@/store/useGame";
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
-interface Props { people: PeopleApi; game: GameApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number) => void }
+interface Props { people: PeopleApi; game: GameApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec }) => void }
 
 export function CircleTab(props: Props) {
   const { people, me, openId, setOpenId } = props;
@@ -80,7 +81,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
   const send = () => { const t = text.trim(); if (!t) return; setText(""); run(async () => { await chat.sendText(t); game.earn("chat"); }); };
   const onType = (v: string) => { setText(v); window.clearTimeout(tt.current); tt.current = window.setTimeout(chat.sendTyping, 300); };
   const joined = (sid: string) => chat.messages.some(m => m.kind === "session_join" && m.session?.id === sid);
-  const begin = (sid: string, dur: number) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(f.name, dur); };
+  const begin = (sid: string, dur: number) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(f.name, dur, { sid, friendId: f.id, name: f.name, avatar: f.avatar }); };
   return (
     <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4" style={{ minHeight: "calc(100vh - 11rem)" }}>
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>

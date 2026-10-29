@@ -10,13 +10,13 @@ const COPY: Record<V, { h: string; sub: string; bullets: string[] }> = {
   together: { h: "Start together.", sub: "Starting is easier with someone beside you. Invite a friend and begin at the same time, with a shared timer and a private chat only the two of you can read.", bullets: ["Start with a friend in 30 seconds", "A shared focus timer", "Encrypted chat, just for you two"] },
   calm: { h: "A calm companion for getting started.", sub: "Tune is a warm, plain-spoken companion that helps you take the first step when your brain says not yet. No lectures. No streak shame.", bullets: ["Talk it out, then pick one step", "Quiet by design, kind when you slip", "Your journal never leaves your device"] },
 };
-const SEG: Record<"a" | "b", string> = { a: "Built to be gentle on busy, distractible minds.", b: "Made for students and anyone who keeps putting things off." };
+const SEG: Record<"a" | "b", string> = { a: "Made for students: the essay, the revision, the deadline you keep dodging.", b: "Made for your first years of work: the report, the admin, the thing you keep putting off." };
 
 async function hit(kind: "view" | "click" | "signup", v: V, s: string) { try { await fetch("/api/hit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, v, s }) }); } catch { /* ignore */ } }
 
 // Public test page. /hello?v=tiny|together|calm&s=a|b  (v = message, s = who it is aimed at)
 export default function Landing() {
-  const q = new URLSearchParams(location.search); const v = (["tiny", "together", "calm"].includes(q.get("v") || "") ? q.get("v") : "tiny") as V; const s = q.get("s") === "a" ? "a" : "b"; const src = (q.get("src") || "").slice(0, 40);
+  const q = new URLSearchParams(location.search); const v = (["tiny", "together", "calm"].includes(q.get("v") || "") ? q.get("v") : "tiny") as V; const s = q.get("s") === "b" ? "b" : "a"; const src = (q.get("src") || "").slice(0, 40);
   const c = COPY[v]; const crowd = useMemo(() => Array.from({ length: 4 }, () => randomAvatar()), []);
   const [email, setEmail] = useState(""); const [ok, setOk] = useState(false); const [consent, setConsent] = useState(false); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   useEffect(() => { document.title = "Cognitune: " + c.h; if (!sessionStorage.getItem("lp-view")) { sessionStorage.setItem("lp-view", "1"); hit("view", v, s); } }, [v, s, c.h]);

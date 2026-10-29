@@ -50,6 +50,7 @@ export function Terms() {
       <p>By using Cognitune you agree to these simple terms.</p>
       <h2>Using Cognitune</h2>
       <ul>
+        <li>You must be 16 or older to create an account.</li>
         <li>Be kind. Do not use Cognitune to harass, scam or spam other people, or to share anything illegal.</li>
         <li>You are responsible for your account and your password or chat passcode. We cannot reset them, and if you lose your passcode, older private messages cannot be opened.</li>
         <li>We may pause or remove accounts that break these terms.</li>

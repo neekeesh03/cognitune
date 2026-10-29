@@ -31,14 +31,14 @@ export async function pulseAnswer(me, body) {
 // public: landing-page counters (page views, clicks, waitlist sign-ups by variant and segment)
 export async function landingHit(ip, body) {
   const rl = await rd("INCR", `rl:hit:${ip}:${Math.floor(Date.now() / 6e4)}`); if (rl > 60) throw err(429, "Slow down.");
-  const v = ["tiny", "together", "calm"].includes(body.v) ? body.v : "tiny", s = ["a", "b"].includes(body.s) ? body.s : "b", kind = ["view", "click", "signup"].includes(body.kind) ? body.kind : "view";
+  const v = ["tiny", "together", "calm"].includes(body.v) ? body.v : "tiny", s = ["a", "b"].includes(body.s) ? body.s : "a", kind = ["view", "click", "signup"].includes(body.kind) ? body.kind : "view";
   await rdp([["INCR", `lp:${v}:${s}:${kind}`]]);
 }
 export async function joinWaitlist(ip, body) {
   const rl = await rd("INCR", `rl:wl:${ip}:${Math.floor(Date.now() / 36e5)}`); if (rl > 10) throw err(429, "Too many tries. Please try again later.");
   const email = cl(body.email, 120).toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) throw err(400, "That email does not look right.");
   if (!body.consent) throw err(400, "Please tick the box so we can email you.");
-  const v = ["tiny", "together", "calm"].includes(body.v) ? body.v : "tiny", s = ["a", "b"].includes(body.s) ? body.s : "b";
+  const v = ["tiny", "together", "calm"].includes(body.v) ? body.v : "tiny", s = ["a", "b"].includes(body.s) ? body.s : "a";
   if (!(await rd("SETNX", "wlx:" + email, "1"))) return; // already on the list: say nothing different
   await rdp([["RPUSH", "wl", JSON.stringify({ ts: Date.now(), email, v, s, src: cl(body.src, 40) })], ["INCR", `lp:${v}:${s}:signup`]]);
 }

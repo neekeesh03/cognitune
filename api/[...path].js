@@ -92,6 +92,16 @@ export default async function handler(req, res) {
       const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
     }
     if (path === "ev" && method === "POST") { const rl = await rd("INCR", `rl:ev:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 120) return res.json({ ok: true }); await track(me, String(body.name || ""), body.props || {}); return res.json({ ok: true }); }
+    if (path === "session-ping" && method === "POST") {
+      const sid = String(body.sid || "").slice(0, 60), w = String(body.w || ""), st = ["waiting", "working", "done", "left"].includes(body.state) ? body.state : "waiting";
+      if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
+      await rd("SET", `sp:${sid}:${me.id}`, JSON.stringify({ state: st, ts: Date.now() }), "EX", 40); return res.json({ ok: true });
+    }
+    if (path === "session-state" && method === "GET") {
+      const sid = String(query.sid || "").slice(0, 60), w = String(query.w || "");
+      if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
+      const v = await getJ(`sp:${sid}:${w}`); return res.json({ state: v && Date.now() - v.ts < 30000 ? v.state : "none" });
+    }
     if (path === "pulse-check" && method === "GET") return res.json({ eligible: await pulseEligible(me) });
     if (path === "pulse" && method === "POST") { if (!(await pulseEligible(me))) throw err(400, "Not right now."); await pulseAnswer(me, body); return res.json({ ok: true }); }
     if (path === "keys" && method === "GET") return res.json({ keys: me.pk && me.wk ? { pk: me.pk, wk: me.wk } : null });

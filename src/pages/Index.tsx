@@ -13,6 +13,7 @@ import { AuthScreen } from "@/components/AuthScreen";
 import { UnlockScreen } from "@/components/UnlockScreen";
 import { MeetFriend } from "@/components/MeetFriend";
 import { PulseCard } from "@/components/PulseCard";
+import type { AvatarSpec } from "@/engine/avatar";
 import { track } from "@/lib/track";
 import { Avatar } from "@/components/Avatar";
 import { useHistory } from "@/store/useHistory";
@@ -59,7 +60,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const j = useJournal(history); const game = useGame(); const plan = usePlan(); const cal = useCalendar(plan.blocks); const fb = useFeedback();
   const agenda = itemsForDay(dkey(), plan.blocks, cal.events);
   const [tab, setTab] = useState<Tab>("today"); const [openId, setOpenId] = useState<string | null>(null);
-  const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean } | null>(null);
+  const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean; buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec } } | null>(null);
   const [dark, setDark] = useTheme();
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
   const people = usePeople(true, f => { if (!(tabRef.current === "circle" && openRef.current === f.id)) toast(f.name, f.last?.text.slice(0, 60) ?? "New message"); });
@@ -82,7 +83,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <FxHost />
       <AnnounceBanner />
       <PulseCard />
-      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); }} onClose={() => setLive(null)} />}
+      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); }} onClose={() => setLive(null)} />}
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} />
@@ -99,7 +100,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         {tab === "tune" && <TuneTab j={j} earnChat={() => game.earn("chat")} earnJournal={() => game.earn("journal")} onAction={onTuneAction} fb={fb} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
-        {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur) => setLive({ title: `Focusing with ${name}`, dur })} />}
+        {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: `Focusing with ${name}`, dur, buddy })} />}
         {tab === "me" && <MeTab fb={fb} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>
       <nav className="glass fixed bottom-5 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
