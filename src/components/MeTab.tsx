@@ -23,7 +23,7 @@ export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, o
   const [admin, setAdmin] = useState(false); useEffect(() => { api<{ admin: boolean }>("me").then(r => setAdmin(!!r.admin)).catch(() => {}); }, []);
   const user = auth.user!; const [pname, setPname] = useState(user.name); const [pav, setPav] = useState<AvatarSpec>(user.avatar); const [pmsg, setPmsg] = useState(""); const [delPw, setDelPw] = useState("");
   const saveProfile = async () => { setPmsg(""); try { const r = await api<{ user: typeof user }>("profile", { body: { name: pname, avatar: pav } }); auth.updateUser(r.user); setPmsg("Saved."); } catch (e) { setPmsg((e as Error).message); } };
-  const deleteAccount = async () => { if (!confirm("Delete your account and all your messages? This cannot be undone.")) return; try { await api("account", { method: "DELETE", body: { password: delPw } }); auth.logout(); } catch (e) { setPmsg((e as Error).message); } };
+  const deleteAccount = async () => { if (!confirm("Delete your account and all your messages? This cannot be undone.")) return; try { await api("account", { method: "DELETE", body: user.g ? { confirm: delPw } : { password: delPw } }); auth.logout(); } catch (e) { setPmsg((e as Error).message); } };
   const { g } = game; const lv = levelFor(g.lifetime); const file = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(""); const [cost, setCost] = useState("50");
   const boxReady = g.todayActive && g.boxDay !== dkey();
@@ -89,7 +89,7 @@ export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, o
             {pmsg && <p className="text-sm text-muted-foreground" role="status">{pmsg}</p>}
           </div>
           <div className="glass space-y-3 rounded-3xl p-5 text-sm"><Button variant="outline" className="rounded-full" onClick={auth.logout}>Log out</Button>
-            <div className="border-t border-border pt-3"><div className="font-semibold">Delete account</div><p className="mb-2 text-muted-foreground">Removes your account, friends list and messages from our server. Your journal and plans on this device are not touched.</p><div className="flex gap-2"><Input type="password" className="h-10 rounded-2xl bg-secondary/60" placeholder="Your password" value={delPw} onChange={e => setDelPw(e.target.value)} /><Button variant="outline" className="rounded-full" disabled={!delPw} onClick={deleteAccount}>Delete</Button></div></div></div>
+            <div className="border-t border-border pt-3"><div className="font-semibold">Delete account</div><p className="mb-2 text-muted-foreground">Removes your account, friends list and messages from our server. Your journal and plans on this device are not touched.</p><div className="flex gap-2"><Input type={user.g ? "text" : "password"} className="h-10 rounded-2xl bg-secondary/60" placeholder={user.g ? "Type your username to confirm" : "Your password"} value={delPw} onChange={e => setDelPw(e.target.value)} /><Button variant="outline" className="rounded-full" disabled={!delPw} onClick={deleteAccount}>Delete</Button></div></div></div>
         </div>)}
 
       {view === "data" && (

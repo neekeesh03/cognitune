@@ -1,12 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/Avatar";
 import { randomAvatar } from "@/engine/avatar";
+import { googleClientId, renderGoogleButton } from "@/lib/google";
 import type { AuthApi } from "@/store/useAuth";
 
 type Step = "welcome" | "signup" | "login";
+
+function GoogleButton({ auth, text, onError }: { auth: AuthApi; text: "signup_with" | "signin_with"; onError: (m: string) => void }) {
+  const box = useRef<HTMLDivElement>(null); const [id, setId] = useState<string | null>(null);
+  useEffect(() => { googleClientId().then(setId); }, []);
+  useEffect(() => { if (id && box.current) renderGoogleButton(box.current, id, text, c => auth.google(c).catch(e => onError((e as Error).message))).catch(() => onError("Could not load Google sign-in.")); }, [id, text]); // eslint-disable-line
+  if (!id) return null;
+  return <><div ref={box} className="flex min-h-[44px] justify-center" /><div className="flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />or<span className="h-px flex-1 bg-border" /></div></>;
+}
 
 function Brand({ small }: { small?: boolean }) {
   return <div className="flex items-center justify-center gap-2.5"><div className={`${small ? "h-7 w-7" : "h-9 w-9"} animate-morph`} style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} /><span className={`${small ? "text-2xl" : "text-3xl"} font-semibold tracking-tight`}>Cognitune</span></div>;
@@ -47,6 +56,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
       <h1 className="mt-5 text-center text-4xl leading-tight">{step === "signup" ? "Create your account" : "Welcome back."}</h1>
       <p className="mx-auto mt-2 max-w-xs text-center text-muted-foreground">{step === "signup" ? "Three quick things. You will meet your friend next." : "Sign in to pick up where you left off."}</p>
       <div className="glass mt-6 space-y-3 rounded-3xl p-5">
+        <GoogleButton key={step} auth={auth} text={step === "signup" ? "signup_with" : "signin_with"} onError={setErr} />
         {step === "signup" && <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Your name" value={name} maxLength={30} autoFocus onChange={e => setName(e.target.value)} />}
         <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Username (letters, numbers, _)" autoCapitalize="none" autoCorrect="off" value={username} maxLength={20} autoFocus={step === "login"} onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))} />
         <Input className="h-11 rounded-2xl bg-secondary/60" type="password" placeholder={step === "signup" ? "Password (8+ characters)" : "Password"} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && ok && go()} />

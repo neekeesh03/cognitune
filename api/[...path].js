@@ -1,9 +1,11 @@
 // Cognitune backend: accounts, friends, messages, calendar, feedback and the admin panel.
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
-import { rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
+import { rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
+import { verifyGoogleToken, cleanUsernameFrom } from "./_google.js";
+const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
 
 const MAX_FILE_B64 = 1_100_000; // about 750 KB of file data
 export { eventsFromIcs };
@@ -36,9 +38,26 @@ export default async function handler(req, res) {
     if (path === "login" && method === "POST") {
       const rl = await rd("INCR", `rl:login:${ip}:${Math.floor(Date.now() / 6e4)}`); if (rl > 15) throw err(429, "Too many tries. Wait a minute.");
       const username = String(body.username || "").toLowerCase().trim(); const id = await rd("GET", "u:" + username); const user = id && await getJ("user:" + id);
-      if (!user || !checkPw(String(body.password || ""), user.pw)) throw err(401, "Wrong username or password.");
+      if (!user || !user.pw || !checkPw(String(body.password || ""), user.pw)) throw err(401, "Wrong username or password.");
       if (user.suspended) throw err(403, "This account is paused. Please contact the Cognitune team.");
-      return res.json({ token: tokenFor(user), user: pub(user), keys: user.pk && user.wk ? { pk: user.pk, wk: user.wk } : null });
+      return res.json({ token: tokenFor(user), user: selfPub(user), keys: user.pk && user.wk ? { pk: user.pk, wk: user.wk } : null });
+    }
+
+    if (path === "config" && method === "GET") return res.json({ googleClientId: GOOGLE_ID() || null });
+    if (path === "google" && method === "POST") {
+      if (!GOOGLE_ID()) throw err(503, "Google sign-in is not set up yet.");
+      const rl = await rd("INCR", `rl:g:${ip}:${Math.floor(Date.now() / 6e4)}`); if (rl > 20) throw err(429, "Too many tries. Wait a minute.");
+      const g = await verifyGoogleToken(body.credential, GOOGLE_ID()); if (!g) throw err(401, "Google could not confirm who you are. Please try again.");
+      let id = await rd("GET", "g:" + g.sub), user = id && await getJ("user:" + id), isNew = false;
+      if (!user) {
+        isNew = true; id = crypto.randomUUID(); const base = cleanUsernameFrom(g.email, g.name); let username = base, n = 0;
+        while (!(await rd("SETNX", "u:" + username, id))) { username = base + String(Math.floor(100 + Math.random() * 900)); if (++n > 30) throw err(500, "Could not pick a username."); }
+        let av = avRandom(), tries = 0; while (!(await claimAvatar(id, av))) { av = avRandom(); if (++tries > 40) throw err(500, "Could not pick an avatar."); }
+        user = { id, username, name: cleanName(g.given_name || g.name) || username, avatar: av, pw: null, gsub: g.sub, created: Date.now() };
+        await setJ("user:" + id, user); await rdp([["SET", "g:" + g.sub, id], ["ZADD", "users:z", 0, username]]); bump("signups");
+      }
+      if (user.suspended) throw err(403, "This account is paused. Please contact the Cognitune team.");
+      return res.json({ token: tokenFor(user), user: selfPub(user), isNew, keys: user.pk && user.wk ? { pk: user.pk, wk: user.wk } : null });
     }
 
     if (path === "cal-feed" && method === "GET") {
@@ -67,8 +86,9 @@ export default async function handler(req, res) {
         const last = msgs[msgs.length - 1];
         return { ...pub(byId[i]), online: online[i], unread: msgs.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
       });
-      const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: pub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
+      const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
     }
+    if (path === "keys" && method === "GET") return res.json({ keys: me.pk && me.wk ? { pk: me.pk, wk: me.wk } : null });
     if (path === "keys" && method === "POST") {
       if (!okPk(body.pk) || !okWk(body.wk)) throw err(400, "Bad keys."); me.pk = body.pk; me.wk = body.wk; await setJ("user:" + me.id, me); return res.json({ ok: true });
     }
@@ -78,7 +98,7 @@ export default async function handler(req, res) {
         if (!avValid(body.avatar)) throw err(400, "Bad avatar.");
         if (avKey(body.avatar) !== avKey(me.avatar)) { if (!(await claimAvatar(me.id, body.avatar))) throw err(409, "Someone already has that exact avatar. Try another."); await rd("DEL", "av:" + avKey(me.avatar)); me.avatar = body.avatar; }
       }
-      await setJ("user:" + me.id, me); return res.json({ user: pub(me) });
+      await setJ("user:" + me.id, me); return res.json({ user: selfPub(me) });
     }
     if (path === "search" && method === "GET") {
       const q = String(query.q || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20); if (q.length < 2) return res.json({ users: [] });
@@ -161,6 +181,7 @@ export default async function handler(req, res) {
       await setJ("rep:" + id, { id, from: me.id, against, reason: c(body.reason, 40) || "Other", text: c(body.text, 500), ts: Date.now(), status: "open" }); await rd("RPUSH", "reps", id); return res.json({ ok: true });
     }
     if (path === "password" && method === "POST") {
+      if (!me.pw) throw err(400, "This account signs in with Google. It has no password.");
       if (!checkPw(String(body.password || ""), me.pw)) throw err(401, "Wrong password.");
       const np = String(body.newPassword || ""); if (np.length < 8) throw err(400, "New password needs at least 8 characters.");
       if (me.wk) { if (!okWk(body.wk)) throw err(400, "Missing key update."); me.wk = body.wk; }
@@ -168,7 +189,8 @@ export default async function handler(req, res) {
     }
     if (await adminRoute(path, method, { me, body, query, res })) return;
     if (path === "account" && method === "DELETE") {
-      if (!checkPw(String(body.password || ""), me.pw)) throw err(401, "Wrong password.");
+      if (me.pw) { if (!checkPw(String(body.password || ""), me.pw)) throw err(401, "Wrong password."); }
+      else if (String(body.confirm || "").toLowerCase() !== me.username) throw err(401, "Type your username exactly to confirm.");
       await deleteAccount(me); return res.json({ ok: true });
     }
     throw err(404, "Not found");

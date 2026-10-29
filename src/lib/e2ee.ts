@@ -49,6 +49,8 @@ export async function ensureKeys(userId: string, password: string, server: Parti
   }
   return { upload: await createKeys(userId, password), fresh: false };
 }
+/** Opens the saved key with a secret (password or passcode). Throws if the secret is wrong. */
+export async function unlockKeys(userId: string, secret: string, server: KeyBundle): Promise<void> { const jwk = await unwrapJwk(server.wk, secret); if (pubOf(jwk) !== server.pk) throw new Error("mismatch"); await keep(userId, jwk); }
 /** Re-locks the private key with a new password (used when the password changes). */
 export async function rewrap(server: KeyBundle, oldPw: string, newPw: string): Promise<Wrapped> { return wrapJwk(await unwrapJwk(server.wk, oldPw), newPw); }
 
