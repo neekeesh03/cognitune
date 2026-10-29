@@ -9,7 +9,8 @@ import { StartsCard } from "@/components/StartsCard";
 import { PlusCard } from "@/components/PlusCard";
 import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
-import type { FeedbackApi } from "@/store/useFeedback";
+import { JournalTab } from "@/components/JournalTab";
+import type { JournalApi } from "@/store/useJournal";
 import type { AvatarSpec } from "@/engine/avatar";
 import { InsightsTab } from "@/components/InsightsTab";
 import { BADGES, dkey, levelFor } from "@/engine/game";
@@ -18,10 +19,10 @@ import type { Profile } from "@/engine/profile";
 import type { CheckIn } from "@/engine/analytics";
 
 const KEYS = ["cognitune.history.v2", "cognitune.entries.v1", "cognitune.settings.v1", "cognitune.game.v1", "cognitune.tasks.v1", "cognitune.blocks.v1"];
-interface Props { fb: FeedbackApi; auth: AuthApi; game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
+interface Props { j: JournalApi; auth: AuthApi; game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
 
-export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, onDelete }: Props) {
-  const [view, setView] = useState<"progress" | "rewards" | "insights" | "profile" | "data">("progress");
+export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, onDelete }: Props) {
+  const [view, setView] = useState<"progress" | "rewards" | "journal" | "insights" | "profile" | "data">("progress");
   const [admin, setAdmin] = useState(false); useEffect(() => { api<{ admin: boolean }>("me").then(r => setAdmin(!!r.admin)).catch(() => {}); }, []);
   const user = auth.user!; const [pname, setPname] = useState(user.name); const [pav, setPav] = useState<AvatarSpec>(user.avatar); const [pmsg, setPmsg] = useState(""); const [delPw, setDelPw] = useState("");
   const saveProfile = async () => { setPmsg(""); try { const r = await api<{ user: typeof user }>("profile", { body: { name: pname, avatar: pav } }); auth.updateUser(r.user); setPmsg("Saved."); } catch (e) { setPmsg((e as Error).message); } };
@@ -33,7 +34,7 @@ export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, o
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
   return (
     <div className="animate-rise mx-auto max-w-3xl">
-      <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["rewards", "Rewards"], ["insights", "About me"], ["profile", "Profile"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["rewards", "Rewards"], ["journal", "Journal"], ["insights", "About me"], ["profile", "Profile"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
 
       {view === "progress" && (
         <div className="space-y-5">
@@ -80,6 +81,7 @@ export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, o
           {g.claimed.length > 0 && <div className="text-sm text-muted-foreground">Recently claimed: {g.claimed.slice(0, 3).map(c => c.name).join(", ")}</div>}
         </div>)}
 
+      {view === "journal" && <JournalTab j={j} earn={() => game.earn("journal")} />}
       {view === "insights" && <InsightsTab profile={profile} history={history} onFollowUp={onFollowUp} onClear={onClear} onDelete={onDelete} />}
 
       {view === "profile" && (
@@ -99,11 +101,7 @@ export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, o
         <div className="space-y-5">
           <PlusCard />
           <div className="glass rounded-3xl p-5 text-sm">
-            <div className="mb-1 text-lg font-semibold">Help improve Tune</div>
-            <p className="text-muted-foreground">When you tap the thumbs on a Tune reply, that rating stays on this device. If you turn this on, each rated reply is also shared anonymously, together with the message you sent before it and a short label of the conversation step. Your name, username and journal are never included. Because nothing identifies you, shared ratings cannot be deleted later.</p>
-            <div className="mt-3 flex flex-wrap items-center gap-3"><Button variant={fb.share ? "hero" : "outline"} className="rounded-full" onClick={() => fb.setShare(!fb.share)}>{fb.share ? "Sharing is on. Turn off" : "Turn on sharing"}</Button><span className="text-xs text-muted-foreground">{fb.items.length} {fb.items.length === 1 ? "rating" : "ratings"} on this device</span></div>
-            <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" className="rounded-full" disabled={!fb.items.length} onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(fb.items, null, 1)], { type: "application/json" })); a.download = "my-tune-ratings.json"; a.click(); }}><Download className="mr-1 h-3.5 w-3.5" />Download my ratings</Button><Button size="sm" variant="ghost" className="rounded-full" disabled={!fb.items.length} onClick={() => confirm("Delete the ratings saved on this device?") && fb.clear()}>Delete my local ratings</Button></div>
-            {admin && <div className="mt-4 border-t border-border pt-3"><div className="font-semibold">Team</div><p className="text-muted-foreground">You are an admin. The admin panel has people, shared ratings, reports and announcements.</p><a href="/admin" className="mt-2 inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground">Open admin panel</a></div>}
+            {admin && <div className="mt-4 border-t border-border pt-3"><div className="font-semibold">Team</div><p className="text-muted-foreground">You are an admin. The admin panel has people, reports and announcements.</p><a href="/admin" className="mt-2 inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground">Open admin panel</a></div>}
           </div>
           <div className="glass rounded-3xl p-5 text-sm">
             <div className="mb-1 text-lg font-semibold">Your personal data stays on this device</div>

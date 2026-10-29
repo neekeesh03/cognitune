@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, CalendarCheck, Heart, Home, LogOut, MessageCircle, Moon, Sprout, Sun } from "lucide-react";
+import { Activity, CalendarCheck, Heart, Home, LogOut, Moon, Sprout, Sun } from "lucide-react";
 import { CheckInTab } from "@/components/CheckInTab";
 import { TodayTab } from "@/components/TodayTab";
-import { TuneTab } from "@/components/TuneTab";
 import { PlanTab } from "@/components/PlanTab";
 import { AnnounceBanner } from "@/components/AnnounceBanner";
 import { CircleTab } from "@/components/CircleTab";
@@ -24,18 +23,15 @@ import { usePlan } from "@/store/usePlan";
 import { usePeople, totalUnread } from "@/store/usePeople";
 import { useAuth, type AuthApi, type User } from "@/store/useAuth";
 import { useCalendar } from "@/store/useCalendar";
-import { useFeedback } from "@/store/useFeedback";
 import { itemsForDay } from "@/engine/calendar";
 import { toast } from "@/lib/fx";
 import { suggestSteps, uid } from "@/engine/plan";
 import { dkey } from "@/engine/game";
-import type { Action } from "@/engine/dialogue";
 
 const TABS = [
   { id: "today", label: "Today", icon: Home },
   { id: "plan", label: "Plan", icon: CalendarCheck },
-  { id: "tune", label: "Tune", icon: MessageCircle },
-  { id: "checkin", label: "Check-in", icon: Activity },
+  { id: "checkin", label: "Start", icon: Activity },
   { id: "circle", label: "Circle", icon: Heart },
   { id: "me", label: "Me", icon: Sprout },
 ] as const;
@@ -58,7 +54,7 @@ const Index = () => {
 
 function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const { history, add, update, clear, remove } = useHistory();
-  const j = useJournal(history); const game = useGame(); const plan = usePlan(); const cal = useCalendar(plan.blocks); const fb = useFeedback();
+  const j = useJournal(history); const game = useGame(); const plan = usePlan(); const cal = useCalendar(plan.blocks);
   const agenda = itemsForDay(dkey(), plan.blocks, cal.events);
   const [tab, setTab] = useState<Tab>("today"); const [openId, setOpenId] = useState<string | null>(null);
   const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean; buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean } } | null>(null);
@@ -67,15 +63,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const people = usePeople(true, f => { if (!(tabRef.current === "circle" && openRef.current === f.id)) toast(f.name, f.last?.text.slice(0, 60) ?? "New message"); });
   const unread = totalUnread(people.friends);
   useEffect(() => { track("app_open", undefined, true); }, []);
-  useEffect(() => { const n = ({ tune: "tab_tune", circle: "tab_circle", plan: "tab_plan", checkin: "tab_checkin" } as Record<string, "tab_tune" | "tab_circle" | "tab_plan" | "tab_checkin">)[tab]; if (n) track(n, undefined, true); }, [tab]);
-  const onTuneAction = (a: Action) => {
-    if (a.type === "timer") setLive({ title: a.task, dur: a.minutes, solo: true });
-    else if (a.type === "task") { plan.addTask({ title: a.title, steps: suggestSteps(a.title) }); toast("Added to Plan", a.title); }
-    else if (a.type === "tasks") { a.items.forEach(t => plan.addTask({ title: t, steps: [] })); toast("Saved to Plan", `${a.items.length} things`); }
-    else if (a.type === "block") { plan.addBlock({ title: a.title, day: dkey(), start: a.start, dur: a.dur }); toast("Booked in Plan", a.title); }
-    else if (a.type === "earn") game.earn(a.kind === "started" ? "started" : a.kind === "task" ? "task" : "journal", { early: new Date().getHours() < 9 });
-    else if (a.type === "goto") setTab(a.tab as Tab);
-  };
+  useEffect(() => { const n = ({ circle: "tab_circle", plan: "tab_plan", checkin: "tab_checkin" } as Record<string, "tab_circle" | "tab_plan" | "tab_checkin">)[tab]; if (n) track(n, undefined, true); }, [tab]);
   void uid;
   const lastTask = history[history.length - 1]?.task && history[history.length - 1].task !== "Untitled" ? history[history.length - 1].task : plan.tasks.find(t => !t.doneAt)?.title ?? "";
   void lastTask;
@@ -98,12 +86,11 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl overflow-x-clip px-5 pt-8">
-        {tab === "today" && <TodayTab j={j} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} />}
+        {tab === "today" && <TodayTab j={j} name={user.name} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
-        {tab === "tune" && <TuneTab j={j} earnChat={() => game.earn("chat")} earnJournal={() => game.earn("journal")} onAction={onTuneAction} fb={fb} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In The Corner" : `Focusing with ${name}`, dur, buddy })} />}
-        {tab === "me" && <MeTab fb={fb} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
+        {tab === "me" && <MeTab j={j} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>
       <nav className="glass fixed bottom-5 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
         {TABS.map(t => { const I = t.icon, on = tab === t.id; return (

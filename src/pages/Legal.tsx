@@ -18,7 +18,7 @@ export function Privacy() {
     <Shell title="Privacy">
       <p>Cognitune is a companion for getting started on things. This page explains, in plain words, what it keeps and where.</p>
       <h2>What stays on your device</h2>
-      <p>Your journal, plans, check-ins, rewards, Tune conversations and calendar blocks are saved on your device only. We cannot see them. Clearing your browser data erases them, so use Save backup in Me.</p>
+      <p>Your journal, plans, check-ins, rewards and calendar blocks are saved on your device only. We cannot see them. Clearing your browser data erases them, so use Save backup in Me.</p>
       <h2>What we store on our server</h2>
       <ul>
         <li>Your username, display name and avatar.</li>
@@ -28,7 +28,6 @@ export function Privacy() {
         <li>Your chat messages and files, locked on your device before they are sent (end-to-end encrypted). We store only the scrambled data, who sent it and when. We cannot read it. Files are deleted after 60 days.</li>
         <li>A copy of your private chat key, locked with your password or chat passcode, so you can read your chats on a new device. We cannot open it.</li>
         <li>If you turn it on: your planned time blocks, to publish a private calendar link for you. You can turn it off any time.</li>
-        <li>If you choose to share Tune ratings: the rated reply, the message before it, the rating and a topic label, with no name or username. Because nothing identifies you, shared ratings cannot be deleted later.</li>
         <li>Simple counts such as sign-ups and messages per day, and the time you were last active.</li>
       </ul>
       <h2>Who handles it</h2>

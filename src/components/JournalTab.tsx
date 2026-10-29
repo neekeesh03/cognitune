@@ -23,7 +23,7 @@ export function JournalTab({ j, earn }: { j: JournalApi; earn?: () => void }) {
         <Button variant="hero" size="lg" className="mt-3 h-12 w-full rounded-2xl" disabled={!text.trim()} onClick={save}>Save entry</Button>
       </div>
       <div className="space-y-3">
-        {list.length === 0 && <p className="text-center text-sm text-muted-foreground">Your entries will appear here, with what Tune picked up from each.</p>}
+        {list.length === 0 && <p className="text-center text-sm text-muted-foreground">Your entries will appear here, with what the app picked up.</p>}
         {list.map(e => (
           <div key={e.id} className="glass rounded-3xl p-5">
             <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground"><span>{new Date(e.ts).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}{e.mood != null && ` · ${MOODS[Math.round(e.mood * 4)]}`}</span><button aria-label="Delete entry" onClick={() => j.remove(e.id)}><Trash2 className="h-3.5 w-3.5" /></button></div>

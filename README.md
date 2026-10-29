@@ -5,8 +5,7 @@ A friendly companion for getting started on things. Check how ready you are, bre
 Live: https://cognitune-nikesh.vercel.app/
 
 ## What is inside
-- **Today, Plan, Tune, Check-in, Circle, Me** tabs.
-- **Tune**, a rule-based companion for journaling and chat. No AI service or API key is used.
+- **Today, Plan, Start, Circle, Me** tabs.
 - **Accounts and friends**: sign up with a username and password, pick a one-of-a-kind cute avatar, add friends by username, chat and send files.
 - **Privacy**: journal, plans, rewards and check-ins stay in the browser. Only account details, friend lists, messages and attachments are stored on the server.
 

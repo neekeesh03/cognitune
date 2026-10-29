@@ -14,7 +14,7 @@ export function weekDays(g: GameState) {
 }
 function line(total: number, days: number) {
   if (total === 0) return "A quiet week. Fresh page on Monday.";
-  if (days >= 6) return "Showed up almost daily. Tune is emotional.";
+  if (days >= 6) return "Showed up almost daily. Nice.";
   if (days >= 4) return "Small starts, stacked up.";
   if (total >= 3) return "Not every day. Enough days.";
   return "Started. That is the hard part.";

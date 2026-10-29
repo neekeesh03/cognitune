@@ -33,9 +33,9 @@ export function InsightsTab({ profile, history, onFollowUp, onClear, onDelete }:
   if (view === "evidence") return <div>{seg}<EvidenceTab /></div>;
   const profileCard = (
     <Card className="glass border-0 rounded-3xl lg:col-span-2">
-      <CardHeader><CardTitle className="text-lg">What Tune has learned about you</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-lg">What the app has learned about you</CardTitle></CardHeader>
       <CardContent className="space-y-4 text-sm">
-        {profile.entries === 0 ? <p className="text-muted-foreground">Write in the journal or talk to Tune. Patterns appear after a few entries.</p> : (<>
+        {profile.entries === 0 ? <p className="text-muted-foreground">Write in the journal. Patterns appear after a few entries.</p> : (<>
           <p className="text-muted-foreground">{profile.entries} {profile.entries === 1 ? "entry" : "entries"} over {profile.journalDays} {profile.journalDays === 1 ? "day" : "days"}, {profile.words} words. Readiness checks currently lean up to {Math.round(profile.blendWeight * 100)}% on this.</p>
           <div className="grid gap-2 sm:grid-cols-2">{VAR_KEYS.map(k => { const l = profile.levels[k]; return (
             <div key={k} className="flex items-center gap-3"><span className="w-16">{FORCE[k].title}</span>

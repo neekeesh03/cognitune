@@ -64,4 +64,4 @@ export function bumpStreak(g: GameState, day = dkey()): { g: GameState; msg?: st
   s.best = Math.max(s.best, s.current); s.lastDay = day;
   return { g: { ...g, streak: s }, msg };
 }
-export const BOX_LINES = ["A little extra for showing up.", "Tune found these for you.", "Small things add up.", "You earned this one.", "Look at you go."];
+export const BOX_LINES = ["A little extra for showing up.", "Found these for you.", "Small things add up.", "You earned this one.", "Look at you go."];

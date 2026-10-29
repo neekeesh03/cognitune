@@ -8,7 +8,7 @@ type V = "tiny" | "together" | "calm";
 const COPY: Record<V, { h: string; sub: string; bullets: string[] }> = {
   tiny: { h: "Stuck? Start in two minutes.", sub: "Tell Cognitune what you are avoiding. It finds the first tiny step and starts a two-minute timer with you. No setup, no pile of overdue tasks.", bullets: ["One tiny step, not a plan", "A gentle two-minute timer", "Missed days never count against you"] },
   together: { h: "Start together.", sub: "Starting is easier with someone beside you. Invite a friend and begin at the same time, with a shared timer and a private chat only the two of you can read.", bullets: ["Start with a friend in 30 seconds", "A shared focus timer", "Encrypted chat, just for you two"] },
-  calm: { h: "A calm companion for getting started.", sub: "Tune is a warm, plain-spoken companion that helps you take the first step when your brain says not yet. No lectures. No streak shame.", bullets: ["Talk it out, then pick one step", "Quiet by design, kind when you slip", "Your journal never leaves your device"] },
+  calm: { h: "A calm way to get started.", sub: "A plain, kind way to take the first step when your brain says not yet. No lectures. No streak shame.", bullets: ["One small step, then another", "Quiet by design, kind when you slip", "Your journal never leaves your device"] },
 };
 const SEG: Record<"a" | "b", string> = { a: "Made for students: the essay, the revision, the deadline you keep dodging.", b: "Made for your first years of work: the report, the admin, the thing you keep putting off." };
 

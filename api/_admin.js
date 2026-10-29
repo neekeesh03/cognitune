@@ -1,4 +1,4 @@
-// Admin backend: overview stats, users, feedback/training data, reports, announcements, team, audit log.
+// Admin backend: overview stats, users, reports, announcements, team, audit log.
 import crypto from "node:crypto";
 import { experimentStats, waitlistList } from "./_exp.js";
 import { rd, rdp, getJ, setJ, err, pub, lastDays, dayStr, hashPw, randomToken, randomId, convoKey, isAdmin, rootAdmins, forgetAdmin, deleteAccount, URL_, IS_PROD } from "./_core.js";
@@ -12,7 +12,7 @@ export async function adminRoute(path, method, ctx) {
 }
 async function adminInner(path, method, ctx) {
   const { me, body, query, res } = ctx;
-  if (!path.startsWith("admin-") && path !== "feedback-export") return false;
+  if (!path.startsWith("admin-")) return false;
   if (!(await isAdmin(me))) throw err(403, "Not allowed.");
 
   if (path === "admin-overview" && method === "GET") {
@@ -40,28 +40,6 @@ async function adminInner(path, method, ctx) {
     if (op === "delete") { await deleteAccount(u); await audit(me, "delete-user", u.username); return res.json({ ok: true }); }
     if (op === "reset-password") { const pw = randomToken(9); u.pw = hashPw(pw); u.pwv = (u.pwv || 0) + 1; await setJ("user:" + u.id, u); await audit(me, "reset-password", u.username); return res.json({ ok: true, password: pw }); }
     throw err(400, "Unknown action.");
-  }
-
-  if (path === "admin-feedback" && method === "GET") {
-    const raw = await rd("LRANGE", "fb", -2000, -1); const total = await rd("LLEN", "fb");
-    const items = raw.map(s => { try { return { id: sha(s), ...JSON.parse(s) }; } catch { return null; } }).filter(Boolean);
-    const stats = { up: 0, down: 0, reasons: {}, flows: {} };
-    items.forEach(i => { stats[i.rating === "up" ? "up" : "down"]++; if (i.reason) stats.reasons[i.reason] = (stats.reasons[i.reason] || 0) + 1; const f = (stats.flows[i.flow || "none"] ||= { up: 0, down: 0 }); f[i.rating === "up" ? "up" : "down"]++; });
-    let list = items.reverse(); const { rating, reason, flow } = query;
-    if (rating) list = list.filter(i => i.rating === rating); if (reason) list = list.filter(i => i.reason === reason); if (flow) list = list.filter(i => (i.flow || "none") === flow);
-    list = list.slice(0, 100); const ann = await rdp(list.map(i => ["GET", "fbx:" + i.id]));
-    return res.json({ total, sampled: items.length, stats, items: list.map((i, n) => ({ ...i, note: ann[n] ? JSON.parse(ann[n]) : null })) });
-  }
-  if (path === "admin-feedback" && method === "POST") {
-    const id = String(body.id || ""); const op = String(body.op || "");
-    if (op === "annotate") { const note = { label: ["good", "bad"].includes(body.label) ? body.label : "", better: String(body.better || "").slice(0, 600) }; if (!note.label && !note.better) await rd("DEL", "fbx:" + id); else await setJ("fbx:" + id, note); return res.json({ ok: true }); }
-    if (op === "delete") { const raw = await rd("LRANGE", "fb", 0, -1); const hit = raw.find(s => sha(s) === id); if (!hit) throw err(404, "Not found."); await rdp([["LREM", "fb", 0, hit], ["DEL", "fbx:" + id]]); await audit(me, "delete-feedback", id); return res.json({ ok: true }); }
-    throw err(400, "Unknown action.");
-  }
-  if ((path === "admin-export" || path === "feedback-export") && method === "GET") {
-    const raw = await rd("LRANGE", "fb", 0, -1); const ids = raw.map(sha); const ann = []; for (let i = 0; i < ids.length; i += 200) ann.push(...(await rdp(ids.slice(i, i + 200).map(x => ["GET", "fbx:" + x]))));
-    const lines = raw.map((s, i) => { let o; try { o = JSON.parse(s); } catch { return null; } const n = ann[i] ? JSON.parse(ann[i]) : {}; return JSON.stringify({ id: ids[i], ...o, label: n.label || "", better: n.better || "" }); }).filter(Boolean);
-    res.setHeader("Content-Type", "application/x-ndjson"); res.setHeader("Content-Disposition", 'attachment; filename="tune-feedback.jsonl"'); await audit(me, "export-training-data", `${lines.length} rows`); return res.send(lines.join("\n"));
   }
 
   if (path === "admin-reports" && method === "GET") {

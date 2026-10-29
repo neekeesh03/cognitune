@@ -1,4 +1,4 @@
-// Cognitune backend: accounts, friends, messages, calendar, feedback and the admin panel.
+// Cognitune backend: accounts, friends, messages, calendar and the admin panel.
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
 import { rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
@@ -168,7 +168,7 @@ export default async function handler(req, res) {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
       if (await rd("SISMEMBER", "blk:" + to, me.id)) throw err(403, "Could not send.");
       const rl = await rd("INCR", `rl:msg:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 60) throw err(429, "Slow down a little.");
-      const kind = ["text", "file", "session", "session_join", "tune"].includes(body.kind) ? body.kind : "text";
+      const kind = ["text", "file", "session", "session_join"].includes(body.kind) ? body.kind : "text";
       if (!okSealed(body.enc)) throw err(400, "Please update the app: messages must be encrypted.");
       const msg = { id: crypto.randomUUID(), ts: Date.now(), from: me.id, kind, enc: body.enc };
       if (kind === "file") {
@@ -198,13 +198,6 @@ export default async function handler(req, res) {
     if (path === "cal-import" && method === "POST") {
       const rl = await rd("INCR", `rl:cal:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 10) throw err(429, "Slow down a little.");
       const text = await fetchIcs(body.url); return res.json({ events: eventsFromIcs(text) });
-    }
-    if (path === "feedback" && method === "POST") {
-      if (!body.consent) throw err(400, "Sharing is off.");
-      const rl = await rd("INCR", `rl:fb:${me.id}:${Math.floor(Date.now() / 36e5)}`); if (rl > 120) throw err(429, "Slow down a little.");
-      const c = (v, n = 500) => String(v == null ? "" : v).replace(/[<>]/g, "").slice(0, n);
-      const item = { ts: Date.now(), rating: body.rating === "up" ? "up" : "down", reason: c(body.reason, 40), flow: c(body.flow, 30), step: c(body.step, 30), prev: c(body.prev), user: c(body.user), reply: c(body.reply) };
-      await rdp([["RPUSH", "fb", JSON.stringify(item)], ["LTRIM", "fb", -20000, -1]]); bump("fb"); return res.json({ ok: true });
     }
     if (path === "report" && method === "POST") {
       const rl = await rd("INCR", `rl:rep:${me.id}:${Math.floor(Date.now() / 36e5)}`); if (rl > 10) throw err(429, "Slow down a little.");

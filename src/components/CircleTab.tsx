@@ -3,7 +3,6 @@ import { ArrowLeft, Check, CheckCheck, Copy, Download, FileText, Paperclip, Plus
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/Avatar";
-import { suggestReplies, tuneRoomPrompt } from "@/engine/friend";
 import { api } from "@/lib/api";
 import { fetchFileUrl } from "@/net/blobs";
 import { loadKey, safetyCode } from "@/lib/e2ee";
@@ -49,7 +48,7 @@ function Home({ people, game, me, setOpenId, startSession }: Props) {
   const share = async () => { if (navigator.share) { try { await navigator.share({ title: "Join me on Cognitune", text: invite }); return; } catch { /* cancelled */ } } await navigator.clipboard?.writeText(invite).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-5">
-      <div className="text-center"><h1 className="text-4xl">Your circle</h1><p className="mx-auto mt-2 max-w-md text-muted-foreground">Chat with the people who help you start. Send messages and files, work side by side, and let Tune cheer you both on.</p></div>
+      <div className="text-center"><h1 className="text-4xl">Your circle</h1><p className="mx-auto mt-2 max-w-md text-muted-foreground">Chat with the people who help you start. Send messages and files, work side by side,.</p></div>
       <div className="glass flex items-center gap-4 rounded-3xl p-4"><Avatar spec={me.avatar} size={56} /><div className="min-w-0 flex-1"><div className="font-semibold">{me.name}</div><div className="text-sm text-muted-foreground">@{me.username}</div></div>
         <Button variant="hero" className="rounded-full" onClick={share}>{copied ? <><Check className="mr-1 h-4 w-4" />Copied</> : <><Share2 className="mr-1 h-4 w-4" />Invite friends</>}</Button></div>
       {people.incoming.length > 0 && <div className="glass space-y-2 rounded-3xl p-4"><div className="text-sm font-semibold">Friend requests</div>{people.incoming.map(u => (
@@ -94,7 +93,6 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
   const first = f.name.split(" ")[0];
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [chat.messages.length, chat.typing]);
   useEffect(() => { people.refresh(); }, [chat.messages.length]); // eslint-disable-line
-  const lastIn = [...chat.messages].reverse().find(m => m.from === f.id && m.kind === "text"); const suggestions = lastIn ? suggestReplies(lastIn.text, f.name) : [];
   const run = async (fn: () => Promise<unknown>) => { setErr(""); try { await fn(); } catch (e) { setErr((e as Error).message); } };
   const send = () => { const t = text.trim(); if (!t) return; setText(""); run(async () => { await chat.sendText(t); game.earn("chat"); }); };
   const onType = (v: string) => { setText(v); window.clearTimeout(tt.current); tt.current = window.setTimeout(chat.sendTyping, 300); };
@@ -110,10 +108,9 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
         <button aria-label={`Remove ${f.name}`} className="p-2 text-muted-foreground hover:text-foreground" onClick={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}><UserMinus className="h-4 w-4" /></button>
       </div>
       <div className="glass flex-1 space-y-2 rounded-3xl p-4" style={{ minHeight: 240 }}>
-        {chat.messages.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No messages yet. Say hi, or ask Tune to start the conversation.</p>}
+        {chat.messages.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No messages yet. Say hi.</p>}
         {chat.messages.map(m => {
           if (m.kind === "session_join") return <div key={m.id} className="text-center text-xs text-muted-foreground">{m.from === me.id ? "You" : first} joined the focus session</div>;
-          if (m.kind === "tune") return <div key={m.id} className="mx-auto max-w-[90%] rounded-2xl px-4 py-2.5 text-sm" style={{ background: "hsl(var(--f-grain) / .25)" }}><div className="mb-0.5 flex items-center gap-1 text-xs font-semibold"><Sparkles className="h-3 w-3" />Tune</div>{m.text}</div>;
           const mine = m.from === me.id; const sj = m.session && joined(m.session.id);
           return (
             <div key={m.id} className={`flex items-end gap-2 ${mine ? "justify-end" : ""}`}>
@@ -135,9 +132,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
         <div ref={end} />
       </div>
       <div className="space-y-2">
-        {suggestions.length > 0 && <div className="flex flex-wrap items-center gap-2"><span className="flex items-center gap-1 text-xs text-muted-foreground"><Sparkles className="h-3 w-3" />Tune suggests</span>{suggestions.map(s => <button key={s} onClick={() => setText(s)} className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">{s}</button>)}</div>}
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" className="rounded-full" onClick={() => run(() => chat.sendTune(tuneRoomPrompt(me.name, first, chat.messages.length)))}><Sparkles className="mr-1 h-3.5 w-3.5" />Ask Tune to cheer us on</Button>
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
         </div>
         {(err || chat.error) && <p className="text-xs text-destructive" role="alert">{err || chat.error}</p>}

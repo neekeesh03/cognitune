@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, getToken } from "@/lib/api";
 
-type Tab = "overview" | "experiments" | "people" | "feedback" | "reports" | "team";
-const TABS: { id: Tab; label: string }[] = [{ id: "overview", label: "Overview" }, { id: "experiments", label: "Experiments" }, { id: "people", label: "People" }, { id: "feedback", label: "Tune ratings" }, { id: "reports", label: "Reports" }, { id: "team", label: "Team and notices" }];
+type Tab = "overview" | "experiments" | "people" | "reports" | "team";
+const TABS: { id: Tab; label: string }[] = [{ id: "overview", label: "Overview" }, { id: "experiments", label: "Experiments" }, { id: "people", label: "People" }, { id: "reports", label: "Reports" }, { id: "team", label: "Team and notices" }];
 const when = (t?: number | null) => (t ? new Date(t).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Never");
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 
@@ -45,12 +45,11 @@ function OverviewTab() {
         <Stat label="People" value={o.totals.users} hint={`${o.week.signups} joined this week`} />
         <Stat label="Active today" value={o.week.active} />
         <Stat label="Messages this week" value={o.week.messages} />
-        <Stat label="Shared ratings" value={o.totals.ratings} />
       </div>
       <Card title="Last 14 days" right={<Button size="sm" variant="ghost" className="rounded-full" onClick={load}><RefreshCw className="mr-1 h-3.5 w-3.5" />Refresh</Button>}>
         <div className="grid gap-6 md:grid-cols-2">
           <Bars data={o.series} k="signups" label="New sign-ups" /><Bars data={o.series} k="active" label="People active" />
-          <Bars data={o.series} k="messages" label="Messages sent" /><Bars data={o.series} k="ratings" label="Tune ratings shared" />
+          <Bars data={o.series} k="messages" label="Messages sent" />
         </div>
         <p className="mt-3 text-xs text-muted-foreground">Counts start from when this panel was released. Active means opened the app at least once that day (UTC).</p>
       </Card>
@@ -64,7 +63,7 @@ function OverviewTab() {
 
 
 // ---------------- Experiments (the test / kill dashboard) ----------------
-interface Exp { users: number; weeklyActive: number; funnel: Record<string, number>; activation: { rate: number | null; n: number }; retention: { d1: number | null; d7: number | null; d30: number | null; n1: number; n7: number; n30: number }; friendEffect: { withFriend: number | null; without: number | null; nWith: number; nWithout: number }; invite: { rate: number | null; n: number }; weekly: { week: string; starters: number; anyStart: number }[]; tune: { up: number; down: number; rate: number | null; n: number }; pulse: { counts: Record<string, number>; n: number; veryPct: number | null; comments: { ts: number; answer: string; benefit: string; alt: string; improve: string }[] }; plus: { counts: Record<string, number>; total: number; opened: number; ofActive: number | null }; landing: { v: string; s: string; view: number; click: number; signup: number }[]; waitlist: number }
+interface Exp { users: number; weeklyActive: number; funnel: Record<string, number>; activation: { rate: number | null; n: number }; retention: { d1: number | null; d7: number | null; d30: number | null; n1: number; n7: number; n30: number }; friendEffect: { withFriend: number | null; without: number | null; nWith: number; nWithout: number }; invite: { rate: number | null; n: number }; weekly: { week: string; starters: number; anyStart: number }[]; pulse: { counts: Record<string, number>; n: number; veryPct: number | null; comments: { ts: number; answer: string; benefit: string; alt: string; improve: string }[] }; plus: { counts: Record<string, number>; total: number; opened: number; ofActive: number | null }; landing: { v: string; s: string; view: number; click: number; signup: number }[]; waitlist: number }
 type Verdict = "pass" | "kill" | "mid" | "early";
 // Thresholds from the validation plan (section 6). Change them in the plan first, then here.
 const judge = (val: number | null, n: number, pass: number, kill: number, minN = 30): Verdict => (val == null || n < minN ? "early" : val >= pass ? "pass" : val < kill ? "kill" : "mid");
@@ -98,12 +97,11 @@ function ExperimentsTab() {
         <Metric label="Came back Day 30" value={pc(d.retention.d30)} n={`${d.retention.n30} people`} rule="Pass 8%+ · kill under 4%" v={judge(d.retention.d30, d.retention.n30, 0.08, 0.04)} />
         <Metric label="Invited a friend" value={pc(d.invite.rate)} n={`${d.invite.n} people who started`} rule="Pass 20%+ · kill under 8%" v={judge(d.invite.rate, d.invite.n, 0.2, 0.08)} />
         <Metric label="Friend effect (Day 7)" value={ratio == null ? "no data" : `${ratio.toFixed(1)}x`} n={`With friend ${pc(d.friendEffect.withFriend)} (${d.friendEffect.nWith}) · without ${pc(d.friendEffect.without)} (${d.friendEffect.nWithout})`} rule="Pass 1.5x or more" v={ratio == null || d.friendEffect.nWith < 15 || d.friendEffect.nWithout < 15 ? "early" : ratio >= 1.5 ? "pass" : ratio < 1.1 ? "kill" : "mid"} />
-        <Metric label="Tune thumbs up" value={pc(d.tune.rate)} n={`${d.tune.n} shared ratings`} rule="Pass 70%+ · kill under 50%" v={judge(d.tune.rate, d.tune.n, 0.7, 0.5)} />
         <Metric label="Very disappointed to lose it" value={pc(d.pulse.veryPct)} n={`${d.pulse.n} answers`} rule="Pass 40%+ (40+ answers) · kill under 20%" v={pulseV} />
         <Metric label="Chose a price" value={pc(d.plus.ofActive, 1)} n={`${d.plus.total} choices · ${d.plus.opened} opened`} rule="Pass 3%+ of weekly actives · kill under 0.5%" v={judge(d.plus.ofActive, d.weeklyActive, 0.03, 0.005, 30)} />
       </div>
       <Card title="Where people drop off (people who ever did each step)">
-        <div className="space-y-1.5 text-sm">{[["checkin", "Did a check-in"], ["timer_start", "Started a timer"], ["timer_done", "Finished a timer"], ["invite", "Invited a friend"], ["together_start", "Started together"], ["tab_tune", "Opened Tune"], ["tab_circle", "Opened Circle"], ["tab_plan", "Opened Plan"]].map(([k, l]) => <div key={k} className="flex items-center gap-3"><span className="w-36 shrink-0">{l}</span><div className="h-3 flex-1 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary/70" style={{ width: `${d.users ? Math.min(100, ((f[k] || 0) / d.users) * 100) : 0}%` }} /></div><span className="w-14 text-right text-xs text-muted-foreground">{f[k] || 0}</span></div>)}</div>
+        <div className="space-y-1.5 text-sm">{[["checkin", "Did a check-in"], ["timer_start", "Started a timer"], ["timer_done", "Finished a timer"], ["invite", "Invited a friend"], ["together_start", "Started together"], ["tab_circle", "Opened Circle"], ["tab_plan", "Opened Plan"]].map(([k, l]) => <div key={k} className="flex items-center gap-3"><span className="w-36 shrink-0">{l}</span><div className="h-3 flex-1 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary/70" style={{ width: `${d.users ? Math.min(100, ((f[k] || 0) / d.users) * 100) : 0}%` }} /></div><span className="w-14 text-right text-xs text-muted-foreground">{f[k] || 0}</span></div>)}</div>
         <p className="mt-2 text-xs text-muted-foreground">Features opened by under 10% of people after 4 weeks are candidates to cut (kill list in the plan).</p>
       </Card>
       <Card title="Weekly starters, last 4 weeks"><div className="grid grid-cols-4 gap-2 text-center text-sm">{d.weekly.map(w => <div key={w.week} className="rounded-xl bg-secondary/60 p-2"><div className="text-xs text-muted-foreground">Week of {w.week.slice(5)}</div><div className="text-xl font-semibold">{w.starters}</div><div className="text-xs text-muted-foreground">{w.anyStart} started at least once</div></div>)}</div></Card>
@@ -152,54 +150,6 @@ function PeopleTab() {
       {d && d.total > 25 && <div className="mt-3 flex items-center gap-2 text-sm"><Button size="sm" variant="outline" disabled={off === 0} onClick={() => setOff(Math.max(0, off - 25))}>Previous</Button><span className="text-muted-foreground">{off + 1} to {Math.min(off + 25, d.total)} of {d.total}</span><Button size="sm" variant="outline" disabled={off + 25 >= d.total} onClick={() => setOff(off + 25)}>Next</Button></div>}
       <p className="mt-3 text-xs text-muted-foreground">Journals, plans and check-ins live only on each person's device, so they are never visible here. Admins never see private messages from this panel.</p>
     </Card>
-  );
-}
-
-// ---------------- Feedback ----------------
-type FbItem = { id: string; ts: number; rating: "up" | "down"; reason: string; flow: string; step: string; prev: string; user: string; reply: string; note: { label: string; better: string } | null };
-type FbResp = { total: number; sampled: number; stats: { up: number; down: number; reasons: Record<string, number>; flows: Record<string, { up: number; down: number }> }; items: FbItem[] };
-function FeedbackRow({ i, reload }: { i: FbItem; reload: () => void }) {
-  const [better, setBetter] = useState(i.note?.better || ""); const [label, setLabel] = useState(i.note?.label || "");
-  const save = async (l = label) => { await api("admin-feedback", { body: { op: "annotate", id: i.id, label: l, better } }).catch(() => {}); };
-  return (
-    <div className="rounded-2xl border border-border p-3 text-sm">
-      <div className="mb-1 flex flex-wrap items-center gap-2"><Pill tone={i.rating === "up" ? "good" : "warn"}>{i.rating === "up" ? "Thumbs up" : "Thumbs down"}</Pill>{i.reason && <Pill>{i.reason}</Pill>}{i.flow && <Pill>{i.flow}{i.step ? ` / ${i.step}` : ""}</Pill>}<span className="text-xs text-muted-foreground">{when(i.ts)}</span></div>
-      {i.prev && <p className="text-muted-foreground">Tune: {i.prev}</p>}
-      <p><b>Person:</b> {i.user || "(chip or empty)"}</p>
-      <p><b>Tune replied:</b> {i.reply}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {(["good", "bad"] as const).map(l => <Button key={l} size="sm" variant={label === l ? "hero" : "outline"} className="rounded-full" onClick={() => { const n = label === l ? "" : l; setLabel(n); save(n); }}>{l === "good" ? "Good example" : "Bad example"}</Button>)}
-        <Button size="sm" variant="ghost" className="rounded-full text-destructive" onClick={async () => { if (confirm("Remove this row from the data?")) { await api("admin-feedback", { body: { op: "delete", id: i.id } }); reload(); } }}>Remove</Button>
-      </div>
-      <Input className="mt-2" placeholder="Write a better reply (becomes training data)" value={better} onChange={e => setBetter(e.target.value)} onBlur={() => save()} />
-    </div>
-  );
-}
-function FeedbackTab() {
-  const [f, setF] = useState({ rating: "", reason: "", flow: "" }); const [d, setD] = useState<FbResp | null>(null); const [e, setE] = useState("");
-  const load = useCallback(() => api<FbResp>(`admin-feedback?rating=${f.rating}&reason=${encodeURIComponent(f.reason)}&flow=${f.flow}`).then(setD).catch(x => setE(errText(x))), [f]);
-  useEffect(() => { load(); }, [load]);
-  const exp = async () => { const r = await fetch("/api/admin-export", { headers: { Authorization: "Bearer " + getToken() } }); if (!r.ok) return alert("Not allowed."); const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = "tune-feedback.jsonl"; a.click(); };
-  if (e) return <p className="text-destructive">{e}</p>; if (!d) return <p className="text-muted-foreground">Loading...</p>;
-  const pct = d.stats.up + d.stats.down ? Math.round((d.stats.up / (d.stats.up + d.stats.down)) * 100) : 0;
-  const flows = Object.entries(d.stats.flows).sort((a, b) => b[1].down - a[1].down);
-  const sel = "h-9 rounded-full border border-border bg-background px-3 text-sm";
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Stat label="Shared ratings" value={d.total} /><Stat label="Thumbs up" value={`${pct}%`} hint={`${d.stats.up} up, ${d.stats.down} down`} /><Stat label="Top complaint" value={<span className="text-xl">{Object.entries(d.stats.reasons).sort((a, b) => b[1] - a[1])[0]?.[0] || "None yet"}</span>} /><Stat label="Weakest topic" value={<span className="text-xl">{flows[0] && flows[0][1].down ? flows[0][0] : "None yet"}</span>} /></div>
-      <Card title="Ratings by topic">
-        <div className="space-y-1.5 text-sm">{flows.map(([n, v]) => <div key={n} className="flex items-center gap-3"><span className="w-24 shrink-0">{n}</span><div className="flex h-3 flex-1 overflow-hidden rounded-full bg-secondary"><div className="bg-success" style={{ width: `${(v.up / (v.up + v.down)) * 100}%` }} /><div className="bg-accent" style={{ width: `${(v.down / (v.up + v.down)) * 100}%` }} /></div><span className="w-16 text-right text-xs text-muted-foreground">{v.up} / {v.down}</span></div>)}{!flows.length && <p className="text-muted-foreground">Nothing shared yet.</p>}</div>
-      </Card>
-      <Card title="Rated replies" right={<Button size="sm" variant="hero" className="rounded-full" onClick={exp}><Download className="mr-1 h-3.5 w-3.5" />Download training data</Button>}>
-        <div className="mb-3 flex flex-wrap gap-2">
-          <select className={sel} value={f.rating} onChange={e => setF({ ...f, rating: e.target.value })}><option value="">All ratings</option><option value="down">Thumbs down</option><option value="up">Thumbs up</option></select>
-          <select className={sel} value={f.reason} onChange={e => setF({ ...f, reason: e.target.value })}><option value="">Any reason</option>{Object.keys(d.stats.reasons).map(r => <option key={r}>{r}</option>)}</select>
-          <select className={sel} value={f.flow} onChange={e => setF({ ...f, flow: e.target.value })}><option value="">Any topic</option>{Object.keys(d.stats.flows).map(r => <option key={r}>{r}</option>)}</select>
-        </div>
-        <div className="space-y-2">{d.items.map(i => <FeedbackRow key={i.id} i={i} reload={load} />)}{!d.items.length && <p className="text-sm text-muted-foreground">No rows match.</p>}</div>
-        <p className="mt-3 text-xs text-muted-foreground">Showing the newest {d.items.length} of {d.sampled}. The download includes every row plus your good/bad labels and better replies, one JSON per line, ready for training.</p>
-      </Card>
-    </div>
   );
 }
 
@@ -268,7 +218,7 @@ export default function AdminPage() {
     <div className="mx-auto min-h-screen max-w-5xl px-5 pb-16 pt-6">
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><a href="/" aria-label="Back to the app" className="rounded-full p-2 hover:bg-secondary"><ArrowLeft className="h-5 w-5" /></a><h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="h-6 w-6 text-primary" />Cognitune admin</h1></div></header>
       <nav className="mb-5 flex flex-wrap gap-1.5" aria-label="Admin sections">{TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`rounded-full px-4 py-2 text-sm font-medium ${tab === t.id ? "bg-primary text-primary-foreground" : "bg-secondary/60 text-muted-foreground hover:text-foreground"}`}>{t.label}</button>)}</nav>
-      {tab === "overview" && <OverviewTab />}{tab === "experiments" && <ExperimentsTab />}{tab === "people" && <PeopleTab />}{tab === "feedback" && <FeedbackTab />}{tab === "reports" && <ReportsTab />}{tab === "team" && <TeamTab />}
+      {tab === "overview" && <OverviewTab />}{tab === "experiments" && <ExperimentsTab />}{tab === "people" && <PeopleTab />}{tab === "reports" && <ReportsTab />}{tab === "team" && <TeamTab />}
     </div>
   );
 }

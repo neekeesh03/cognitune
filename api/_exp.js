@@ -2,7 +2,7 @@
 // landing-page tracking and the waitlist. No message, journal or plan content is ever recorded here.
 import { rd, rdp, setJ, getJ, err, dayStr, lastDays } from "./_core.js";
 
-export const EVENTS = ["app_open", "checkin", "timer_start", "timer_done", "together_start", "invite", "tab_tune", "tab_circle", "tab_plan", "tab_checkin", "plus_open", "plus_price"];
+export const EVENTS = ["app_open", "checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "tab_checkin", "plus_open", "plus_price"];
 const PRICES = ["3", "5", "8", "none"];
 export const weekId = (t = Date.now()) => { const d = new Date(t); const day = (d.getUTCDay() + 6) % 7; return dayStr(t - day * 864e5); }; // Monday of the week
 const cl = (v, n) => String(v == null ? "" : v).replace(/[<>]/g, "").trim().slice(0, n);
@@ -51,7 +51,7 @@ export async function experimentStats() {
   const users = (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(Boolean);
   const total = users.length;
   const [fcount] = [await rdp(users.map(u => ["SCARD", "f:" + u.id]))];
-  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_tune", "tab_circle", "tab_plan"];
+  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan"];
   const evSets = {}; for (const n of evNames) evSets[n] = new Set(await rd("SMEMBERS", "evf:" + n));
   // retention: for each user, was she active on day +1, +7, +30 (only if that day has fully passed)
   const checks = []; const meta = [];
@@ -67,8 +67,6 @@ export async function experimentStats() {
   const weeks = [0, 1, 2, 3].map(k => weekId(now - k * 7 * 864e5)); const wkc = []; weeks.forEach(w => users.forEach(u => wkc.push(["GET", `wk:${w}:${u.id}`])));
   const wkr = wkc.length ? await rdp(wkc) : []; const weekly = weeks.map((w, k) => ({ week: w, starters: wkr.slice(k * total, (k + 1) * total).filter(x => +x >= 3).length, anyStart: wkr.slice(k * total, (k + 1) * total).filter(x => +x >= 1).length }));
   const invitedAmongActivated = users.filter(u => evSets.invite.has(u.id) && evSets.timer_start.has(u.id)).length, activatedEver = users.filter(u => evSets.timer_start.has(u.id)).length;
-  // Tune ratings
-  const fbRaw = await rd("LRANGE", "fb", 0, -1); let up = 0, down = 0; fbRaw.forEach(s => { try { JSON.parse(s).rating === "up" ? up++ : down++; } catch { /* skip */ } });
   // pulse
   const pr = (await rd("LRANGE", "pulse", 0, -1)).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean);
   const pc = { very: 0, somewhat: 0, not: 0, nolonger: 0 }; pr.forEach(p => pc[p.answer]++);
@@ -88,7 +86,7 @@ export async function experimentStats() {
     retention: { d1: pct(ret[1].hit, ret[1].n), d7: pct(ret[7].hit, ret[7].n), d30: pct(ret[30].hit, ret[30].n), n1: ret[1].n, n7: ret[7].n, n30: ret[30].n },
     friendEffect: { withFriend: pct(retByFriend.with.hit, retByFriend.with.n), without: pct(retByFriend.without.hit, retByFriend.without.n), nWith: retByFriend.with.n, nWithout: retByFriend.without.n },
     invite: { rate: pct(invitedAmongActivated, activatedEver), n: activatedEver },
-    weekly, tune: { up, down, rate: pct(up, up + down), n: up + down },
+    weekly,
     pulse: { counts: pc, n: pr.length, veryPct: pct(pc.very, pr.length), comments: pr.filter(p => p.benefit || p.alt || p.improve).slice(-30).reverse().map(p => ({ ts: p.ts, answer: p.answer, benefit: p.benefit, alt: p.alt, improve: p.improve })) },
     plus: { counts: plus, total: pl.length, opened: opens, ofActive: pct(pl.filter(p => p.price !== "none").length, weeklyActive7.size || 0) },
     landing: Object.values(landing), waitlist: wlCount,

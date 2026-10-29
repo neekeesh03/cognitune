@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { filePayload } from "@/net/blobs";
 import { openJson, sealBytes, sealJson, unb64 } from "@/lib/e2ee";
-export interface ChatMsg { id: string; ts: number; from: string; kind: "text" | "file" | "session" | "session_join" | "tune"; text: string; file?: { id: string; name: string; type: string; size: number; iv?: string }; session?: { id: string; dur: number; room?: boolean }; pending?: boolean }
+export interface ChatMsg { id: string; ts: number; from: string; kind: "text" | "file" | "session" | "session_join"; text: string; file?: { id: string; name: string; type: string; size: number; iv?: string }; session?: { id: string; dur: number; room?: boolean }; pending?: boolean }
 
 interface Raw { id: string; ts: number; from: string; kind: ChatMsg["kind"]; enc?: string; fileId?: string; text?: string; file?: ChatMsg["file"]; session?: ChatMsg["session"] }
 interface Content { text?: string; session?: ChatMsg["session"]; file?: { name: string; type: string; size: number; iv: string } }
@@ -44,10 +44,9 @@ export function useChat(friendId: string | null, meId: string, friendPk: string 
     const f = await filePayload(file); const bytes = unb64(f.data); const sealed = await sealBytes(meId, pkRef.current, bytes);
     return post("file", { text, file: { name: f.name, type: f.type, size: bytes.length, iv: sealed.iv } }, { data: sealed.data });
   }, [post, meId]);
-  const sendTune = useCallback((text: string) => post("tune", { text }), [post]);
   const invite = useCallback((dur: number) => { const sid = crypto.randomUUID(); return post("session", { text: `Let's focus together for ${dur} minutes.`, session: { id: sid, dur } }); }, [post]);
   const joinSession = useCallback((sid: string, dur: number, room?: boolean) => post("session_join", { text: "Joined the focus session.", session: { id: sid, dur, ...(room ? { room: true } : {}) } }), [post]);
   const sendTyping = useCallback(() => { if (fid.current) api("typing", { body: { to: fid.current } }).catch(() => {}); }, []);
-  return { messages, online, typing, error, sendText, sendFile, sendTune, invite, joinSession, sendTyping, meId };
+  return { messages, online, typing, error, sendText, sendFile, invite, joinSession, sendTyping, meId };
 }
 export type ChatApi = ReturnType<typeof useChat>;
