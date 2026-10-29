@@ -85,7 +85,7 @@ export const lastDays = n => Array.from({ length: n }, (_, i) => dayStr(Date.now
 
 // admins: usernames in the ADMIN_USERS env var (always admin) plus any added from the panel (stored in Redis)
 const adminCache = globalThis.__cogAdmin || (globalThis.__cogAdmin = new Map());
-export const rootAdmins = () => (process.env.ADMIN_USERS || "").toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
+export const rootAdmins = () => ((process.env.ADMIN_USERS || "") + "," + (process.env.ADMIN_EXTRA || "")).toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
 export async function isAdmin(u) {
   if (rootAdmins().includes(u.username)) return true;
   const c = adminCache.get(u.id); if (c && Date.now() - c.t < 60000) return c.v;
