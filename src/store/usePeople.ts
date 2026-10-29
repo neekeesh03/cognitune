@@ -20,9 +20,9 @@ export function usePeople(active: boolean, onNew?: (f: Friend) => void) {
     const t = setInterval(() => { if (!document.hidden) refresh(); }, 15000); const v = () => !document.hidden && refresh();
     document.addEventListener("visibilitychange", v); return () => { clearInterval(t); document.removeEventListener("visibilitychange", v); };
   }, [active, refresh]);
-  const request = useCallback(async (username: string) => { const r = await api<{ status: string }>("friends/request", { body: { username } }); await refresh(); return r.status; }, [refresh]);
-  const respond = useCallback(async (id: string, accept: boolean) => { await api("friends/respond", { body: { id, accept } }); await refresh(); }, [refresh]);
-  const remove = useCallback(async (id: string, block = false) => { await api("friends/remove", { body: { id, block } }); await refresh(); }, [refresh]);
+  const request = useCallback(async (username: string) => { const r = await api<{ status: string }>("friend-request", { body: { username } }); await refresh(); return r.status; }, [refresh]);
+  const respond = useCallback(async (id: string, accept: boolean) => { await api("friend-respond", { body: { id, accept } }); await refresh(); }, [refresh]);
+  const remove = useCallback(async (id: string, block = false) => { await api("friend-remove", { body: { id, block } }); await refresh(); }, [refresh]);
   return { friends, incoming, outgoing, ready, refresh, request, respond, remove };
 }
 export type PeopleApi = ReturnType<typeof usePeople>;

@@ -134,7 +134,7 @@ export default async function handler(req, res) {
       const us = (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(u => u && u.id !== me.id);
       return res.json({ users: us.map(pub) });
     }
-    if (path === "friends/request" && method === "POST") {
+    if (path === "friend-request" && method === "POST") {
       const rl = await rd("INCR", `rl:fr:${me.id}:${Math.floor(Date.now() / 36e5)}`); if (rl > 30) throw err(429, "Slow down a little.");
       const uname = String(body.username || "").toLowerCase().trim(); const tid = await rd("GET", "u:" + uname);
       if (!tid) throw err(404, "No one with that username."); if (tid === me.id) throw err(400, "That is you!");
@@ -143,12 +143,12 @@ export default async function handler(req, res) {
       if (await rd("SISMEMBER", "fout:" + tid, me.id)) { await rdp([["SADD", "f:" + me.id, tid], ["SADD", "f:" + tid, me.id], ["SREM", "fout:" + tid, me.id], ["SREM", "fin:" + me.id, tid]]); return res.json({ ok: true, status: "friends" }); }
       await rdp([["SADD", "fout:" + me.id, tid], ["SADD", "fin:" + tid, me.id]]); return res.json({ ok: true, status: "sent" });
     }
-    if (path === "friends/respond" && method === "POST") {
+    if (path === "friend-respond" && method === "POST") {
       const id = String(body.id || ""); if (!(await rd("SISMEMBER", "fin:" + me.id, id))) throw err(404, "No such request.");
       const cmds = [["SREM", "fin:" + me.id, id], ["SREM", "fout:" + id, me.id]]; if (body.accept) cmds.push(["SADD", "f:" + me.id, id], ["SADD", "f:" + id, me.id]);
       await rdp(cmds); return res.json({ ok: true });
     }
-    if (path === "friends/remove" && method === "POST") {
+    if (path === "friend-remove" && method === "POST") {
       const id = String(body.id || ""); const cmds = [["SREM", "f:" + me.id, id], ["SREM", "f:" + id, me.id], ["SREM", "fout:" + me.id, id], ["SREM", "fin:" + me.id, id]];
       if (body.block) cmds.push(["SADD", "blk:" + me.id, id]); await rdp(cmds); return res.json({ ok: true });
     }
