@@ -69,7 +69,8 @@ async function claimAvatar(userId, av) {
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   try {
-    const path = (Array.isArray(req.query.path) ? req.query.path : [req.query.path]).filter(Boolean).join("/");
+    const u = new URL(req.url, "http://x"); const path = u.pathname.replace(/^\/api\/?/, "").replace(/\/+$/, "");
+    const query = Object.fromEntries(u.searchParams);
     const method = req.method; const body = req.body && typeof req.body === "object" ? req.body : {};
     const ip = String(req.headers["x-forwarded-for"] || "x").split(",")[0].trim();
 
@@ -127,7 +128,7 @@ export default async function handler(req, res) {
       await setJ("user:" + me.id, me); return res.json({ user: pub(me) });
     }
     if (path === "search" && method === "GET") {
-      const q = String(req.query.q || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20); if (q.length < 2) return res.json({ users: [] });
+      const q = String(query.q || "").toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20); if (q.length < 2) return res.json({ users: [] });
       const names = await rd("ZRANGEBYLEX", "users:z", "[" + q, "[" + q + "\xff", "LIMIT", 0, 8);
       const ids = (await rdp(names.map(n => ["GET", "u:" + n]))).filter(Boolean);
       const us = (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(u => u && u.id !== me.id);
@@ -152,8 +153,8 @@ export default async function handler(req, res) {
       if (body.block) cmds.push(["SADD", "blk:" + me.id, id]); await rdp(cmds); return res.json({ ok: true });
     }
     if (path === "messages" && method === "GET") {
-      const w = String(req.query.with || ""); if (!(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
-      const since = +req.query.since || 0; const raw = await rd("LRANGE", convoKey(me.id, w), -150, -1);
+      const w = String(query.with || ""); if (!(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
+      const since = +query.since || 0; const raw = await rd("LRANGE", convoKey(me.id, w), -150, -1);
       const msgs = raw.map(m => JSON.parse(m)).filter(m => m.ts > since);
       const seen = await rd("GET", "seen:" + w); const typing = await rd("GET", `typ:${w}:${me.id}`);
       return res.json({ messages: msgs, online: !!seen, typing: !!typing });
@@ -177,7 +178,7 @@ export default async function handler(req, res) {
     if (path === "typing" && method === "POST") { await rd("SET", `typ:${me.id}:${String(body.to || "")}`, "1", "EX", 4); return res.json({ ok: true }); }
     if (path === "read" && method === "POST") { await rd("SET", `rd:${me.id}:${String(body.with || "")}`, String(Date.now())); return res.json({ ok: true }); }
     if (path === "file" && method === "GET") {
-      const f = await getJ("file:" + String(req.query.id || "")); if (!f || (f.to !== me.id && f.from !== me.id)) throw err(404, "File not found.");
+      const f = await getJ("file:" + String(query.id || "")); if (!f || (f.to !== me.id && f.from !== me.id)) throw err(404, "File not found.");
       res.setHeader("Content-Type", f.type); res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(f.name)}"`); return res.send(Buffer.from(f.data, "base64"));
     }
     if (path === "account" && method === "DELETE") {
