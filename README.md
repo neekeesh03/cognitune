@@ -1,73 +1,27 @@
-# Welcome to your Lovable project
+# Cognitune
 
-## Project info
+A friendly companion for getting started on things. Check how ready you are, break tasks into tiny steps, plan your day in time blocks, build gentle streaks, earn rewards, and keep friends in your corner.
 
-**URL**: https://lovable.dev/projects/011265b9-a5ad-422b-9367-4808ddc3d9d9
+Live: https://cognitune-nikesh.vercel.app/
 
-## How can I edit this code?
+## What is inside
+- **Today, Plan, Tune, Check-in, Circle, Me** tabs.
+- **Tune**, a rule-based companion for journaling and chat. No AI service or API key is used.
+- **Accounts and friends**: sign up with a username and password, pick a one-of-a-kind cute avatar, add friends by username, chat and send files.
+- **Privacy**: journal, plans, rewards and check-ins stay in the browser. Only account details, friend lists, messages and attachments are stored on the server.
 
-There are several ways of editing your application.
+## Tech
+Vite, React, TypeScript, Tailwind, shadcn/ui. Backend is a single Vercel serverless function (`api/[...path].js`) using Upstash Redis through the Vercel Storage integration.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/011265b9-a5ad-422b-9367-4808ddc3d9d9) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
+## Run locally
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
+Without Redis variables the API falls back to an in-memory store, which is fine for local testing and is disabled on Vercel.
 
-**Edit a file directly in GitHub**
+## Deploy
+Connect the repo to Vercel, add an Upstash Redis database from Vercel Storage (it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`), and optionally set `SESSION_SECRET` to a long random string.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/011265b9-a5ad-422b-9367-4808ddc3d9d9) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Brand
+Colours: Amazon (green) and Zest (amber) scales plus Sage, Grey and Lavender. Typeface: Inter Tight.

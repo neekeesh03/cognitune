@@ -3,17 +3,25 @@ import { Flame, Gift, Lock, Snowflake, Sparkles, Trash2, Upload, Download } from
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Garden } from "@/components/Garden";
+import { Avatar } from "@/components/Avatar";
+import { AvatarEditor } from "@/components/AvatarEditor";
+import { api } from "@/lib/api";
+import type { AuthApi } from "@/store/useAuth";
+import type { AvatarSpec } from "@/engine/avatar";
 import { InsightsTab } from "@/components/InsightsTab";
 import { BADGES, dkey, levelFor } from "@/engine/game";
 import type { GameApi } from "@/store/useGame";
 import type { Profile } from "@/engine/profile";
 import type { CheckIn } from "@/engine/analytics";
 
-const KEYS = ["cognitune.history.v2", "cognitune.entries.v1", "cognitune.settings.v1", "cognitune.game.v1", "cognitune.tasks.v1", "cognitune.blocks.v1", "cognitune.people.v1", "cognitune.theme"];
-interface Props { game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
+const KEYS = ["cognitune.history.v2", "cognitune.entries.v1", "cognitune.settings.v1", "cognitune.game.v1", "cognitune.tasks.v1", "cognitune.blocks.v1"];
+interface Props { auth: AuthApi; game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
 
-export function MeTab({ game, profile, history, onFollowUp, onClear, onDelete }: Props) {
-  const [view, setView] = useState<"progress" | "rewards" | "insights" | "data">("progress");
+export function MeTab({ auth, game, profile, history, onFollowUp, onClear, onDelete }: Props) {
+  const [view, setView] = useState<"progress" | "rewards" | "insights" | "profile" | "data">("progress");
+  const user = auth.user!; const [pname, setPname] = useState(user.name); const [pav, setPav] = useState<AvatarSpec>(user.avatar); const [pmsg, setPmsg] = useState(""); const [delPw, setDelPw] = useState("");
+  const saveProfile = async () => { setPmsg(""); try { const r = await api<{ user: typeof user }>("profile", { body: { name: pname, avatar: pav } }); auth.updateUser(r.user); setPmsg("Saved."); } catch (e) { setPmsg((e as Error).message); } };
+  const deleteAccount = async () => { if (!confirm("Delete your account and all your messages? This cannot be undone.")) return; try { await api("account", { method: "DELETE", body: { password: delPw } }); auth.logout(); } catch (e) { setPmsg((e as Error).message); } };
   const { g } = game; const lv = levelFor(g.lifetime); const file = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(""); const [cost, setCost] = useState("50");
   const boxReady = g.todayActive && g.boxDay !== dkey();
@@ -21,7 +29,7 @@ export function MeTab({ game, profile, history, onFollowUp, onClear, onDelete }:
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
   return (
     <div className="animate-rise mx-auto max-w-3xl">
-      <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["rewards", "Rewards"], ["insights", "About me"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["rewards", "Rewards"], ["insights", "About me"], ["profile", "Profile"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
 
       {view === "progress" && (
         <div className="space-y-5">
@@ -69,11 +77,24 @@ export function MeTab({ game, profile, history, onFollowUp, onClear, onDelete }:
 
       {view === "insights" && <InsightsTab profile={profile} history={history} onFollowUp={onFollowUp} onClear={onClear} onDelete={onDelete} />}
 
+      {view === "profile" && (
+        <div className="space-y-5">
+          <div className="glass space-y-4 rounded-3xl p-5">
+            <div className="flex items-center gap-3"><Avatar spec={user.avatar} size={48} /><div><div className="text-lg font-semibold">{user.name}</div><div className="text-sm text-muted-foreground">@{user.username}</div></div></div>
+            <AvatarEditor value={pav} onChange={setPav} />
+            <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Display name" maxLength={30} value={pname} onChange={e => setPname(e.target.value)} />
+            <Button variant="hero" className="w-full rounded-2xl" onClick={saveProfile}>Save profile</Button>
+            {pmsg && <p className="text-sm text-muted-foreground" role="status">{pmsg}</p>}
+          </div>
+          <div className="glass space-y-3 rounded-3xl p-5 text-sm"><Button variant="outline" className="rounded-full" onClick={auth.logout}>Log out</Button>
+            <div className="border-t border-border pt-3"><div className="font-semibold">Delete account</div><p className="mb-2 text-muted-foreground">Removes your account, friends list and messages from our server. Your journal and plans on this device are not touched.</p><div className="flex gap-2"><Input type="password" className="h-10 rounded-2xl bg-secondary/60" placeholder="Your password" value={delPw} onChange={e => setDelPw(e.target.value)} /><Button variant="outline" className="rounded-full" disabled={!delPw} onClick={deleteAccount}>Delete</Button></div></div></div>
+        </div>)}
+
       {view === "data" && (
         <div className="space-y-5">
           <div className="glass rounded-3xl p-5 text-sm">
-            <div className="mb-1 text-lg font-semibold">Your data stays on this device</div>
-            <p className="text-muted-foreground">Clearing your browser data would erase it, and it does not sync to other devices. Save a backup file now and then, and load it on another device to continue there.</p>
+            <div className="mb-1 text-lg font-semibold">Your personal data stays on this device</div>
+            <p className="text-muted-foreground">Your journal, plans and rewards are saved on this device only. Clearing your browser data would erase them, and they do not follow you to other devices yet. Save a backup file now and then, and load it on another device to continue there.</p>
             <div className="mt-4 flex flex-wrap gap-2"><Button variant="hero" className="rounded-full" onClick={exportAll}><Download className="mr-2 h-4 w-4" />Save backup</Button><Button variant="outline" className="rounded-full" onClick={() => file.current?.click()}><Upload className="mr-2 h-4 w-4" />Load backup</Button><input ref={file} type="file" accept="application/json" hidden onChange={e => e.target.files?.[0] && importAll(e.target.files[0])} /></div>
           </div>
           <div className="glass rounded-3xl p-5 text-sm"><div className="mb-1 text-lg font-semibold">Need support?</div><p className="text-muted-foreground">Cognitune is a helper for building habits. It is not therapy or medical advice. If you are struggling or in crisis, please reach out to someone you trust or a local helpline. <a className="underline" href="https://findahelpline.com" target="_blank" rel="noreferrer">findahelpline.com</a> lists free lines by country.</p></div>

@@ -1,4 +1,3 @@
-import type { Person } from "@/store/usePeople";
 
 export const waLink = (phone: string, text: string) => `https://wa.me/${phone.replace(/[^\d]/g, "")}?text=${encodeURIComponent(text)}`;
 export const smsLink = (phone: string, text: string) => `sms:${phone}?&body=${encodeURIComponent(text)}`;
@@ -35,4 +34,3 @@ export async function winCard(opts: { title: string; line: string; streak: numbe
   return new Promise(res => c.toBlob(b => res(b!), "image/png"));
 }
 export const personColor = (i: number) => ["var(--f-primode)", "var(--f-flexion)", "var(--f-grain)", "var(--f-cap)", "var(--f-anchory)"][i % 5];
-export type { Person };
