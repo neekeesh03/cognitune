@@ -9,12 +9,13 @@ import { fetchFileUrl } from "@/net/blobs";
 import { loadKey, safetyCode } from "@/lib/e2ee";
 import type { AvatarSpec } from "@/engine/avatar";
 import { useChat, type ChatMsg } from "@/net/useChat";
+import { inviteToRoom } from "@/net/room";
 import type { Friend, PeopleApi, Pub } from "@/store/usePeople";
 import type { User } from "@/store/useAuth";
 import type { GameApi } from "@/store/useGame";
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
-interface Props { people: PeopleApi; game: GameApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec }) => void }
+interface Props { people: PeopleApi; game: GameApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
 
 export function CircleTab(props: Props) {
   const { people, me, openId, setOpenId } = props;
@@ -23,7 +24,23 @@ export function CircleTab(props: Props) {
   return <Home {...props} />;
 }
 
-function Home({ people, game, me, setOpenId }: Props) {
+function Corner({ people, me, startSession }: Pick<Props, "people" | "me" | "startSession">) {
+  const [open, setOpen] = useState(false); const [pick, setPick] = useState<string[]>([]); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const toggle = (id: string) => setPick(p => (p.includes(id) ? p.filter(x => x !== id) : p.length < 5 ? [...p, id] : p));
+  const go = async (dur: number) => { setErr(""); setBusy(true); try { const sid = await inviteToRoom(me.id, people.friends.filter(f => pick.includes(f.id)), dur); setOpen(false); setPick([]); startSession("The Corner", dur, { sid, friendId: "", name: "The Corner", avatar: me.avatar, room: true }); } catch (e) { setErr((e as Error).message); } setBusy(false); };
+  if (people.friends.length === 0) return null;
+  return (
+    <div className="glass space-y-3 rounded-3xl p-4">
+      <div className="flex items-center justify-between gap-3"><div><div className="text-sm font-semibold">The Corner</div><div className="text-xs text-muted-foreground">Work side by side with up to 5 friends. No cameras, just company.</div></div>{!open && <Button variant="hero" size="sm" className="rounded-full" onClick={() => setOpen(true)}>Open a corner</Button>}</div>
+      {open && <>
+        <div className="flex flex-wrap gap-2">{people.friends.map(f => <button key={f.id} aria-pressed={pick.includes(f.id)} onClick={() => toggle(f.id)} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${pick.includes(f.id) ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}><Avatar spec={f.avatar} size={22} />{f.name.split(" ")[0]}</button>)}</div>
+        <div className="flex flex-wrap items-center gap-2"><span className="text-xs text-muted-foreground">{pick.length === 0 ? "Pick who to invite, then how long." : `${pick.length} invited`}</span>{[15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" disabled={!pick.length || busy} onClick={() => go(d)}>{d} min</Button>)}<Button size="sm" variant="ghost" className="rounded-full" onClick={() => { setOpen(false); setPick([]); }}>Cancel</Button></div>
+        {err && <p className="text-xs text-destructive" role="alert">{err}</p>}
+      </>}
+    </div>);
+}
+
+function Home({ people, game, me, setOpenId, startSession }: Props) {
   const [q, setQ] = useState(""); const [found, setFound] = useState<Pub[]>([]); const [msg, setMsg] = useState(""); const [copied, setCopied] = useState(false);
   useEffect(() => { if (q.trim().length < 2) { setFound([]); return; } const t = setTimeout(() => api<{ users: Pub[] }>("search?q=" + encodeURIComponent(q.trim())).then(r => setFound(r.users)).catch(() => {}), 250); return () => clearTimeout(t); }, [q]);
   const status = (id: string) => people.friends.some(f => f.id === id) ? "friend" : people.outgoing.some(f => f.id === id) ? "sent" : people.incoming.some(f => f.id === id) ? "incoming" : "none";
@@ -47,6 +64,7 @@ function Home({ people, game, me, setOpenId }: Props) {
         {q.trim().length >= 2 && found.length === 0 && <p className="text-xs text-muted-foreground">No one found yet. Ask your friend for their exact username.</p>}
         {msg && <p className="text-sm text-primary" role="status">{msg}</p>}
       </div>
+      <Corner people={people} me={me} startSession={startSession} />
       {people.friends.length === 0 ? <p className="py-4 text-center text-sm text-muted-foreground">No friends here yet. Invite someone, or search for a username above.</p> : (
         <div className="grid gap-3 sm:grid-cols-2">{people.friends.map(x => (
           <button key={x.id} aria-label={`Chat with ${x.name}`} onClick={() => setOpenId(x.id)} className="glass flex items-center gap-3 rounded-3xl p-4 text-left transition hover:scale-[1.01]">
@@ -81,7 +99,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
   const send = () => { const t = text.trim(); if (!t) return; setText(""); run(async () => { await chat.sendText(t); game.earn("chat"); }); };
   const onType = (v: string) => { setText(v); window.clearTimeout(tt.current); tt.current = window.setTimeout(chat.sendTyping, 300); };
   const joined = (sid: string) => chat.messages.some(m => m.kind === "session_join" && m.session?.id === sid);
-  const begin = (sid: string, dur: number) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(f.name, dur, { sid, friendId: f.id, name: f.name, avatar: f.avatar }); };
+  const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "The Corner" : f.name, dur, { sid, friendId: f.id, name: room ? "The Corner" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
   return (
     <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4" style={{ minHeight: "calc(100vh - 11rem)" }}>
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
@@ -103,10 +121,11 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
               <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[15px] ${mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-foreground/[.07]"}`}>
                 {m.kind === "file" ? <FileBubble m={m} meId={me.id} pk={f.pk ?? null} /> : m.kind === "session" && m.session ? (
                   <div><div className="flex items-center gap-2 font-medium"><Timer className="h-4 w-4" />{m.text}</div>
-                    {!mine && !sj && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => run(async () => { await chat.joinSession(m.session!.id, m.session!.dur); begin(m.session!.id, m.session!.dur); })}>Join now</Button>}
-                    {!mine && sj && !started.includes(m.session.id) && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => begin(m.session!.id, m.session!.dur)}>Open timer</Button>}
-                    {mine && !sj && <div className="mt-1 text-xs opacity-80">Waiting for {first} to join...</div>}
-                    {mine && sj && <Button size="sm" variant="outline" className="mt-2 rounded-full bg-transparent" onClick={() => begin(m.session!.id, m.session!.dur)}>{first} joined. Start</Button>}</div>
+                    {!mine && !sj && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => run(async () => { await chat.joinSession(m.session!.id, m.session!.dur, m.session!.room); begin(m.session!.id, m.session!.dur, m.session!.room); })}>Join now</Button>}
+                    {!mine && sj && !started.includes(m.session.id) && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => begin(m.session!.id, m.session!.dur, m.session!.room)}>Open timer</Button>}
+                    {mine && m.session.room && <div className="mt-1 text-xs opacity-80">Invite sent. Your corner is open.</div>}
+                    {mine && !m.session.room && !sj && <div className="mt-1 text-xs opacity-80">Waiting for {first} to join...</div>}
+                    {mine && !m.session.room && sj && <Button size="sm" variant="outline" className="mt-2 rounded-full bg-transparent" onClick={() => begin(m.session!.id, m.session!.dur)}>{first} joined. Start</Button>}</div>
                 ) : <div className="whitespace-pre-wrap">{m.text}</div>}
                 <div className={`mt-0.5 flex items-center justify-end gap-1 text-[10px] ${mine ? "opacity-70" : "text-muted-foreground"}`}>{new Date(m.ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}{mine && <CheckCheck className="h-3 w-3" aria-label="Sent" />}</div>
               </div>

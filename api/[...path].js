@@ -102,6 +102,22 @@ export default async function handler(req, res) {
       if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
       const v = await getJ(`sp:${sid}:${w}`); return res.json({ state: v && Date.now() - v.ts < 30000 ? v.state : "none" });
     }
+    if (path === "room-create" && method === "POST") {
+      const sid = String(body.sid || "").slice(0, 60), inv = [...new Set((Array.isArray(body.inv) ? body.inv : []).map(String))].slice(0, 5);
+      if (!sid || !inv.length) throw err(400, "Pick at least one friend.");
+      if (await rd("SCARD", "rm:" + sid)) throw err(409, "That room already exists.");
+      for (const f of inv) if (!(await rd("SISMEMBER", "f:" + me.id, f))) throw err(403, "You can only invite friends.");
+      await rd("SADD", "rm:" + sid, me.id, ...inv); await rd("EXPIRE", "rm:" + sid, 21600); return res.json({ ok: true });
+    }
+    if (path === "room-ping" && method === "POST") {
+      const sid = String(body.sid || "").slice(0, 60), st = ["waiting", "working", "done", "left"].includes(body.state) ? body.state : "waiting";
+      if (!sid || !(await rd("SISMEMBER", "rm:" + sid, me.id))) throw err(403, "You are not in this room.");
+      await rd("SET", `sp:${sid}:${me.id}`, JSON.stringify({ state: st, ts: Date.now() }), "EX", 40);
+      const ids = ((await rd("SMEMBERS", "rm:" + sid)) || []).filter(i => i !== me.id);
+      const us = ids.length ? (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)) : [];
+      const sts = ids.length ? await rdp(ids.map(i => ["GET", `sp:${sid}:${i}`])) : [];
+      return res.json({ members: ids.map((i, n) => { const u = us[n]; const v = sts[n] && JSON.parse(sts[n]); return u ? { id: i, name: u.name, avatar: u.avatar, state: v && Date.now() - v.ts < 30000 ? v.state : "none" } : null; }).filter(Boolean) });
+    }
     if (path === "pulse-check" && method === "GET") return res.json({ eligible: await pulseEligible(me) });
     if (path === "pulse" && method === "POST") { if (!(await pulseEligible(me))) throw err(400, "Not right now."); await pulseAnswer(me, body); return res.json({ ok: true }); }
     if (path === "keys" && method === "GET") return res.json({ keys: me.pk && me.wk ? { pk: me.pk, wk: me.wk } : null });
