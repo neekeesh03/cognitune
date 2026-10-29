@@ -88,6 +88,24 @@ async function adminInner(path, method, ctx) {
     await rd(op === "add" ? "SADD" : "SREM", "admins", u.id); forgetAdmin(u.id); await audit(me, op + "-admin", u.username); return res.json({ ok: true });
   }
 
+  if (path === "admin-purge-legacy" && method === "POST") {
+    // Deletes every message sent before end-to-end encryption existed (no "enc" field), and any file attached to one.
+    let cursor = "0", chats = 0, removed = 0, files = 0;
+    do {
+      const r = await rd("SCAN", cursor, "MATCH", "c:*", "COUNT", 200); cursor = String(r[0]);
+      for (const key of r[1]) {
+        const raw = await rd("LRANGE", key, 0, -1); const keep = [], drop = [];
+        raw.forEach(s => { let m; try { m = JSON.parse(s); } catch { drop.push(s); return; } (m.enc ? keep : drop).push(m.enc ? s : m); });
+        if (!drop.length) continue; chats++;
+        const cmds = []; await rd("DEL", key);
+        for (const m of drop) { removed++; if (m && m.file && m.file.id) { files++; cmds.push(["DEL", "file:" + m.file.id]); } }
+        keep.forEach(s => cmds.push(["RPUSH", key, s])); if (cmds.length) await rdp(cmds);
+      }
+    } while (cursor !== "0");
+    await audit(me, "purge-unencrypted-messages", `${removed} messages in ${chats} chats, ${files} files`);
+    return res.json({ ok: true, removed, chats, files });
+  }
+
   if (path === "admin-audit" && method === "GET") { const raw = await rd("LRANGE", "audit", -150, -1); return res.json({ items: raw.map(s => JSON.parse(s)).reverse() }); }
 
   throw err(404, "Not found");

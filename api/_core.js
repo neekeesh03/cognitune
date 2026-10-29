@@ -31,6 +31,7 @@ function memRun([cmd, ...a]) {
     case "LTRIM": { const l = alive(a[0]) ? kv.get(a[0]) : []; kv.set(a[0], sliceIdx(l, a[1], a[2])); return "OK"; }
     case "LREM": { const l = alive(a[0]) ? kv.get(a[0]) : []; kv.set(a[0], l.filter(x => x !== a[2])); return 1; }
     case "INCR": { const v = (alive(a[0]) ? +kv.get(a[0]) : 0) + 1; kv.set(a[0], String(v)); return v; }
+    case "SCAN": { const re = new RegExp("^" + String(a[2]).replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$"); return ["0", [...kv.keys()].filter(k => re.test(k))]; }
     case "EXPIRE": exp.set(a[0], Date.now() + a[1] * 1000); return 1;
     case "ZADD": { const z = alive(a[0]) ? kv.get(a[0]) : new Set(); z.add(a[2]); kv.set(a[0], z); return 1; }
     case "ZREM": { const z = alive(a[0]) ? kv.get(a[0]) : null; if (z) z.delete(a[1]); return 1; }

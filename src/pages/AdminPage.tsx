@@ -190,6 +190,10 @@ function TeamTab() {
         <ul className="space-y-1 text-sm">{a?.root.map(r => <li key={r}>@{r} <Pill tone="good">set in server settings</Pill></li>)}{a?.added.map(u => <li key={u.id} className="flex items-center gap-2">@{u.username} <Pill>added here</Pill><button className="text-xs text-destructive" onClick={async () => { await api("admin-admins", { body: { username: u.username, op: "remove" } }); load(); }}>Remove</button></li>)}</ul>
         <div className="mt-3 flex gap-2"><Input className="max-w-xs" placeholder="Username to make admin" value={name} onChange={e => setName(e.target.value)} /><Button size="sm" variant="outline" className="rounded-full" onClick={async () => { try { await api("admin-admins", { body: { username: name, op: "add" } }); setName(""); load(); } catch (e) { alert(errText(e)); } }}>Add admin</Button></div>
       </Card>
+      <Card title="Clean up old messages">
+        <p className="mb-2 text-sm text-muted-foreground">Permanently deletes every message and file that was sent before private messaging was turned on. Encrypted messages are not touched. This cannot be undone.</p>
+        <Button size="sm" variant="outline" className="rounded-full text-destructive" onClick={async () => { if (!confirm("Delete all old unencrypted messages and files for everyone?")) return; try { const r = await api<{ removed: number; chats: number; files: number }>("admin-purge-legacy", { method: "POST", body: {} }); setM(`Deleted ${r.removed} messages and ${r.files} files from ${r.chats} chats.`); load(); } catch (e) { alert(errText(e)); } }}>Delete old unencrypted messages</Button>
+      </Card>
       <Card title="Recent admin actions"><div className="max-h-80 space-y-1 overflow-auto text-sm">{log.map((l, i) => <div key={i} className="flex gap-3"><span className="w-40 shrink-0 text-xs text-muted-foreground">{when(l.ts)}</span><span>@{l.by} · {l.action.replace(/-/g, " ")} {l.detail && <span className="text-muted-foreground">({l.detail})</span>}</span></div>)}{!log.length && <p className="text-muted-foreground">Nothing yet.</p>}</div></Card>
     </div>
   );
