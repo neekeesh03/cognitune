@@ -12,6 +12,8 @@ import { FocusTimer } from "@/components/FocusTimer";
 import { AuthScreen } from "@/components/AuthScreen";
 import { UnlockScreen } from "@/components/UnlockScreen";
 import { MeetFriend } from "@/components/MeetFriend";
+import { PulseCard } from "@/components/PulseCard";
+import { track } from "@/lib/track";
 import { Avatar } from "@/components/Avatar";
 import { useHistory } from "@/store/useHistory";
 import { useJournal } from "@/store/useJournal";
@@ -62,6 +64,8 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
   const people = usePeople(true, f => { if (!(tabRef.current === "circle" && openRef.current === f.id)) toast(f.name, f.last?.text.slice(0, 60) ?? "New message"); });
   const unread = totalUnread(people.friends);
+  useEffect(() => { track("app_open", undefined, true); }, []);
+  useEffect(() => { const n = ({ tune: "tab_tune", circle: "tab_circle", plan: "tab_plan", checkin: "tab_checkin" } as Record<string, "tab_tune" | "tab_circle" | "tab_plan" | "tab_checkin">)[tab]; if (n) track(n, undefined, true); }, [tab]);
   const onTuneAction = (a: Action) => {
     if (a.type === "timer") setLive({ title: a.task, dur: a.minutes, solo: true });
     else if (a.type === "task") { plan.addTask({ title: a.title, steps: suggestSteps(a.title) }); toast("Added to Plan", a.title); }
@@ -77,7 +81,8 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
     <div className="min-h-screen pb-28">
       <FxHost />
       <AnnounceBanner />
-      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart onStarted={() => {}} onDone={() => game.earn(live.solo ? "timer" : "buddy")} onClose={() => setLive(null)} />}
+      <PulseCard />
+      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); }} onClose={() => setLive(null)} />}
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} />
@@ -93,7 +98,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         {tab === "today" && <TodayTab j={j} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         {tab === "tune" && <TuneTab j={j} earnChat={() => game.earn("chat")} earnJournal={() => game.earn("journal")} onAction={onTuneAction} fb={fb} />}
-        <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); }} onDone={() => game.earn("timer")} /></div>
+        <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur) => setLive({ title: `Focusing with ${name}`, dur })} />}
         {tab === "me" && <MeTab fb={fb} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>

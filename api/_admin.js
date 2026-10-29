@@ -1,5 +1,6 @@
 // Admin backend: overview stats, users, feedback/training data, reports, announcements, team, audit log.
 import crypto from "node:crypto";
+import { experimentStats, waitlistList } from "./_exp.js";
 import { rd, rdp, getJ, setJ, err, pub, lastDays, dayStr, hashPw, randomToken, randomId, convoKey, isAdmin, rootAdmins, forgetAdmin, deleteAccount, URL_, IS_PROD } from "./_core.js";
 
 const sha = s => crypto.createHash("sha1").update(s).digest("hex").slice(0, 12);
@@ -105,6 +106,10 @@ async function adminInner(path, method, ctx) {
     await audit(me, "purge-unencrypted-messages", `${removed} messages in ${chats} chats, ${files} files`);
     return res.json({ ok: true, removed, chats, files });
   }
+
+  if (path === "admin-exp" && method === "GET") return res.json(await experimentStats());
+  if (path === "admin-waitlist" && method === "GET") return res.json({ items: await waitlistList() });
+  if (path === "admin-waitlist-export" && method === "GET") { const items = await waitlistList(); await audit(me, "export-waitlist", `${items.length} rows`); res.setHeader("Content-Type", "text/csv"); res.setHeader("Content-Disposition", 'attachment; filename="waitlist.csv"'); return res.send("email,variant,segment,source,joined\n" + items.map(i => [i.email, i.v, i.s, i.src || "", new Date(i.ts).toISOString()].join(",")).join("\n")); }
 
   if (path === "admin-audit" && method === "GET") { const raw = await rd("LRANGE", "audit", -150, -1); return res.json({ items: raw.map(s => JSON.parse(s)).reverse() }); }
 

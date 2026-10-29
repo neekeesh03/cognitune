@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Garden } from "@/components/Garden";
 import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
+import { PlusCard } from "@/components/PlusCard";
 import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
 import type { FeedbackApi } from "@/store/useFeedback";
@@ -94,6 +95,7 @@ export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, o
 
       {view === "data" && (
         <div className="space-y-5">
+          <PlusCard />
           <div className="glass rounded-3xl p-5 text-sm">
             <div className="mb-1 text-lg font-semibold">Help improve Tune</div>
             <p className="text-muted-foreground">When you tap the thumbs on a Tune reply, that rating stays on this device. If you turn this on, each rated reply is also shared anonymously, together with the message you sent before it and a short label of the conversation step. Your name, username and journal are never included. Because nothing identifies you, shared ratings cannot be deleted later.</p>

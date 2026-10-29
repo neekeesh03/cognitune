@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
+import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_exp.js";
 import { verifyGoogleToken, cleanUsernameFrom } from "./_google.js";
 const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
 
@@ -43,6 +44,8 @@ export default async function handler(req, res) {
       return res.json({ token: tokenFor(user), user: selfPub(user), keys: user.pk && user.wk ? { pk: user.pk, wk: user.wk } : null });
     }
 
+    if (path === "hit" && method === "POST") { await landingHit(ip, body); return res.json({ ok: true }); }
+    if (path === "waitlist" && method === "POST") { await joinWaitlist(ip, body); return res.json({ ok: true }); }
     if (path === "config" && method === "GET") return res.json({ googleClientId: GOOGLE_ID() || null });
     if (path === "google" && method === "POST") {
       if (!GOOGLE_ID()) throw err(503, "Google sign-in is not set up yet.");
@@ -88,6 +91,9 @@ export default async function handler(req, res) {
       });
       const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
     }
+    if (path === "ev" && method === "POST") { const rl = await rd("INCR", `rl:ev:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 120) return res.json({ ok: true }); await track(me, String(body.name || ""), body.props || {}); return res.json({ ok: true }); }
+    if (path === "pulse-check" && method === "GET") return res.json({ eligible: await pulseEligible(me) });
+    if (path === "pulse" && method === "POST") { if (!(await pulseEligible(me))) throw err(400, "Not right now."); await pulseAnswer(me, body); return res.json({ ok: true }); }
     if (path === "keys" && method === "GET") return res.json({ keys: me.pk && me.wk ? { pk: me.pk, wk: me.wk } : null });
     if (path === "keys" && method === "POST") {
       if (!okPk(body.pk) || !okWk(body.wk)) throw err(400, "Bad keys."); me.pk = body.pk; me.wk = body.wk; await setJ("user:" + me.id, me); return res.json({ ok: true });

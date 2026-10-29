@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, getToken } from "@/lib/api";
 
-type Tab = "overview" | "people" | "feedback" | "reports" | "team";
-const TABS: { id: Tab; label: string }[] = [{ id: "overview", label: "Overview" }, { id: "people", label: "People" }, { id: "feedback", label: "Tune ratings" }, { id: "reports", label: "Reports" }, { id: "team", label: "Team and notices" }];
+type Tab = "overview" | "experiments" | "people" | "feedback" | "reports" | "team";
+const TABS: { id: Tab; label: string }[] = [{ id: "overview", label: "Overview" }, { id: "experiments", label: "Experiments" }, { id: "people", label: "People" }, { id: "feedback", label: "Tune ratings" }, { id: "reports", label: "Reports" }, { id: "team", label: "Team and notices" }];
 const when = (t?: number | null) => (t ? new Date(t).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Never");
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 
@@ -58,6 +58,64 @@ function OverviewTab() {
         <Card title="Needs attention"><ul className="space-y-1 text-sm"><li>Reports filed: <b>{o.totals.reports}</b> (see Reports for the open ones)</li><li>Notice showing now: {o.announce ? <b>"{o.announce.text}"</b> : <span className="text-muted-foreground">none</span>}</li></ul></Card>
         <Card title="System"><ul className="space-y-1 text-sm"><li>Storage: {o.system.storage ? <Pill tone="good">connected</Pill> : <Pill tone="warn">not connected</Pill>}</li><li>Region: {o.system.region}</li><li>Admins: {o.totals.admins}</li></ul></Card>
       </div>
+    </div>
+  );
+}
+
+
+// ---------------- Experiments (the test / kill dashboard) ----------------
+interface Exp { users: number; weeklyActive: number; funnel: Record<string, number>; activation: { rate: number | null; n: number }; retention: { d1: number | null; d7: number | null; d30: number | null; n1: number; n7: number; n30: number }; friendEffect: { withFriend: number | null; without: number | null; nWith: number; nWithout: number }; invite: { rate: number | null; n: number }; weekly: { week: string; starters: number; anyStart: number }[]; tune: { up: number; down: number; rate: number | null; n: number }; pulse: { counts: Record<string, number>; n: number; veryPct: number | null; comments: { ts: number; answer: string; benefit: string; alt: string; improve: string }[] }; plus: { counts: Record<string, number>; total: number; opened: number; ofActive: number | null }; landing: { v: string; s: string; view: number; click: number; signup: number }[]; waitlist: number }
+type Verdict = "pass" | "kill" | "mid" | "early";
+// Thresholds from the validation plan (section 6). Change them in the plan first, then here.
+const judge = (val: number | null, n: number, pass: number, kill: number, minN = 30): Verdict => (val == null || n < minN ? "early" : val >= pass ? "pass" : val < kill ? "kill" : "mid");
+const pc = (v: number | null, d = 0) => (v == null ? "no data" : `${(v * 100).toFixed(d)}%`);
+function Badge({ v }: { v: Verdict }) { const m = { pass: ["Pass", "good"], kill: ["Below kill line", "warn"], mid: ["Between", "plain"], early: ["Too early", "plain"] } as const; return <Pill tone={m[v][1] as "good" | "warn" | "plain"}>{m[v][0]}</Pill>; }
+function Metric({ label, value, n, rule, v }: { label: string; value: string; n: string; rule: string; v: Verdict }) {
+  return <div className="glass rounded-2xl p-4"><div className="flex items-start justify-between gap-2"><div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div><Badge v={v} /></div><div className="mt-1 text-3xl font-semibold">{value}</div><div className="text-xs text-muted-foreground">{n}</div><div className="mt-1 text-xs text-muted-foreground">{rule}</div></div>;
+}
+function ExperimentsTab() {
+  const [d, setD] = useState<Exp | null>(null); const [e, setE] = useState("");
+  const load = useCallback(() => api<Exp>("admin-exp").then(setD).catch(x => setE(errText(x))), []);
+  useEffect(() => { load(); }, [load]);
+  if (e) return <p className="text-destructive">{e}</p>; if (!d) return <p className="text-muted-foreground">Loading...</p>;
+  const f = d.funnel; const ratio = d.friendEffect.withFriend != null && d.friendEffect.without ? d.friendEffect.withFriend / d.friendEffect.without : null;
+  const lp = d.landing.filter(x => x.view > 0).map(x => ({ ...x, conv: (x.click + x.signup) / x.view })).sort((a, b) => b.conv - a.conv);
+  const best = lp[0]; const pulseV = judge(d.pulse.veryPct, d.pulse.n, 0.4, 0.2, 40);
+  const exp = async () => { const r = await fetch("/api/admin-waitlist-export", { headers: { Authorization: "Bearer " + getToken() } }); if (!r.ok) return alert("Not allowed."); const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = "waitlist.csv"; a.click(); };
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Live numbers for the test plan. Badges compare each result with the pass and kill lines written in the validation plan. "Too early" means too few people to judge. Nothing here reads anyone's messages, journal or plans.</p>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="People" value={d.users} hint={`${d.weeklyActive} active in 7 days`} />
+        <Stat label="Weekly starters" value={d.weekly[0]?.starters ?? 0} hint="3+ timed starts this week (North Star)" />
+        <Stat label="Waitlist" value={d.waitlist} />
+        <Stat label="Pulse answers" value={d.pulse.n} />
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <Metric label="First start in 24h" value={pc(d.activation.rate)} n={`${d.activation.n} people old enough`} rule="Pass 40%+ · kill under 15%" v={judge(d.activation.rate, d.activation.n, 0.4, 0.15)} />
+        <Metric label="Came back Day 1" value={pc(d.retention.d1)} n={`${d.retention.n1} people`} rule="Pass 35%+" v={judge(d.retention.d1, d.retention.n1, 0.35, 0.15)} />
+        <Metric label="Came back Day 7" value={pc(d.retention.d7)} n={`${d.retention.n7} people`} rule="Pass 15%+" v={judge(d.retention.d7, d.retention.n7, 0.15, 0.05)} />
+        <Metric label="Came back Day 30" value={pc(d.retention.d30)} n={`${d.retention.n30} people`} rule="Pass 8%+ · kill under 4%" v={judge(d.retention.d30, d.retention.n30, 0.08, 0.04)} />
+        <Metric label="Invited a friend" value={pc(d.invite.rate)} n={`${d.invite.n} people who started`} rule="Pass 20%+ · kill under 8%" v={judge(d.invite.rate, d.invite.n, 0.2, 0.08)} />
+        <Metric label="Friend effect (Day 7)" value={ratio == null ? "no data" : `${ratio.toFixed(1)}x`} n={`With friend ${pc(d.friendEffect.withFriend)} (${d.friendEffect.nWith}) · without ${pc(d.friendEffect.without)} (${d.friendEffect.nWithout})`} rule="Pass 1.5x or more" v={ratio == null || d.friendEffect.nWith < 15 || d.friendEffect.nWithout < 15 ? "early" : ratio >= 1.5 ? "pass" : ratio < 1.1 ? "kill" : "mid"} />
+        <Metric label="Tune thumbs up" value={pc(d.tune.rate)} n={`${d.tune.n} shared ratings`} rule="Pass 70%+ · kill under 50%" v={judge(d.tune.rate, d.tune.n, 0.7, 0.5)} />
+        <Metric label="Very disappointed to lose it" value={pc(d.pulse.veryPct)} n={`${d.pulse.n} answers`} rule="Pass 40%+ (40+ answers) · kill under 20%" v={pulseV} />
+        <Metric label="Chose a price" value={pc(d.plus.ofActive, 1)} n={`${d.plus.total} choices · ${d.plus.opened} opened`} rule="Pass 3%+ of weekly actives · kill under 0.5%" v={judge(d.plus.ofActive, d.weeklyActive, 0.03, 0.005, 30)} />
+      </div>
+      <Card title="Where people drop off (people who ever did each step)">
+        <div className="space-y-1.5 text-sm">{[["checkin", "Did a check-in"], ["timer_start", "Started a timer"], ["timer_done", "Finished a timer"], ["invite", "Invited a friend"], ["together_start", "Started together"], ["tab_tune", "Opened Tune"], ["tab_circle", "Opened Circle"], ["tab_plan", "Opened Plan"]].map(([k, l]) => <div key={k} className="flex items-center gap-3"><span className="w-36 shrink-0">{l}</span><div className="h-3 flex-1 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary/70" style={{ width: `${d.users ? Math.min(100, ((f[k] || 0) / d.users) * 100) : 0}%` }} /></div><span className="w-14 text-right text-xs text-muted-foreground">{f[k] || 0}</span></div>)}</div>
+        <p className="mt-2 text-xs text-muted-foreground">Features opened by under 10% of people after 4 weeks are candidates to cut (kill list in the plan).</p>
+      </Card>
+      <Card title="Weekly starters, last 4 weeks"><div className="grid grid-cols-4 gap-2 text-center text-sm">{d.weekly.map(w => <div key={w.week} className="rounded-xl bg-secondary/60 p-2"><div className="text-xs text-muted-foreground">Week of {w.week.slice(5)}</div><div className="text-xl font-semibold">{w.starters}</div><div className="text-xs text-muted-foreground">{w.anyStart} started at least once</div></div>)}</div></Card>
+      <Card title="Landing page messages" right={<Button size="sm" variant="outline" className="rounded-full" onClick={exp}><Download className="mr-1 h-3.5 w-3.5" />Waitlist CSV</Button>}>
+        <p className="mb-2 text-xs text-muted-foreground">Share links like /hello?v=tiny&amp;s=b&amp;src=reddit. v = tiny, together or calm. s = a (ADHD-friendly) or b (students and procrastinators). Conversion = tried the app or joined the waitlist, out of visitors. Pass 10%+ · kill under 4%.</p>
+        {lp.length ? <div className="space-y-1 text-sm">{lp.map(x => <div key={x.v + x.s} className="flex items-center justify-between gap-3 border-b border-border py-1.5"><span>{x.v} / {x.s === "a" ? "ADHD-friendly" : "students"}</span><span className="text-muted-foreground">{x.view} views · {x.click} tried · {x.signup} joined</span><span className="flex items-center gap-2"><b>{pc(x.conv, 1)}</b><Badge v={judge(x.conv, x.view, 0.1, 0.04, 100)} /></span></div>)}</div> : <p className="text-sm text-muted-foreground">No visits yet.</p>}
+        {best && lp.length > 1 && <p className="mt-2 text-xs text-muted-foreground">Leading: {best.v} for {best.s === "a" ? "ADHD-friendly" : "students"}. A clear winner is at least 1.5x the next one.</p>}
+      </Card>
+      <Card title="What people say (anonymous)">
+        {d.pulse.comments.length ? <div className="space-y-2 text-sm">{d.pulse.comments.map((c, i) => <div key={i} className="rounded-xl border border-border p-2"><Pill>{({ very: "Very disappointed", somewhat: "Somewhat", not: "Not disappointed", nolonger: "Don't use it" } as Record<string, string>)[c.answer]}</Pill>{c.benefit && <p className="mt-1"><b>Helps with:</b> {c.benefit}</p>}{c.alt && <p><b>Would use instead:</b> {c.alt}</p>}</div>)}</div> : <p className="text-sm text-muted-foreground">No comments yet. The question appears for people who used the app on 2+ of the last 14 days.</p>}
+      </Card>
+      <div className="text-right"><Button size="sm" variant="ghost" className="rounded-full" onClick={load}><RefreshCw className="mr-1 h-3.5 w-3.5" />Refresh</Button></div>
     </div>
   );
 }
@@ -210,7 +268,7 @@ export default function AdminPage() {
     <div className="mx-auto min-h-screen max-w-5xl px-5 pb-16 pt-6">
       <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><a href="/" aria-label="Back to the app" className="rounded-full p-2 hover:bg-secondary"><ArrowLeft className="h-5 w-5" /></a><h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="h-6 w-6 text-primary" />Cognitune admin</h1></div></header>
       <nav className="mb-5 flex flex-wrap gap-1.5" aria-label="Admin sections">{TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`rounded-full px-4 py-2 text-sm font-medium ${tab === t.id ? "bg-primary text-primary-foreground" : "bg-secondary/60 text-muted-foreground hover:text-foreground"}`}>{t.label}</button>)}</nav>
-      {tab === "overview" && <OverviewTab />}{tab === "people" && <PeopleTab />}{tab === "feedback" && <FeedbackTab />}{tab === "reports" && <ReportsTab />}{tab === "team" && <TeamTab />}
+      {tab === "overview" && <OverviewTab />}{tab === "experiments" && <ExperimentsTab />}{tab === "people" && <PeopleTab />}{tab === "feedback" && <FeedbackTab />}{tab === "reports" && <ReportsTab />}{tab === "team" && <TeamTab />}
     </div>
   );
 }
