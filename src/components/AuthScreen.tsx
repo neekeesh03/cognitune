@@ -47,6 +47,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         <Button variant="hero" className="h-12 w-full rounded-2xl text-base" onClick={() => to("signup")}>Get started</Button>
         <Button variant="outline" className="h-12 w-full rounded-2xl text-base" onClick={() => to("login")}>I already have an account</Button>
       </div>
+      <p className="mt-6 text-xs text-muted-foreground">By continuing you agree to the <a href="/terms" className="underline">Terms</a> and <a href="/privacy" className="underline">Privacy</a> notes.</p>
     </div>);
 
   return (
