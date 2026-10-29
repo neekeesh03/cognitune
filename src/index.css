@@ -148,6 +148,8 @@
 .animate-rise { animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
 .animate-breathe { animation: breathe 5s ease-in-out infinite; }
 .animate-morph { animation: morph 14s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .animate-breathe, .animate-morph, .animate-rise { animation: none; } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.animate-float { animation: bob 4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .animate-breathe, .animate-morph, .animate-rise, .animate-float { animation: none; } }
 
 @keyframes fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(105vh) rotate(var(--r)); opacity: .9; } }

@@ -10,6 +10,7 @@ interface AuthResp { token: string; user: User; keys?: KeyBundle | null }
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [locked, setLocked] = useState(false);
+  const [needsAvatar, setNeedsAvatar] = useState(false);
   const [loading, setLoading] = useState<boolean>(!!getToken());
   const enter = (u: User) => { installScope(u.id, u.name); setUser(u); hasKey(u.id).then(h => setLocked(!h)).catch(() => setLocked(true)); };
   useEffect(() => {
@@ -18,7 +19,7 @@ export function useAuth() {
     const out = () => { setUser(null); };
     window.addEventListener("cognitune:signedout", out); return () => window.removeEventListener("cognitune:signedout", out);
   }, []);
-  const register = useCallback(async (b: { username: string; password: string; name: string; avatar: AvatarSpec }) => { const k = await prepareKeys(b.password); const r = await api<AuthResp>("register", { body: { ...b, pk: k.bundle.pk, wk: k.bundle.wk } }); await k.keep(r.user.id); setToken(r.token); enter(r.user); }, []);
+  const register = useCallback(async (b: { username: string; password: string; name: string; avatar?: AvatarSpec }) => { const k = await prepareKeys(b.password); const r = await api<AuthResp>("register", { body: { ...b, pk: k.bundle.pk, wk: k.bundle.wk } }); await k.keep(r.user.id); setToken(r.token); setNeedsAvatar(true); enter(r.user); }, []);
   const unlockWith = async (r: AuthResp, password: string) => {
     const k = await ensureKeys(r.user.id, password, r.keys ?? null);
     if (k.upload) await api("keys", { body: k.upload });
@@ -33,6 +34,7 @@ export function useAuth() {
   }, [user]);
   const logout = useCallback(async () => { if (user) await forgetKey(user.id); setToken(null); setUser(null); location.reload(); }, [user]);
   const updateUser = useCallback((u: User) => setUser(u), []);
-  return { user, loading, locked, register, login, unlock, logout, updateUser };
+  const finishOnboarding = useCallback(() => setNeedsAvatar(false), []);
+  return { user, loading, locked, needsAvatar, finishOnboarding, register, login, unlock, logout, updateUser };
 }
 export type AuthApi = ReturnType<typeof useAuth>;

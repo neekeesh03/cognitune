@@ -11,6 +11,7 @@ import { FxHost } from "@/components/FxHost";
 import { FocusTimer } from "@/components/FocusTimer";
 import { AuthScreen } from "@/components/AuthScreen";
 import { UnlockScreen } from "@/components/UnlockScreen";
+import { MeetFriend } from "@/components/MeetFriend";
 import { Avatar } from "@/components/Avatar";
 import { useHistory } from "@/store/useHistory";
 import { useJournal } from "@/store/useJournal";
@@ -47,6 +48,7 @@ const Index = () => {
   if (auth.loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-12 w-12 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} /></div>;
   if (!auth.user) return <><FxHost /><AuthScreen auth={auth} /></>;
   if (auth.locked) return <UnlockScreen auth={auth} />;
+  if (auth.needsAvatar) return <><FxHost /><MeetFriend auth={auth} /></>;
   return <Shell auth={auth} user={auth.user} />;
 };
 
