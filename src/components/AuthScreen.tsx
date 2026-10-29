@@ -27,7 +27,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         <Input className="h-11 rounded-2xl bg-secondary/60" type="password" placeholder={mode === "signup" ? "Password (8+ characters)" : "Password"} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && ok && go()} />
         {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
         <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={!ok || busy} onClick={go}>{busy ? "One moment..." : mode === "signup" ? "Create my account" : "Sign in"}</Button>
-        <p className="text-center text-xs text-muted-foreground">{mode === "signup" ? "Your journal, plans and rewards stay on this device. Messages and files you send to friends are stored on our server so they arrive even when your friend is offline. There is no password reset yet, so remember yours." : "New here? Choose Create account."}</p>
+        <p className="text-center text-xs text-muted-foreground">{mode === "signup" ? "Your journal, plans and rewards stay on this device. Messages and files you send to friends are end-to-end encrypted, so only you and your friend can read them. They are locked with your password, and there is no password reset yet, so remember yours." : "New here? Choose Create account."}</p>
       </div>
     </div>);
 }

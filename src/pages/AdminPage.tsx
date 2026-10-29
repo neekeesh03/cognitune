@@ -71,7 +71,7 @@ function PeopleTab() {
   const act = async (u: U, op: string) => {
     if (op === "delete" && !confirm(`Delete ${u.username} and all their server data? This cannot be undone.`)) return;
     if (op === "suspend" && !confirm(`Pause ${u.username}? They will be signed out and cannot sign in.`)) return;
-    if (op === "reset-password" && !confirm(`Make a new temporary password for ${u.username}? Their current sessions end.`)) return;
+    if (op === "reset-password" && !confirm(`Make a new temporary password for ${u.username}? Their sessions end, and old private messages they received will no longer open (encryption keys are tied to the password).`)) return;
     try { const r = await api<{ password?: string }>("admin-user", { body: { id: u.id, op } }); setMsg(r.password ? `New password for ${u.username}: ${r.password}  (shown once. Share it privately and ask them to change it.)` : "Done."); load(); } catch (e) { setMsg(errText(e)); }
   };
   return (

@@ -1,11 +1,11 @@
 // Cognitune backend: accounts, friends, messages, calendar, feedback and the admin panel.
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
-import { rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, avKey, avValid, avRandom, pub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
+import { rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
 
-const MAX_FILE_B64 = 1_000_000; // about 750 KB of file data
+const MAX_FILE_B64 = 1_100_000; // about 750 KB of file data
 export { eventsFromIcs };
 
 export default async function handler(req, res) {
@@ -29,6 +29,7 @@ export default async function handler(req, res) {
       let av = avValid(body.avatar) ? body.avatar : avRandom(); let tries = 0;
       while (!(await claimAvatar(id, av))) { av = avRandom(); if (++tries > 40) throw err(500, "Could not pick an avatar."); }
       const user = { id, username, name, avatar: av, pw: hashPw(pw), created: Date.now() };
+      if (okPk(body.pk) && okWk(body.wk)) { user.pk = body.pk; user.wk = body.wk; }
       await setJ("user:" + id, user); await rd("ZADD", "users:z", 0, username); bump("signups");
       return res.json({ token: tokenFor(user), user: pub(user) });
     }
@@ -37,7 +38,7 @@ export default async function handler(req, res) {
       const username = String(body.username || "").toLowerCase().trim(); const id = await rd("GET", "u:" + username); const user = id && await getJ("user:" + id);
       if (!user || !checkPw(String(body.password || ""), user.pw)) throw err(401, "Wrong username or password.");
       if (user.suspended) throw err(403, "This account is paused. Please contact the Cognitune team.");
-      return res.json({ token: tokenFor(user), user: pub(user) });
+      return res.json({ token: tokenFor(user), user: pub(user), keys: user.pk && user.wk ? { pk: user.pk, wk: user.wk } : null });
     }
 
     if (path === "cal-feed" && method === "GET") {
@@ -64,9 +65,12 @@ export default async function handler(req, res) {
       const friends = friendIds.filter(i => byId[i]).map((i, n) => {
         const msgs = (lasts[n] || []).map(m => JSON.parse(m)); const lr = +(reads[n] || 0);
         const last = msgs[msgs.length - 1];
-        return { ...pub(byId[i]), online: online[i], unread: msgs.filter(m => m.from === i && m.ts > lr).length, last: last ? { text: last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
+        return { ...pub(byId[i]), online: online[i], unread: msgs.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
       });
       const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: pub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
+    }
+    if (path === "keys" && method === "POST") {
+      if (!okPk(body.pk) || !okWk(body.wk)) throw err(400, "Bad keys."); me.pk = body.pk; me.wk = body.wk; await setJ("user:" + me.id, me); return res.json({ ok: true });
     }
     if (path === "profile" && method === "POST") {
       if (body.name != null) me.name = cleanName(body.name) || me.name;
@@ -113,13 +117,11 @@ export default async function handler(req, res) {
       if (await rd("SISMEMBER", "blk:" + to, me.id)) throw err(403, "Could not send.");
       const rl = await rd("INCR", `rl:msg:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 60) throw err(429, "Slow down a little.");
       const kind = ["text", "file", "session", "session_join", "tune"].includes(body.kind) ? body.kind : "text";
-      const msg = { id: crypto.randomUUID(), ts: Date.now(), from: me.id, kind, text: String(body.text || "").slice(0, 2000) };
-      if (kind === "tune") msg.tune = true;
-      if (kind === "session" || kind === "session_join") { const d = +body.session?.dur; msg.session = { id: String(body.session?.id || "").slice(0, 60), dur: [15, 25, 45].includes(d) ? d : 25 }; }
+      if (!okSealed(body.enc)) throw err(400, "Please update the app: messages must be encrypted.");
+      const msg = { id: crypto.randomUUID(), ts: Date.now(), from: me.id, kind, enc: body.enc };
       if (kind === "file") {
-        const f = body.file; if (!f || typeof f.data !== "string" || f.data.length > MAX_FILE_B64) throw err(413, "That file is too big. Photos are shrunk automatically; other files can be up to about 700 KB.");
-        const fid = crypto.randomUUID(); await setJ("file:" + fid, { name: String(f.name || "file").slice(0, 120), type: String(f.type || "application/octet-stream").slice(0, 80), data: f.data, to, from: me.id }, "EX", 60 * 864e3);
-        msg.file = { id: fid, name: String(f.name || "file").slice(0, 120), type: String(f.type || "application/octet-stream").slice(0, 80), size: Math.floor(f.data.length * 0.75) };
+        const f = body.file; if (!f || typeof f.data !== "string" || f.data.length > MAX_FILE_B64 || !/^[\w+/=]+$/.test(f.data)) throw err(413, "That file is too big. Photos are shrunk automatically; other files can be up to about 700 KB.");
+        const fid = crypto.randomUUID(); await setJ("file:" + fid, { data: f.data, to, from: me.id }, "EX", 60 * 864e3); msg.fileId = fid;
       }
       const ck = convoKey(me.id, to); await rdp([["RPUSH", ck, JSON.stringify(msg)], ["LTRIM", ck, -300, -1]]);
       bump("msgs"); return res.json({ message: msg });
@@ -128,7 +130,7 @@ export default async function handler(req, res) {
     if (path === "read" && method === "POST") { await rd("SET", `rd:${me.id}:${String(body.with || "")}`, String(Date.now())); return res.json({ ok: true }); }
     if (path === "file" && method === "GET") {
       const f = await getJ("file:" + String(query.id || "")); if (!f || (f.to !== me.id && f.from !== me.id)) throw err(404, "File not found.");
-      res.setHeader("Content-Type", f.type); res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(f.name)}"`); return res.send(Buffer.from(f.data, "base64"));
+      res.setHeader("Content-Type", f.type || "application/octet-stream"); return res.send(Buffer.from(f.data, "base64"));
     }
     if (path === "cal-feed-on" && method === "POST") {
       let tok = await rd("GET", "calu:" + me.id); if (!tok) { tok = crypto.randomBytes(18).toString("base64url"); await rdp([["SET", "calu:" + me.id, tok], ["SET", "calt:" + tok, me.id]]); }
@@ -161,6 +163,7 @@ export default async function handler(req, res) {
     if (path === "password" && method === "POST") {
       if (!checkPw(String(body.password || ""), me.pw)) throw err(401, "Wrong password.");
       const np = String(body.newPassword || ""); if (np.length < 8) throw err(400, "New password needs at least 8 characters.");
+      if (me.wk) { if (!okWk(body.wk)) throw err(400, "Missing key update."); me.wk = body.wk; }
       me.pw = hashPw(np); me.pwv = (me.pwv || 0) + 1; await setJ("user:" + me.id, me); return res.json({ token: tokenFor(me) });
     }
     if (await adminRoute(path, method, { me, body, query, res })) return;

@@ -2,17 +2,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { AvatarSpec } from "@/engine/avatar";
-export interface Pub { id: string; username: string; name: string; avatar: AvatarSpec }
+import { openJson } from "@/lib/e2ee";
+export interface Pub { id: string; username: string; name: string; avatar: AvatarSpec; pk?: string | null }
 export interface Friend extends Pub { online: boolean; unread: number; last: { text: string; ts: number; mine: boolean } | null }
-interface MeResp { user: Pub; friends: Friend[]; incoming: Pub[]; outgoing: Pub[] }
+interface RawFriend extends Omit<Friend, "last"> { last: { enc: string | null; text: string; ts: number; mine: boolean } | null }
+interface MeResp { user: Pub; friends: RawFriend[]; incoming: Pub[]; outgoing: Pub[] }
 
 export function usePeople(active: boolean, onNew?: (f: Friend) => void) {
   const [friends, setFriends] = useState<Friend[]>([]); const [incoming, setIncoming] = useState<Pub[]>([]); const [outgoing, setOutgoing] = useState<Pub[]>([]); const [ready, setReady] = useState(false);
   const prev = useRef<Record<string, number>>({}); const cb = useRef(onNew); cb.current = onNew;
   const refresh = useCallback(async () => {
     try {
-      const r = await api<MeResp>("me"); setFriends(r.friends); setIncoming(r.incoming); setOutgoing(r.outgoing); setReady(true);
-      r.friends.forEach(f => { if (f.unread > (prev.current[f.id] ?? f.unread)) cb.current?.(f); prev.current[f.id] = f.unread; });
+      const r = await api<MeResp>("me");
+      const friends: Friend[] = await Promise.all(r.friends.map(async f => {
+        if (!f.last) return { ...f, last: null };
+        let text = f.last.text;
+        if (f.last.enc) { try { const c = await openJson<{ text?: string; file?: unknown }>(r.user.id, f.pk || "", f.last.enc); text = c.file ? "Sent a file" : c.text || "Message"; } catch { text = "Private message"; } }
+        return { ...f, last: { text, ts: f.last.ts, mine: f.last.mine } };
+      }));
+      setFriends(friends); setIncoming(r.incoming); setOutgoing(r.outgoing); setReady(true);
+      friends.forEach(f => { if (f.unread > (prev.current[f.id] ?? f.unread)) cb.current?.(f); prev.current[f.id] = f.unread; });
     } catch { /* offline or signed out: keep what we have */ }
   }, []);
   useEffect(() => {

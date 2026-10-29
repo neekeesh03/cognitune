@@ -25,3 +25,9 @@ Connect the repo to Vercel, add an Upstash Redis database from Vercel Storage (i
 
 ## Brand
 Colours: Amazon (green) and Zest (amber) scales plus Sage, Grey and Lavender. Typeface: Inter Tight.
+
+## Private messages (end-to-end encryption)
+
+Friend messages and files are encrypted on the device with the browser's Web Crypto (ECDH P-256 to agree a secret between two friends, AES-256-GCM for each message and file). The server stores only scrambled data plus who sent it and when. Each account's private key is locked with a key derived from the password (PBKDF2, 310,000 rounds) before a copy is stored on the server, so chats can be opened on a new device after signing in. Each chat shows a safety code that two friends can compare to rule out a man in the middle.
+
+Limits: the server still sees who talks to whom, when, message type and size. A weak password weakens the key lock. If an admin resets a password, old private messages can no longer be opened. Messages sent before encryption was added remain readable on the server. The code is `src/lib/e2ee.ts`.

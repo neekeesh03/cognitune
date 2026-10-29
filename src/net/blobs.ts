@@ -1,8 +1,11 @@
 import { getToken } from "@/lib/api";
+import { openBytes } from "@/lib/e2ee";
 /** Downloads an attachment (needs your sign-in) and returns a local URL you can show or save. */
-export async function fetchFileUrl(id: string): Promise<string | null> {
-  const r = await fetch("/api/file?id=" + encodeURIComponent(id), { headers: { Authorization: "Bearer " + getToken() } }); if (!r.ok) return null;
-  return URL.createObjectURL(await r.blob());
+export async function fetchFileUrl(f: { id: string; type: string; iv?: string }, meId: string, theirPk: string | null): Promise<string | null> {
+  const r = await fetch("/api/file?id=" + encodeURIComponent(f.id), { headers: { Authorization: "Bearer " + getToken() } }); if (!r.ok) return null;
+  if (!f.iv) return URL.createObjectURL(await r.blob()); // older, unencrypted file
+  if (!theirPk) return null;
+  try { return URL.createObjectURL(new Blob([await openBytes(meId, theirPk, f.iv, await r.arrayBuffer())], { type: f.type })); } catch { return null; }
 }
 const toB64 = (buf: ArrayBuffer) => { let s = ""; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
 export const MAX_B64 = 1_000_000;

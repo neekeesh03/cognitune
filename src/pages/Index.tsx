@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, CalendarCheck, Heart, Home, MessageCircle, Moon, Sprout, Sun } from "lucide-react";
+import { Activity, CalendarCheck, Heart, Home, LogOut, MessageCircle, Moon, Sprout, Sun } from "lucide-react";
 import { CheckInTab } from "@/components/CheckInTab";
 import { TodayTab } from "@/components/TodayTab";
 import { TuneTab } from "@/components/TuneTab";
@@ -10,6 +10,7 @@ import { MeTab } from "@/components/MeTab";
 import { FxHost } from "@/components/FxHost";
 import { FocusTimer } from "@/components/FocusTimer";
 import { AuthScreen } from "@/components/AuthScreen";
+import { UnlockScreen } from "@/components/UnlockScreen";
 import { Avatar } from "@/components/Avatar";
 import { useHistory } from "@/store/useHistory";
 import { useJournal } from "@/store/useJournal";
@@ -45,6 +46,7 @@ const Index = () => {
   const auth = useAuth(); useTheme();
   if (auth.loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-12 w-12 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} /></div>;
   if (!auth.user) return <><FxHost /><AuthScreen auth={auth} /></>;
+  if (auth.locked) return <UnlockScreen auth={auth} />;
   return <Shell auth={auth} user={auth.user} />;
 };
 
@@ -81,6 +83,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         </div>
         <div className="flex items-center gap-2">
           <button aria-label="Switch between light and dark" onClick={() => setDark(!dark)} className="glass rounded-full p-2.5 text-muted-foreground hover:text-foreground">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
+          <button aria-label="Log out" title="Log out" onClick={() => { if (confirm("Log out of Cognitune on this device?")) auth.logout(); }} className="glass flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground"><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Log out</span></button>
           <button aria-label="Your profile" onClick={() => setTab("me")}><Avatar spec={user.avatar} size={40} ring /></button>
         </div>
       </header>

@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { suggestReplies, tuneRoomPrompt } from "@/engine/friend";
 import { api } from "@/lib/api";
 import { fetchFileUrl } from "@/net/blobs";
+import { loadKey, safetyCode } from "@/lib/e2ee";
 import { useChat, type ChatMsg } from "@/net/useChat";
 import type { Friend, PeopleApi, Pub } from "@/store/usePeople";
 import type { User } from "@/store/useAuth";
@@ -53,13 +54,13 @@ function Home({ people, game, me, setOpenId }: Props) {
               <div className="truncate text-xs text-muted-foreground">{x.last ? (x.last.mine ? "You: " : "") + x.last.text : x.online ? "Online now" : "Say hi"}</div></div>
           </button>))}</div>)}
       {people.outgoing.length > 0 && <p className="text-center text-xs text-muted-foreground">Waiting on: {people.outgoing.map(u => "@" + u.username).join(", ")}</p>}
-      <p className="text-center text-xs text-muted-foreground">Messages and files are stored on our server so they arrive even when your friend is away. They are not end-to-end encrypted, so keep the very private stuff in your journal, which never leaves your device.</p>
+      <p className="text-center text-xs text-muted-foreground">Messages and files are end-to-end encrypted. They are locked on your device and only you and your friend can open them. Our server only stores scrambled data so it can deliver it when your friend is away. Your journal never leaves your device.</p>
     </div>);
 }
 
-function FileBubble({ m }: { m: ChatMsg }) {
+function FileBubble({ m, meId, pk }: { m: ChatMsg; meId: string; pk: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => { let u: string | null = null, live = true; if (m.file) fetchFileUrl(m.file.id).then(x => { if (x && live) { u = x; setUrl(x); } }); return () => { live = false; if (u) URL.revokeObjectURL(u); }; }, [m.file?.id]); // eslint-disable-line
+  useEffect(() => { let u: string | null = null, live = true; if (m.file) fetchFileUrl(m.file, meId, pk).then(x => { if (x && live) { u = x; setUrl(x); } }); return () => { live = false; if (u) URL.revokeObjectURL(u); }; }, [m.file?.id]); // eslint-disable-line
   if (!m.file) return null; const img = m.file.type.startsWith("image/");
   return (<div>{img && url && <img src={url} alt={m.file.name} className="mb-1 max-h-56 rounded-xl" />}
     <div className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0" /><span className="truncate">{m.file.name}</span><span className="shrink-0 text-xs opacity-70">{fmtSize(m.file.size)}</span>{url && <a href={url} download={m.file.name} aria-label={`Download ${m.file.name}`} className="shrink-0 rounded-full p-1 hover:bg-foreground/10"><Download className="h-4 w-4" /></a>}</div>
@@ -67,7 +68,8 @@ function FileBubble({ m }: { m: ChatMsg }) {
 }
 
 function Conversation({ f, me, people, game, startSession, back }: Props & { f: Friend; back: () => void }) {
-  const chat = useChat(f.id, me.id);
+  const chat = useChat(f.id, me.id, f.pk ?? null);
+  const [code, setCode] = useState(""); useEffect(() => { setCode(""); (async () => { const k = await loadKey(me.id); if (k && f.pk) setCode(await safetyCode(k.pk, f.pk)); })().catch(() => {}); }, [me.id, f.pk]);
   const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null); const end = useRef<HTMLDivElement>(null); const tt = useRef(0);
   const first = f.name.split(" ")[0];
@@ -84,7 +86,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><Avatar spec={f.avatar} size={60} /><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
-          <div><h1 className="text-3xl">{f.name}</h1><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : "Away. Your messages will be waiting."}</div></div></div>
+          <div><h1 className="text-3xl">{f.name}</h1><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : "Away. Your messages will be waiting."}</div>{f.pk ? <div className="mt-0.5 text-xs text-muted-foreground" title="Compare this code with your friend, in person or on a call. If it matches, nobody is listening in.">Private chat. Safety code {code || "..."}</div> : <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
         <button aria-label={`Report ${f.name}`} className="p-2 text-xs text-muted-foreground hover:text-foreground" onClick={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Cognitune team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</button>
         <button aria-label={`Remove ${f.name}`} className="p-2 text-muted-foreground hover:text-foreground" onClick={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}><UserMinus className="h-4 w-4" /></button>
       </div>
@@ -98,7 +100,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
             <div key={m.id} className={`flex items-end gap-2 ${mine ? "justify-end" : ""}`}>
               {!mine && <Avatar spec={f.avatar} size={28} />}
               <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[15px] ${mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-foreground/[.07]"}`}>
-                {m.kind === "file" ? <FileBubble m={m} /> : m.kind === "session" && m.session ? (
+                {m.kind === "file" ? <FileBubble m={m} meId={me.id} pk={f.pk ?? null} /> : m.kind === "session" && m.session ? (
                   <div><div className="flex items-center gap-2 font-medium"><Timer className="h-4 w-4" />{m.text}</div>
                     {!mine && !sj && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => run(async () => { await chat.joinSession(m.session!.id, m.session!.dur); begin(m.session!.id, m.session!.dur); })}>Join now</Button>}
                     {!mine && sj && !started.includes(m.session.id) && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => begin(m.session!.id, m.session!.dur)}>Open timer</Button>}

@@ -73,7 +73,10 @@ export const avRandom = () => Object.fromEntries(Object.entries(AV).map(([k, n])
 export async function claimAvatar(userId, av) { const k = "av:" + avKey(av); const ok = await rd("SETNX", k, userId); if (ok) return true; return (await rd("GET", k)) === userId; }
 
 // ---------- misc helpers ----------
-export const pub = u => ({ id: u.id, username: u.username, name: u.name, avatar: u.avatar });
+export const pub = u => ({ id: u.id, username: u.username, name: u.name, avatar: u.avatar, pk: u.pk || null });
+export const okPk = s => typeof s === "string" && s.length < 400 && /^\{"kty":"EC","crv":"P-256","x":"[\w-]{43}","y":"[\w-]{43}"\}$/.test(s);
+export const okWk = w => w && typeof w === "object" && ["salt", "iv", "ct"].every(k => typeof w[k] === "string" && w[k].length < 3000 && /^[\w+/=]+$/.test(w[k]));
+export const okSealed = s => typeof s === "string" && s.length < 12000 && /^1\.[\w+/=]+\.[\w+/=]+$/.test(s);
 export const cleanName = s => String(s || "").replace(/[<>]/g, "").trim().slice(0, 30);
 export const convoKey = (a, b) => `c:${[a, b].sort().join(":")}`;
 export const dayStr = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
