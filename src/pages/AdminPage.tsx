@@ -1,0 +1,212 @@
+import { useCallback, useEffect, useState } from "react";
+import { ArrowLeft, Download, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { api, getToken } from "@/lib/api";
+
+type Tab = "overview" | "people" | "feedback" | "reports" | "team";
+const TABS: { id: Tab; label: string }[] = [{ id: "overview", label: "Overview" }, { id: "people", label: "People" }, { id: "feedback", label: "Tune ratings" }, { id: "reports", label: "Reports" }, { id: "team", label: "Team and notices" }];
+const when = (t?: number | null) => (t ? new Date(t).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Never");
+const errText = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
+
+function Card({ title, children, right }: { title?: string; children: React.ReactNode; right?: React.ReactNode }) {
+  return <section className="glass rounded-3xl p-5">{(title || right) && <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-lg font-semibold">{title}</h2>{right}</div>}{children}</section>;
+}
+function Stat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
+  return <div className="glass rounded-2xl p-4"><div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-1 text-3xl font-semibold">{value}</div>{hint && <div className="text-xs text-muted-foreground">{hint}</div>}</div>;
+}
+function Bars({ data, k, label }: { data: { day: string; [k: string]: number | string }[]; k: string; label: string }) {
+  const max = Math.max(1, ...data.map(d => +d[k]));
+  return (
+    <div>
+      <div className="mb-2 text-sm font-medium">{label}</div>
+      <div className="flex h-24 items-end gap-1" role="img" aria-label={`${label} over the last 14 days`}>
+        {data.map(d => <div key={d.day} className="flex h-full flex-1 items-end"><div className="w-full rounded-t bg-primary/70" style={{ height: `${Math.max(3, (+d[k] / max) * 100)}%` }} title={`${d.day}: ${d[k]}`} /></div>)}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-muted-foreground"><span>{data[0]?.day}</span><span>{data[data.length - 1]?.day}</span></div>
+    </div>
+  );
+}
+function Pill({ children, tone = "plain" }: { children: React.ReactNode; tone?: "plain" | "good" | "warn" }) {
+  const c = tone === "good" ? "bg-success/15 text-success" : tone === "warn" ? "bg-accent/20 text-foreground" : "bg-secondary text-muted-foreground";
+  return <span className={`rounded-full px-2 py-0.5 text-xs ${c}`}>{children}</span>;
+}
+
+// ---------------- Overview ----------------
+type Overview = { totals: { users: number; ratings: number; reports: number; admins: number }; announce: { text: string } | null; series: { day: string; signups: number; messages: number; active: number; ratings: number }[]; week: { signups: number; messages: number; active: number }; system: { storage: boolean; region: string; node: string } };
+function OverviewTab() {
+  const [o, setO] = useState<Overview | null>(null); const [e, setE] = useState("");
+  const load = useCallback(() => api<Overview>("admin-overview").then(setO).catch(x => setE(errText(x))), []);
+  useEffect(() => { load(); }, [load]);
+  if (e) return <p className="text-destructive">{e}</p>; if (!o) return <p className="text-muted-foreground">Loading...</p>;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="People" value={o.totals.users} hint={`${o.week.signups} joined this week`} />
+        <Stat label="Active today" value={o.week.active} />
+        <Stat label="Messages this week" value={o.week.messages} />
+        <Stat label="Shared ratings" value={o.totals.ratings} />
+      </div>
+      <Card title="Last 14 days" right={<Button size="sm" variant="ghost" className="rounded-full" onClick={load}><RefreshCw className="mr-1 h-3.5 w-3.5" />Refresh</Button>}>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Bars data={o.series} k="signups" label="New sign-ups" /><Bars data={o.series} k="active" label="People active" />
+          <Bars data={o.series} k="messages" label="Messages sent" /><Bars data={o.series} k="ratings" label="Tune ratings shared" />
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">Counts start from when this panel was released. Active means opened the app at least once that day (UTC).</p>
+      </Card>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Card title="Needs attention"><ul className="space-y-1 text-sm"><li>Reports filed: <b>{o.totals.reports}</b> (see Reports for the open ones)</li><li>Notice showing now: {o.announce ? <b>"{o.announce.text}"</b> : <span className="text-muted-foreground">none</span>}</li></ul></Card>
+        <Card title="System"><ul className="space-y-1 text-sm"><li>Storage: {o.system.storage ? <Pill tone="good">connected</Pill> : <Pill tone="warn">not connected</Pill>}</li><li>Region: {o.system.region}</li><li>Admins: {o.totals.admins}</li></ul></Card>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- People ----------------
+type U = { id: string; username: string; name: string; created?: number; suspended: boolean; lastActive: number | null; friends: number; admin: boolean };
+function PeopleTab() {
+  const [q, setQ] = useState(""); const [off, setOff] = useState(0); const [d, setD] = useState<{ total: number; users: U[] } | null>(null); const [msg, setMsg] = useState("");
+  const load = useCallback(() => api<{ total: number; users: U[] }>(`admin-users?q=${encodeURIComponent(q)}&offset=${off}`).then(setD).catch(x => setMsg(errText(x))), [q, off]);
+  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [load]);
+  const act = async (u: U, op: string) => {
+    if (op === "delete" && !confirm(`Delete ${u.username} and all their server data? This cannot be undone.`)) return;
+    if (op === "suspend" && !confirm(`Pause ${u.username}? They will be signed out and cannot sign in.`)) return;
+    if (op === "reset-password" && !confirm(`Make a new temporary password for ${u.username}? Their current sessions end.`)) return;
+    try { const r = await api<{ password?: string }>("admin-user", { body: { id: u.id, op } }); setMsg(r.password ? `New password for ${u.username}: ${r.password}  (shown once. Share it privately and ask them to change it.)` : "Done."); load(); } catch (e) { setMsg(errText(e)); }
+  };
+  return (
+    <Card title={`People${d ? ` (${d.total})` : ""}`}>
+      <div className="relative mb-3 max-w-sm"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Search by username" value={q} onChange={e => { setQ(e.target.value); setOff(0); }} /></div>
+      {msg && <p className="mb-3 break-all rounded-xl bg-secondary px-3 py-2 text-sm">{msg}</p>}
+      <div className="divide-y divide-border">
+        {d?.users.map(u => (
+          <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+            <div><div className="font-medium">{u.name} <span className="text-sm text-muted-foreground">@{u.username}</span> {u.admin && <Pill tone="good">admin</Pill>} {u.suspended && <Pill tone="warn">paused</Pill>}</div><div className="text-xs text-muted-foreground">Joined {when(u.created)} · Last seen {when(u.lastActive)} · {u.friends} friends</div></div>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="outline" className="rounded-full" onClick={() => act(u, "reset-password")}>New password</Button>
+              {!u.admin && (u.suspended ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => act(u, "unsuspend")}>Unpause</Button> : <Button size="sm" variant="outline" className="rounded-full" onClick={() => act(u, "suspend")}>Pause</Button>)}
+              {!u.admin && <Button size="sm" variant="ghost" className="rounded-full text-destructive" onClick={() => act(u, "delete")}>Delete</Button>}
+            </div>
+          </div>
+        ))}
+        {d && !d.users.length && <p className="py-3 text-sm text-muted-foreground">No one found.</p>}
+      </div>
+      {d && d.total > 25 && <div className="mt-3 flex items-center gap-2 text-sm"><Button size="sm" variant="outline" disabled={off === 0} onClick={() => setOff(Math.max(0, off - 25))}>Previous</Button><span className="text-muted-foreground">{off + 1} to {Math.min(off + 25, d.total)} of {d.total}</span><Button size="sm" variant="outline" disabled={off + 25 >= d.total} onClick={() => setOff(off + 25)}>Next</Button></div>}
+      <p className="mt-3 text-xs text-muted-foreground">Journals, plans and check-ins live only on each person's device, so they are never visible here. Admins never see private messages from this panel.</p>
+    </Card>
+  );
+}
+
+// ---------------- Feedback ----------------
+type FbItem = { id: string; ts: number; rating: "up" | "down"; reason: string; flow: string; step: string; prev: string; user: string; reply: string; note: { label: string; better: string } | null };
+type FbResp = { total: number; sampled: number; stats: { up: number; down: number; reasons: Record<string, number>; flows: Record<string, { up: number; down: number }> }; items: FbItem[] };
+function FeedbackRow({ i, reload }: { i: FbItem; reload: () => void }) {
+  const [better, setBetter] = useState(i.note?.better || ""); const [label, setLabel] = useState(i.note?.label || "");
+  const save = async (l = label) => { await api("admin-feedback", { body: { op: "annotate", id: i.id, label: l, better } }).catch(() => {}); };
+  return (
+    <div className="rounded-2xl border border-border p-3 text-sm">
+      <div className="mb-1 flex flex-wrap items-center gap-2"><Pill tone={i.rating === "up" ? "good" : "warn"}>{i.rating === "up" ? "Thumbs up" : "Thumbs down"}</Pill>{i.reason && <Pill>{i.reason}</Pill>}{i.flow && <Pill>{i.flow}{i.step ? ` / ${i.step}` : ""}</Pill>}<span className="text-xs text-muted-foreground">{when(i.ts)}</span></div>
+      {i.prev && <p className="text-muted-foreground">Tune: {i.prev}</p>}
+      <p><b>Person:</b> {i.user || "(chip or empty)"}</p>
+      <p><b>Tune replied:</b> {i.reply}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {(["good", "bad"] as const).map(l => <Button key={l} size="sm" variant={label === l ? "hero" : "outline"} className="rounded-full" onClick={() => { const n = label === l ? "" : l; setLabel(n); save(n); }}>{l === "good" ? "Good example" : "Bad example"}</Button>)}
+        <Button size="sm" variant="ghost" className="rounded-full text-destructive" onClick={async () => { if (confirm("Remove this row from the data?")) { await api("admin-feedback", { body: { op: "delete", id: i.id } }); reload(); } }}>Remove</Button>
+      </div>
+      <Input className="mt-2" placeholder="Write a better reply (becomes training data)" value={better} onChange={e => setBetter(e.target.value)} onBlur={() => save()} />
+    </div>
+  );
+}
+function FeedbackTab() {
+  const [f, setF] = useState({ rating: "", reason: "", flow: "" }); const [d, setD] = useState<FbResp | null>(null); const [e, setE] = useState("");
+  const load = useCallback(() => api<FbResp>(`admin-feedback?rating=${f.rating}&reason=${encodeURIComponent(f.reason)}&flow=${f.flow}`).then(setD).catch(x => setE(errText(x))), [f]);
+  useEffect(() => { load(); }, [load]);
+  const exp = async () => { const r = await fetch("/api/admin-export", { headers: { Authorization: "Bearer " + getToken() } }); if (!r.ok) return alert("Not allowed."); const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = "tune-feedback.jsonl"; a.click(); };
+  if (e) return <p className="text-destructive">{e}</p>; if (!d) return <p className="text-muted-foreground">Loading...</p>;
+  const pct = d.stats.up + d.stats.down ? Math.round((d.stats.up / (d.stats.up + d.stats.down)) * 100) : 0;
+  const flows = Object.entries(d.stats.flows).sort((a, b) => b[1].down - a[1].down);
+  const sel = "h-9 rounded-full border border-border bg-background px-3 text-sm";
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4"><Stat label="Shared ratings" value={d.total} /><Stat label="Thumbs up" value={`${pct}%`} hint={`${d.stats.up} up, ${d.stats.down} down`} /><Stat label="Top complaint" value={<span className="text-xl">{Object.entries(d.stats.reasons).sort((a, b) => b[1] - a[1])[0]?.[0] || "None yet"}</span>} /><Stat label="Weakest topic" value={<span className="text-xl">{flows[0] && flows[0][1].down ? flows[0][0] : "None yet"}</span>} /></div>
+      <Card title="Ratings by topic">
+        <div className="space-y-1.5 text-sm">{flows.map(([n, v]) => <div key={n} className="flex items-center gap-3"><span className="w-24 shrink-0">{n}</span><div className="flex h-3 flex-1 overflow-hidden rounded-full bg-secondary"><div className="bg-success" style={{ width: `${(v.up / (v.up + v.down)) * 100}%` }} /><div className="bg-accent" style={{ width: `${(v.down / (v.up + v.down)) * 100}%` }} /></div><span className="w-16 text-right text-xs text-muted-foreground">{v.up} / {v.down}</span></div>)}{!flows.length && <p className="text-muted-foreground">Nothing shared yet.</p>}</div>
+      </Card>
+      <Card title="Rated replies" right={<Button size="sm" variant="hero" className="rounded-full" onClick={exp}><Download className="mr-1 h-3.5 w-3.5" />Download training data</Button>}>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <select className={sel} value={f.rating} onChange={e => setF({ ...f, rating: e.target.value })}><option value="">All ratings</option><option value="down">Thumbs down</option><option value="up">Thumbs up</option></select>
+          <select className={sel} value={f.reason} onChange={e => setF({ ...f, reason: e.target.value })}><option value="">Any reason</option>{Object.keys(d.stats.reasons).map(r => <option key={r}>{r}</option>)}</select>
+          <select className={sel} value={f.flow} onChange={e => setF({ ...f, flow: e.target.value })}><option value="">Any topic</option>{Object.keys(d.stats.flows).map(r => <option key={r}>{r}</option>)}</select>
+        </div>
+        <div className="space-y-2">{d.items.map(i => <FeedbackRow key={i.id} i={i} reload={load} />)}{!d.items.length && <p className="text-sm text-muted-foreground">No rows match.</p>}</div>
+        <p className="mt-3 text-xs text-muted-foreground">Showing the newest {d.items.length} of {d.sampled}. The download includes every row plus your good/bad labels and better replies, one JSON per line, ready for training.</p>
+      </Card>
+    </div>
+  );
+}
+
+// ---------------- Reports ----------------
+type Rep = { id: string; fromName: string; againstName: string; againstId: string; reason: string; text: string; ts: number; status: string; suspended: boolean; note?: string; by?: string };
+function ReportsTab() {
+  const [r, setR] = useState<Rep[] | null>(null); const [open, setOpen] = useState(true);
+  const load = useCallback(() => api<{ reports: Rep[] }>("admin-reports").then(x => setR(x.reports)), []);
+  useEffect(() => { load(); }, [load]);
+  if (!r) return <p className="text-muted-foreground">Loading...</p>;
+  const list = r.filter(x => (x.status === "open") === open);
+  return (
+    <Card title="Reports from people" right={<div className="flex gap-1">{[true, false].map(o => <Button key={String(o)} size="sm" variant={open === o ? "hero" : "outline"} className="rounded-full" onClick={() => setOpen(o)}>{o ? "Open" : "Resolved"}</Button>)}</div>}>
+      <div className="space-y-2">{list.map(x => (
+        <div key={x.id} className="rounded-2xl border border-border p-3 text-sm">
+          <div><b>@{x.fromName}</b> reported <b>@{x.againstName}</b> <Pill>{x.reason}</Pill> <span className="text-xs text-muted-foreground">{when(x.ts)}</span></div>
+          {x.text && <p className="mt-1 text-muted-foreground">"{x.text}"</p>}
+          {x.status !== "open" && <p className="mt-1 text-xs text-muted-foreground">Resolved by {x.by}{x.note ? `: ${x.note}` : ""}</p>}
+          <div className="mt-2 flex gap-2">
+            {x.status === "open" ? <>
+              {!x.suspended && <Button size="sm" variant="outline" className="rounded-full" onClick={async () => { if (confirm(`Pause @${x.againstName}?`)) { await api("admin-user", { body: { id: x.againstId, op: "suspend" } }).catch(e => alert(errText(e))); load(); } }}>Pause them</Button>}
+              <Button size="sm" variant="hero" className="rounded-full" onClick={async () => { const note = prompt("Short note (optional)") || ""; await api("admin-reports", { body: { id: x.id, op: "resolve", note } }); load(); }}>Mark resolved</Button>
+            </> : <Button size="sm" variant="outline" className="rounded-full" onClick={async () => { await api("admin-reports", { body: { id: x.id, op: "reopen" } }); load(); }}>Reopen</Button>}
+          </div>
+        </div>))}
+        {!list.length && <p className="text-sm text-muted-foreground">{open ? "Nothing waiting. " : "Nothing resolved yet."}</p>}
+      </div>
+    </Card>
+  );
+}
+
+// ---------------- Team and notices ----------------
+type Audit = { ts: number; by: string; action: string; detail: string };
+function TeamTab() {
+  const [a, setA] = useState<{ root: string[]; added: { id: string; username: string; name: string }[] } | null>(null); const [name, setName] = useState(""); const [text, setText] = useState(""); const [lvl, setLvl] = useState("info"); const [log, setLog] = useState<Audit[]>([]); const [m, setM] = useState("");
+  const load = useCallback(() => { api<typeof a>("admin-admins").then(setA); api<{ items: Audit[] }>("admin-audit").then(x => setLog(x.items)); }, []);
+  useEffect(() => { load(); }, [load]);
+  return (
+    <div className="space-y-4">
+      <Card title="Notice for everyone">
+        <p className="mb-2 text-sm text-muted-foreground">Shows as a small banner at the top of the app until each person closes it. Send an empty notice to remove it.</p>
+        <Input maxLength={280} placeholder="For example: Scheduled maintenance tonight at 10pm" value={text} onChange={e => setText(e.target.value)} />
+        <div className="mt-2 flex flex-wrap items-center gap-2"><select className="h-9 rounded-full border border-border bg-background px-3 text-sm" value={lvl} onChange={e => setLvl(e.target.value)}><option value="info">Normal</option><option value="important">Important</option></select><Button size="sm" variant="hero" className="rounded-full" onClick={async () => { await api("admin-announce", { body: { text, level: lvl } }); setM(text ? "Notice is live." : "Notice removed."); setText(""); load(); }}>{text ? "Publish" : "Remove notice"}</Button>{m && <span className="text-sm text-muted-foreground">{m}</span>}</div>
+      </Card>
+      <Card title="Admins">
+        <ul className="space-y-1 text-sm">{a?.root.map(r => <li key={r}>@{r} <Pill tone="good">set in server settings</Pill></li>)}{a?.added.map(u => <li key={u.id} className="flex items-center gap-2">@{u.username} <Pill>added here</Pill><button className="text-xs text-destructive" onClick={async () => { await api("admin-admins", { body: { username: u.username, op: "remove" } }); load(); }}>Remove</button></li>)}</ul>
+        <div className="mt-3 flex gap-2"><Input className="max-w-xs" placeholder="Username to make admin" value={name} onChange={e => setName(e.target.value)} /><Button size="sm" variant="outline" className="rounded-full" onClick={async () => { try { await api("admin-admins", { body: { username: name, op: "add" } }); setName(""); load(); } catch (e) { alert(errText(e)); } }}>Add admin</Button></div>
+      </Card>
+      <Card title="Recent admin actions"><div className="max-h-80 space-y-1 overflow-auto text-sm">{log.map((l, i) => <div key={i} className="flex gap-3"><span className="w-40 shrink-0 text-xs text-muted-foreground">{when(l.ts)}</span><span>@{l.by} · {l.action.replace(/-/g, " ")} {l.detail && <span className="text-muted-foreground">({l.detail})</span>}</span></div>)}{!log.length && <p className="text-muted-foreground">Nothing yet.</p>}</div></Card>
+    </div>
+  );
+}
+
+export default function AdminPage() {
+  const [tab, setTab] = useState<Tab>("overview"); const [state, setState] = useState<"checking" | "out" | "no" | "yes">("checking");
+  useEffect(() => { if (!getToken()) { setState("out"); return; } api<{ admin: boolean }>("me").then(r => setState(r.admin ? "yes" : "no")).catch(() => setState("out")); }, []);
+  const shell = (c: React.ReactNode) => <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-5 text-center">{c}<a href="/" className="text-sm text-primary underline">Back to Cognitune</a></div>;
+  if (state === "checking") return shell(<p className="text-muted-foreground">Checking...</p>);
+  if (state === "out") return shell(<><h1 className="text-2xl font-semibold">Please sign in first</h1><p className="text-muted-foreground">Sign in to Cognitune with your admin account, then come back to this page.</p></>);
+  if (state === "no") return shell(<><h1 className="text-2xl font-semibold">This page is for the team</h1><p className="text-muted-foreground">Your account is not an admin.</p></>);
+  return (
+    <div className="mx-auto min-h-screen max-w-5xl px-5 pb-16 pt-6">
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><a href="/" aria-label="Back to the app" className="rounded-full p-2 hover:bg-secondary"><ArrowLeft className="h-5 w-5" /></a><h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="h-6 w-6 text-primary" />Cognitune admin</h1></div></header>
+      <nav className="mb-5 flex flex-wrap gap-1.5" aria-label="Admin sections">{TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`rounded-full px-4 py-2 text-sm font-medium ${tab === t.id ? "bg-primary text-primary-foreground" : "bg-secondary/60 text-muted-foreground hover:text-foreground"}`}>{t.label}</button>)}</nav>
+      {tab === "overview" && <OverviewTab />}{tab === "people" && <PeopleTab />}{tab === "feedback" && <FeedbackTab />}{tab === "reports" && <ReportsTab />}{tab === "team" && <TeamTab />}
+    </div>
+  );
+}

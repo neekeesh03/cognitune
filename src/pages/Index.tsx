@@ -4,6 +4,7 @@ import { CheckInTab } from "@/components/CheckInTab";
 import { TodayTab } from "@/components/TodayTab";
 import { TuneTab } from "@/components/TuneTab";
 import { PlanTab } from "@/components/PlanTab";
+import { AnnounceBanner } from "@/components/AnnounceBanner";
 import { CircleTab } from "@/components/CircleTab";
 import { MeTab } from "@/components/MeTab";
 import { FxHost } from "@/components/FxHost";
@@ -71,6 +72,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   return (
     <div className="min-h-screen pb-28">
       <FxHost />
+      <AnnounceBanner />
       {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart onStarted={() => {}} onDone={() => game.earn(live.solo ? "timer" : "buddy")} onClose={() => setLive(null)} />}
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <div className="flex items-center gap-2.5">

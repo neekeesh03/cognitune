@@ -85,6 +85,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><Avatar spec={f.avatar} size={60} /><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
           <div><h1 className="text-3xl">{f.name}</h1><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : "Away. Your messages will be waiting."}</div></div></div>
+        <button aria-label={`Report ${f.name}`} className="p-2 text-xs text-muted-foreground hover:text-foreground" onClick={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Cognitune team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</button>
         <button aria-label={`Remove ${f.name}`} className="p-2 text-muted-foreground hover:text-foreground" onClick={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}><UserMinus className="h-4 w-4" /></button>
       </div>
       <div className="glass flex-1 space-y-2 rounded-3xl p-4" style={{ minHeight: 240 }}>
