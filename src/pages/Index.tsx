@@ -17,6 +17,9 @@ import { usePlan } from "@/store/usePlan";
 import { usePeople, totalUnread } from "@/store/usePeople";
 import { useAuth, type AuthApi, type User } from "@/store/useAuth";
 import { toast } from "@/lib/fx";
+import { suggestSteps, uid } from "@/engine/plan";
+import { dkey } from "@/engine/game";
+import type { Action } from "@/engine/dialogue";
 
 const TABS = [
   { id: "today", label: "Today", icon: Home },
@@ -45,17 +48,26 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const { history, add, update, clear, remove } = useHistory();
   const j = useJournal(history); const game = useGame(); const plan = usePlan();
   const [tab, setTab] = useState<Tab>("today"); const [openId, setOpenId] = useState<string | null>(null);
-  const [live, setLive] = useState<{ name: string; dur: number } | null>(null);
+  const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean } | null>(null);
   const [dark, setDark] = useTheme();
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
   const people = usePeople(true, f => { if (!(tabRef.current === "circle" && openRef.current === f.id)) toast(f.name, f.last?.text.slice(0, 60) ?? "New message"); });
   const unread = totalUnread(people.friends);
+  const onTuneAction = (a: Action) => {
+    if (a.type === "timer") setLive({ title: a.task, dur: a.minutes, solo: true });
+    else if (a.type === "task") { plan.addTask({ title: a.title, steps: suggestSteps(a.title) }); toast("Added to Plan", a.title); }
+    else if (a.type === "tasks") { a.items.forEach(t => plan.addTask({ title: t, steps: [] })); toast("Saved to Plan", `${a.items.length} things`); }
+    else if (a.type === "block") { plan.addBlock({ title: a.title, day: dkey(), start: a.start, dur: a.dur }); toast("Booked in Plan", a.title); }
+    else if (a.type === "earn") game.earn(a.kind === "started" ? "started" : a.kind === "task" ? "task" : "journal", { early: new Date().getHours() < 9 });
+    else if (a.type === "goto") setTab(a.tab as Tab);
+  };
+  void uid;
   const lastTask = history[history.length - 1]?.task && history[history.length - 1].task !== "Untitled" ? history[history.length - 1].task : plan.tasks.find(t => !t.doneAt)?.title ?? "";
   void lastTask;
   return (
     <div className="min-h-screen pb-28">
       <FxHost />
-      {live && <FocusTimer color="var(--f-flexion)" task={`Focusing with ${live.name}`} minutes={live.dur} autoStart onStarted={() => {}} onDone={() => game.earn("buddy")} onClose={() => setLive(null)} />}
+      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart onStarted={() => {}} onDone={() => game.earn(live.solo ? "timer" : "buddy")} onClose={() => setLive(null)} />}
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <div className="flex items-center gap-2.5">
           <div className="h-7 w-7 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} />
@@ -69,9 +81,9 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <main className="mx-auto max-w-5xl overflow-x-clip px-5 pt-8">
         {tab === "today" && <TodayTab j={j} go={t => setTab(t as Tab)} game={game} plan={plan} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} />}
-        {tab === "tune" && <TuneTab j={j} earnChat={() => game.earn("chat")} earnJournal={() => game.earn("journal")} />}
+        {tab === "tune" && <TuneTab j={j} earnChat={() => game.earn("chat")} earnJournal={() => game.earn("journal")} onAction={onTuneAction} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); }} onDone={() => game.earn("timer")} /></div>
-        {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur) => setLive({ name, dur })} />}
+        {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur) => setLive({ title: `Focusing with ${name}`, dur })} />}
         {tab === "me" && <MeTab auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>
       <nav className="glass fixed bottom-5 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
