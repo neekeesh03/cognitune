@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, X } from "lucide-react";
+import { LofiPanel } from "@/components/LofiPanel";
 import { Avatar } from "@/components/Avatar";
 import { useBuddy, type Buddy } from "@/net/useBuddy";
 import type { AvatarSpec } from "@/engine/avatar";
@@ -13,6 +14,7 @@ export function FocusTimer({ color, task, onStarted, onClose, onDone, minutes, a
   const [left, setLeft] = useState(start);
   const [run, setRun] = useState(!!autoStart);
   const [done, setDone] = useState(false);
+  const [how, setHow] = useState<string | null>(null);
   const fired = useRef(false);
   const buddyState = useBuddy(buddy, done ? "done" : run ? "working" : "waiting");
   const first = buddy?.name.split(" ")[0] ?? "";
@@ -44,6 +46,9 @@ export function FocusTimer({ color, task, onStarted, onClose, onDone, minutes, a
       {!minutes && !run && !done && left === total && (
         <div className="mt-8 flex gap-2">{PRESETS.map(p => <button key={p.m} onClick={() => { setTotal(p.m * 60); setLeft(p.m * 60); }} className={`rounded-full border px-4 py-1.5 text-sm transition ${total === p.m * 60 ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{p.label}</button>)}</div>
       )}
+      {!done && <div className="mt-6 w-full max-w-sm px-6"><LofiPanel compact /></div>}
+      {done && !how && <div className="mt-6 text-center"><p className="mb-2 text-sm text-muted-foreground">How did it go?</p><div className="flex flex-wrap justify-center gap-2">{[["Did it", "Nice. That counts."], ["Got going", "Starting was the hard part. You did it."], ["Not today", "That is okay. You showed up, and tomorrow is a fresh start."]].map(([k, v]) => <button key={k} onClick={() => setHow(v)} className="rounded-full border border-border px-4 py-1.5 text-sm hover:border-primary hover:text-primary">{k}</button>)}</div></div>}
+      {done && how && <p className="mt-6 max-w-xs text-center text-sm" role="status">{how}</p>}
       <div className="mt-8 flex gap-3">
         {!done && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={() => setRun(r => !r)}>{run ? <><Pause className="mr-2 h-4 w-4" />Pause</> : <><Play className="mr-2 h-4 w-4" />{left === total ? "Start" : "Resume"}</>}</Button>}
         {done && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={onClose}>Back</Button>}

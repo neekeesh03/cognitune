@@ -15,6 +15,7 @@ export function useGame() {
       if (kind === "chat") s.counts["chat_" + day] = (prev.counts["chat_" + day] || 0) + 1;
       if (n) { s.sparks += n; s.lifetime += n; }
       let msg: string | undefined;
+      if (STREAK_EVENTS.includes(kind)) s.counts["s_" + day] = (prev.counts["s_" + day] || 0) + 1;
       if (STREAK_EVENTS.includes(kind)) { const r = bumpStreak(s, day); s = r.g; msg = r.msg; s.todayActive = true; }
       s.today = day;
       const have = new Set(s.badges); const add = (id: string) => have.add(id);

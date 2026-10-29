@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Garden } from "@/components/Garden";
 import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
+import { StartsCard } from "@/components/StartsCard";
 import { PlusCard } from "@/components/PlusCard";
 import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
@@ -43,10 +44,11 @@ export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, o
             <div className="mx-auto mt-3 h-2.5 max-w-xs rounded-full bg-foreground/10"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${lv.pct * 100}%` }} /></div>
             <div className="mt-1 text-xs text-muted-foreground">{lv.level >= 8 ? "Fully grown" : `${lv.need - lv.into} sparks to the next stage`}</div>
           </div>
+          <StartsCard name={user.name} avatar={user.avatar} g={g} />
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="glass rounded-3xl p-4"><Flame className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-primode))" }} /><div className="text-3xl font-semibold">{g.streak.current}</div><div className="text-xs text-muted-foreground">day streak</div></div>
+            <div className="glass rounded-3xl p-4"><Flame className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-primode))" }} /><div className="text-3xl font-semibold">{g.streak.current}</div><div className="text-xs text-muted-foreground">showing-up days</div></div>
             <div className="glass rounded-3xl p-4"><Sparkles className="mx-auto h-6 w-6 text-primary" /><div className="text-3xl font-semibold">{g.sparks}</div><div className="text-xs text-muted-foreground">sparks to spend</div></div>
-            <div className="glass rounded-3xl p-4"><Snowflake className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-anchory))" }} /><div className="text-3xl font-semibold">{g.streak.freezes}</div><div className="text-xs text-muted-foreground">streak freezes</div></div>
+            <div className="glass rounded-3xl p-4"><Snowflake className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-anchory))" }} /><div className="text-3xl font-semibold">{g.streak.freezes}</div><div className="text-xs text-muted-foreground">rest days saved</div></div>
           </div>
           <p className="text-center text-xs text-muted-foreground">Best streak: {g.streak.best} {g.streak.best === 1 ? "day" : "days"}. A freeze covers a missed day so your streak stays safe. You earn one every 7 days.</p>
           <div className="glass flex items-center justify-between gap-3 rounded-3xl p-5">

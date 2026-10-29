@@ -12,6 +12,7 @@ import { FocusTimer } from "@/components/FocusTimer";
 import { AuthScreen } from "@/components/AuthScreen";
 import { UnlockScreen } from "@/components/UnlockScreen";
 import { MeetFriend } from "@/components/MeetFriend";
+import { LofiButton } from "@/components/LofiPanel";
 import { PulseCard } from "@/components/PulseCard";
 import type { AvatarSpec } from "@/engine/avatar";
 import { track } from "@/lib/track";
@@ -90,6 +91,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
           <span className="text-2xl font-semibold tracking-tight">Cognitune</span>
         </div>
         <div className="flex items-center gap-2">
+          <LofiButton />
           <button aria-label="Switch between light and dark" onClick={() => setDark(!dark)} className="glass rounded-full p-2.5 text-muted-foreground hover:text-foreground">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
           <button aria-label="Log out" title="Log out" onClick={() => { if (confirm("Log out of Cognitune on this device?")) auth.logout(); }} className="glass flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground"><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Log out</span></button>
           <button aria-label="Your profile" onClick={() => setTab("me")}><Avatar spec={user.avatar} size={40} ring /></button>

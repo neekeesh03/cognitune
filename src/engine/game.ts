@@ -56,11 +56,11 @@ export function bumpStreak(g: GameState, day = dkey()): { g: GameState; msg?: st
     if (gap === 1) s.current += 1;
     else if (gap > 1) {
       const missed = gap - 1;
-      if (s.freezes >= missed) { s.freezes -= missed; s.current += 1; msg = `A streak freeze covered ${missed === 1 ? "yesterday" : `${missed} days`}. Your streak is safe.`; }
-      else { s.current = 1; msg = "Fresh start. Your best streak is kept."; }
+      if (s.freezes >= missed) { s.freezes -= missed; s.current += 1; msg = `A rest day covered ${missed === 1 ? "yesterday" : `${missed} days`}. Your showing-up days are safe.`; }
+      else { s.current = 1; msg = "Fresh start. Your best run is kept."; }
     }
   }
-  if (s.current > 0 && s.current % 7 === 0 && s.freezes < 2) { s.freezes += 1; msg = (msg ? msg + " " : "") + "You earned a streak freeze."; }
+  if (s.current > 0 && s.current % 7 === 0 && s.freezes < 2) { s.freezes += 1; msg = (msg ? msg + " " : "") + "You earned a rest day."; }
   s.best = Math.max(s.best, s.current); s.lastDay = day;
   return { g: { ...g, streak: s }, msg };
 }
