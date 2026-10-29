@@ -18,6 +18,7 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: { display: ["Inter Tight", "system-ui", "sans-serif"], sans: ["Inter Tight", "system-ui", "sans-serif"] },
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
