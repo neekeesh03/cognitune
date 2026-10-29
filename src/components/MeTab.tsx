@@ -1,12 +1,13 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Flame, Gift, Lock, Snowflake, Sparkles, Trash2, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Garden } from "@/components/Garden";
 import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
+import type { FeedbackApi } from "@/store/useFeedback";
 import type { AvatarSpec } from "@/engine/avatar";
 import { InsightsTab } from "@/components/InsightsTab";
 import { BADGES, dkey, levelFor } from "@/engine/game";
@@ -15,10 +16,11 @@ import type { Profile } from "@/engine/profile";
 import type { CheckIn } from "@/engine/analytics";
 
 const KEYS = ["cognitune.history.v2", "cognitune.entries.v1", "cognitune.settings.v1", "cognitune.game.v1", "cognitune.tasks.v1", "cognitune.blocks.v1"];
-interface Props { auth: AuthApi; game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
+interface Props { fb: FeedbackApi; auth: AuthApi; game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
 
-export function MeTab({ auth, game, profile, history, onFollowUp, onClear, onDelete }: Props) {
+export function MeTab({ fb, auth, game, profile, history, onFollowUp, onClear, onDelete }: Props) {
   const [view, setView] = useState<"progress" | "rewards" | "insights" | "profile" | "data">("progress");
+  const [admin, setAdmin] = useState(false); useEffect(() => { api<{ admin: boolean }>("me").then(r => setAdmin(!!r.admin)).catch(() => {}); }, []);
   const user = auth.user!; const [pname, setPname] = useState(user.name); const [pav, setPav] = useState<AvatarSpec>(user.avatar); const [pmsg, setPmsg] = useState(""); const [delPw, setDelPw] = useState("");
   const saveProfile = async () => { setPmsg(""); try { const r = await api<{ user: typeof user }>("profile", { body: { name: pname, avatar: pav } }); auth.updateUser(r.user); setPmsg("Saved."); } catch (e) { setPmsg((e as Error).message); } };
   const deleteAccount = async () => { if (!confirm("Delete your account and all your messages? This cannot be undone.")) return; try { await api("account", { method: "DELETE", body: { password: delPw } }); auth.logout(); } catch (e) { setPmsg((e as Error).message); } };
@@ -92,6 +94,13 @@ export function MeTab({ auth, game, profile, history, onFollowUp, onClear, onDel
 
       {view === "data" && (
         <div className="space-y-5">
+          <div className="glass rounded-3xl p-5 text-sm">
+            <div className="mb-1 text-lg font-semibold">Help improve Tune</div>
+            <p className="text-muted-foreground">When you tap the thumbs on a Tune reply, that rating stays on this device. If you turn this on, each rated reply is also shared anonymously, together with the message you sent before it and a short label of the conversation step. Your name, username and journal are never included. Because nothing identifies you, shared ratings cannot be deleted later.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3"><Button variant={fb.share ? "hero" : "outline"} className="rounded-full" onClick={() => fb.setShare(!fb.share)}>{fb.share ? "Sharing is on. Turn off" : "Turn on sharing"}</Button><span className="text-xs text-muted-foreground">{fb.items.length} {fb.items.length === 1 ? "rating" : "ratings"} on this device</span></div>
+            <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" className="rounded-full" disabled={!fb.items.length} onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(fb.items, null, 1)], { type: "application/json" })); a.download = "my-tune-ratings.json"; a.click(); }}><Download className="mr-1 h-3.5 w-3.5" />Download my ratings</Button><Button size="sm" variant="ghost" className="rounded-full" disabled={!fb.items.length} onClick={() => confirm("Delete the ratings saved on this device?") && fb.clear()}>Delete my local ratings</Button></div>
+            {admin && <div className="mt-4 border-t border-border pt-3"><div className="font-semibold">Team</div><p className="text-muted-foreground">You can download every shared rating as training data.</p><Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={async () => { const r = await fetch("/api/feedback-export", { headers: { Authorization: "Bearer " + getToken() } }); if (!r.ok) return alert("Not allowed."); const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob()); a.download = "tune-feedback.jsonl"; a.click(); }}><Download className="mr-1 h-3.5 w-3.5" />Download training data</Button></div>}
+          </div>
           <div className="glass rounded-3xl p-5 text-sm">
             <div className="mb-1 text-lg font-semibold">Your personal data stays on this device</div>
             <p className="text-muted-foreground">Your journal, plans and rewards are saved on this device only. Clearing your browser data would erase them, and they do not follow you to other devices yet. Save a backup file now and then, and load it on another device to continue there.</p>

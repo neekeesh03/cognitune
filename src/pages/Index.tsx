@@ -16,6 +16,9 @@ import { useGame } from "@/store/useGame";
 import { usePlan } from "@/store/usePlan";
 import { usePeople, totalUnread } from "@/store/usePeople";
 import { useAuth, type AuthApi, type User } from "@/store/useAuth";
+import { useCalendar } from "@/store/useCalendar";
+import { useFeedback } from "@/store/useFeedback";
+import { itemsForDay } from "@/engine/calendar";
 import { toast } from "@/lib/fx";
 import { suggestSteps, uid } from "@/engine/plan";
 import { dkey } from "@/engine/game";
@@ -46,7 +49,8 @@ const Index = () => {
 
 function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const { history, add, update, clear, remove } = useHistory();
-  const j = useJournal(history); const game = useGame(); const plan = usePlan();
+  const j = useJournal(history); const game = useGame(); const plan = usePlan(); const cal = useCalendar(plan.blocks); const fb = useFeedback();
+  const agenda = itemsForDay(dkey(), plan.blocks, cal.events);
   const [tab, setTab] = useState<Tab>("today"); const [openId, setOpenId] = useState<string | null>(null);
   const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean } | null>(null);
   const [dark, setDark] = useTheme();
@@ -79,12 +83,12 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl overflow-x-clip px-5 pt-8">
-        {tab === "today" && <TodayTab j={j} go={t => setTab(t as Tab)} game={game} plan={plan} />}
-        {tab === "plan" && <PlanTab plan={plan} game={game} history={history} />}
-        {tab === "tune" && <TuneTab j={j} earnChat={() => game.earn("chat")} earnJournal={() => game.earn("journal")} onAction={onTuneAction} />}
+        {tab === "today" && <TodayTab j={j} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} />}
+        {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
+        {tab === "tune" && <TuneTab j={j} earnChat={() => game.earn("chat")} earnJournal={() => game.earn("journal")} onAction={onTuneAction} fb={fb} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); }} onDone={() => game.earn("timer")} /></div>
         {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur) => setLive({ title: `Focusing with ${name}`, dur })} />}
-        {tab === "me" && <MeTab auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
+        {tab === "me" && <MeTab fb={fb} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>
       <nav className="glass fixed bottom-5 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
         {TABS.map(t => { const I = t.icon, on = tab === t.id; return (

@@ -3,7 +3,7 @@ import type { TextSignals } from "./text";
 import { themes } from "./text";
 import type { CheckIn } from "./analytics";
 
-export interface Entry { id: string; ts: number; kind: "journal" | "chat"; role: "user" | "friend"; text: string; prompt?: string; mood?: number; signals?: TextSignals }
+export interface Entry { id: string; ts: number; kind: "journal" | "chat"; role: "user" | "friend"; text: string; prompt?: string; mood?: number; signals?: TextSignals; meta?: { flow: string; step: string; user: string; prev: string } }
 export interface Profile {
   levels: Partial<Record<VarKey, { value: number; n: number; conf: number }>>;
   observed: Record<VarKey, number>;

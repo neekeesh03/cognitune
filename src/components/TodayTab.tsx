@@ -12,8 +12,9 @@ import type { GameApi } from "@/store/useGame";
 import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
 import { fmtTime } from "@/engine/plan";
+import { fmtClock, type CalItem } from "@/engine/calendar";
 
-export function TodayTab({ j, go, game, plan }: { j: JournalApi; go: (t: string) => void; game: GameApi; plan: PlanApi }) {
+export function TodayTab({ j, go, game, plan, agenda }: { j: JournalApi; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[] }) {
   const nextBlock = plan.blocks.filter(b => b.day === dkey() && !b.done).sort((a, b) => a.start - b.start)[0];
   const nextStep = plan.tasks.filter(t => !t.doneAt).flatMap(t => t.steps.filter(s => !s.done).map(s => ({ s, t })))[0];
   const boxReady = game.g.todayActive && game.g.boxDay !== dkey();
@@ -48,6 +49,8 @@ export function TodayTab({ j, go, game, plan }: { j: JournalApi; go: (t: string)
           <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Sparkles className="h-4 w-4 text-primary" /><b>{game.g.sparks}</b> sparks</span>
           {boxReady && <button onClick={game.openBox} className="glass flex animate-breathe items-center gap-1.5 rounded-full px-4 py-2 text-primary"><Gift className="h-4 w-4" />Open spark box</button>}
         </div>
+        {agenda.length > 0 && <div className="glass rounded-3xl p-5"><div className="mb-3 flex items-center justify-between"><span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Your day</span><button className="text-xs text-primary hover:underline" onClick={() => go("plan")}>Open calendar</button></div>
+          <div className="space-y-2">{agenda.slice(0, 5).map(i => <div key={i.kind + i.id} className="flex items-center gap-3 text-sm"><span className="w-16 shrink-0 text-xs text-muted-foreground">{i.allDay ? "All day" : fmtClock(i.start)}</span><span className={`truncate ${i.done ? "line-through opacity-60" : ""}`}>{i.title}</span><i className="ml-auto h-2 w-2 shrink-0 rounded-full" style={{ background: i.kind === "block" ? "hsl(var(--primary))" : "hsl(var(--f-grain))" }} /></div>)}</div></div>}
         <div className="glass rounded-3xl p-5">
           <div className="mb-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">Next up</div>
           {nextBlock ? <button className="w-full text-left" onClick={() => go("plan")}><div className="text-2xl font-semibold">{nextBlock.title}</div><div className="text-sm text-muted-foreground">{fmtTime(nextBlock.start)} · {nextBlock.dur} min · tap to open your plan</div></button>

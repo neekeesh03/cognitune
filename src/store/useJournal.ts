@@ -20,7 +20,7 @@ export function useJournal(history: CheckIn[]) {
     const e: Entry = { id: crypto.randomUUID(), ts: Date.now(), kind, role: "user", text, signals: analyze(text), ...extra };
     setEntries(p => [...p, e]); return e;
   }, []);
-  const addFriend = useCallback((text: string) => setEntries(p => [...p, { id: crypto.randomUUID(), ts: Date.now(), kind: "chat", role: "friend", text }]), []);
+  const addFriend = useCallback((text: string, meta?: Entry["meta"]) => { const e: Entry = { id: crypto.randomUUID(), ts: Date.now(), kind: "chat", role: "friend", text, meta }; setEntries(p => [...p, e]); return e; }, []);
   const remove = useCallback((id: string) => setEntries(p => p.filter(e => e.id !== id)), []);
   const clear = useCallback(() => setEntries([]), []);
   const set = useCallback((patch: Partial<Settings>) => setSettings(s => ({ ...s, ...patch })), []);

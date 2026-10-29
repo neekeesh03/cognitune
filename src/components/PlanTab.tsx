@@ -8,17 +8,19 @@ import { dkey } from "@/engine/game";
 import { timeOfDay, CheckIn } from "@/engine/analytics";
 import type { PlanApi } from "@/store/usePlan";
 import type { GameApi } from "@/store/useGame";
+import { CalendarView } from "@/components/CalendarView";
+import type { CalendarApi } from "@/store/useCalendar";
 
 const DURS = [15, 25, 45, 60, 90];
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 6am..10pm
 const shift = (day: string, n: number) => { const d = new Date(day + "T12:00"); d.setDate(d.getDate() + n); return dkey(d); };
 
-export function PlanTab({ plan, game, history }: { plan: PlanApi; game: GameApi; history: CheckIn[] }) {
-  const [view, setView] = useState<"todo" | "day">("todo");
+export function PlanTab({ plan, game, history, cal }: { plan: PlanApi; game: GameApi; history: CheckIn[]; cal: CalendarApi }) {
+  const [view, setView] = useState<"todo" | "day" | "cal">("todo");
   return (
-    <div className="animate-rise mx-auto max-w-2xl">
-      <div className="mb-6 flex w-fit gap-1 rounded-full bg-foreground/[.05] p-1">{([["todo", "Tiny to-dos"], ["day", "Day planner"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
-      {view === "todo" ? <Todos plan={plan} game={game} /> : <Day plan={plan} game={game} history={history} />}
+    <div className={`animate-rise mx-auto ${view === "cal" ? "max-w-3xl" : "max-w-2xl"}`}>
+      <div className="mb-6 flex w-fit gap-1 rounded-full bg-foreground/[.05] p-1">{([["todo", "Tiny to-dos"], ["day", "Day planner"], ["cal", "Calendar"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      {view === "todo" ? <Todos plan={plan} game={game} /> : view === "day" ? <Day plan={plan} game={game} history={history} /> : <CalendarView plan={plan} cal={cal} game={game} />}
     </div>
   );
 }
