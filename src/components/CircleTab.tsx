@@ -134,7 +134,7 @@ function Conversation({ f, me, people, game, startSession, back, openProfile }: 
   const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "The Corner" : f.name, dur, { sid, friendId: f.id, name: room ? "The Corner" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
   return (
     <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4" style={{ minHeight: "calc(100vh - 11rem)" }}>
-      <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/85 px-5 pb-2 pt-2 backdrop-blur-xl">
+      <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/95 px-5 pb-2 pt-2 shadow-sm backdrop-blur-xl">
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><button aria-label={`Open ${f.name}'s profile`} onClick={() => openProfile(f.username)}><Avatar spec={f.avatar} size={40} /></button><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
@@ -171,7 +171,7 @@ function Conversation({ f, me, people, game, startSession, back, openProfile }: 
         {chat.typing && <div className="flex items-end gap-2"><Avatar spec={f.avatar} size={28} /><div className="rounded-2xl rounded-bl-sm bg-foreground/[.07] px-4 py-3"><span className="inline-flex gap-1">{[0, 1, 2].map(i => <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: `${i * 0.15}s` }} />)}</span></div></div>}
         <div ref={end} />
       </div>
-      <div className="sticky bottom-24 z-20 space-y-2 rounded-3xl bg-background/80 pb-1 backdrop-blur-xl">
+      <div className="sticky bottom-24 z-20 space-y-2 rounded-3xl bg-background/95 pb-1 backdrop-blur-xl">
         <div className="flex flex-wrap gap-2">
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
         </div>
