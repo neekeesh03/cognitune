@@ -210,13 +210,13 @@ function TeamTab() {
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("overview"); const [state, setState] = useState<"checking" | "out" | "no" | "yes">("checking");
   useEffect(() => { if (!getToken()) { setState("out"); return; } api<{ admin: boolean }>("me").then(r => setState(r.admin ? "yes" : "no")).catch(() => setState("out")); }, []);
-  const shell = (c: React.ReactNode) => <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-5 text-center">{c}<a href="/" className="text-sm text-primary underline">Back to Cognitune</a></div>;
+  const shell = (c: React.ReactNode) => <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-5 text-center">{c}<a href="/" className="text-sm text-primary underline">Back to Lagomo</a></div>;
   if (state === "checking") return shell(<p className="text-muted-foreground">Checking...</p>);
-  if (state === "out") return shell(<><h1 className="text-2xl font-semibold">Please sign in first</h1><p className="text-muted-foreground">Sign in to Cognitune with your admin account, then come back to this page.</p></>);
+  if (state === "out") return shell(<><h1 className="text-2xl font-semibold">Please sign in first</h1><p className="text-muted-foreground">Sign in to Lagomo with your admin account, then come back to this page.</p></>);
   if (state === "no") return shell(<><h1 className="text-2xl font-semibold">This page is for the team</h1><p className="text-muted-foreground">Your account is not an admin.</p></>);
   return (
     <div className="mx-auto min-h-screen max-w-5xl px-5 pb-16 pt-6">
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><a href="/" aria-label="Back to the app" className="rounded-full p-2 hover:bg-secondary"><ArrowLeft className="h-5 w-5" /></a><h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="h-6 w-6 text-primary" />Cognitune admin</h1></div></header>
+      <header className="mb-5 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><a href="/" aria-label="Back to the app" className="rounded-full p-2 hover:bg-secondary"><ArrowLeft className="h-5 w-5" /></a><h1 className="flex items-center gap-2 text-2xl font-semibold"><ShieldCheck className="h-6 w-6 text-primary" />Lagomo admin</h1></div></header>
       <nav className="mb-5 flex flex-wrap gap-1.5" aria-label="Admin sections">{TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} className={`rounded-full px-4 py-2 text-sm font-medium ${tab === t.id ? "bg-primary text-primary-foreground" : "bg-secondary/60 text-muted-foreground hover:text-foreground"}`}>{t.label}</button>)}</nav>
       {tab === "overview" && <OverviewTab />}{tab === "experiments" && <ExperimentsTab />}{tab === "people" && <PeopleTab />}{tab === "reports" && <ReportsTab />}{tab === "team" && <TeamTab />}
     </div>

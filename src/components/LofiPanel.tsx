@@ -7,7 +7,7 @@ export function useLofi() {
   return lofi;
 }
 
-/** Mood chips + volume. Music is made live in the browser by Cognitune, lyric-free, and always optional. */
+/** Mood chips + volume. Music is made live in the browser by Lagomo, lyric-free, and always optional. */
 export function LofiPanel({ compact }: { compact?: boolean }) {
   const l = useLofi();
   return (
@@ -18,7 +18,7 @@ export function LofiPanel({ compact }: { compact?: boolean }) {
           return <button key={m.id} title={m.hint} aria-pressed={on} onClick={() => (on ? l.stop() : l.play(m.id))} className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition ${on ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>{on ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}{m.name}</button>;
         })}
       </div>
-      {!compact && <p className="text-center text-xs text-muted-foreground">{MOODS.find(m => m.id === l.moodId)?.hint}. Made live by Cognitune, no lyrics.</p>}
+      {!compact && <p className="text-center text-xs text-muted-foreground">{MOODS.find(m => m.id === l.moodId)?.hint}. Made live by Lagomo, no lyrics.</p>}
       <label className="mx-auto flex max-w-[220px] items-center gap-2 text-xs text-muted-foreground"><Volume2 className="h-4 w-4" /><input aria-label="Volume" type="range" min={0} max={1} step={0.05} value={l.volume} onChange={e => l.setVolume(+e.target.value)} className="w-full accent-[hsl(var(--primary))]" /></label>
     </div>
   );

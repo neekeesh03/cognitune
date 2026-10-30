@@ -82,7 +82,7 @@ export function InsightsTab({ profile, history, onFollowUp, onClear, onDelete }:
               <div className="flex gap-2"><Button size="sm" onClick={() => onFollowUp(x.id, true)}>Started</Button><Button size="sm" variant="outline" onClick={() => onFollowUp(x.id, false)}>Did not</Button></div>
             </div>
           ))}
-          <p className="text-xs text-muted-foreground">These labels let Cognitune learn your own threshold instead of relying on population defaults.</p>
+          <p className="text-xs text-muted-foreground">These labels let Lagomo learn your own threshold instead of relying on population defaults.</p>
         </CardContent>
       </Card>
 

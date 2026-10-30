@@ -7,7 +7,7 @@ export interface ChatMsg { id: string; ts: number; from: string; kind: "text" | 
 
 interface Raw { id: string; ts: number; from: string; kind: ChatMsg["kind"]; enc?: string; fileId?: string; text?: string; file?: ChatMsg["file"]; session?: ChatMsg["session"] }
 interface Content { text?: string; session?: ChatMsg["session"]; file?: { name: string; type: string; size: number; iv: string } }
-const NEEDS_PK = "Your friend needs to open Cognitune and sign in once to turn on private messaging before you can message them.";
+const NEEDS_PK = "Your friend needs to open Lagomo and sign in once to turn on private messaging before you can message them.";
 
 export function useChat(friendId: string | null, meId: string, friendPk: string | null = null) {
   const [messages, setMessages] = useState<ChatMsg[]>([]); const [online, setOnline] = useState(false); const [typing, setTyping] = useState(false); const [error, setError] = useState("");

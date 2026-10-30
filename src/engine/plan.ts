@@ -22,7 +22,7 @@ export const fmtTime = (min: number) => { const h = Math.floor(min / 60), m = mi
 const stamp = (day: string, min: number) => day.replace(/-/g, "") + "T" + String(Math.floor(min / 60)).padStart(2, "0") + String(min % 60).padStart(2, "0") + "00";
 
 export function googleLink(b: Block) {
-  const p = new URLSearchParams({ action: "TEMPLATE", text: b.title, dates: `${stamp(b.day, b.start)}/${stamp(b.day, b.start + b.dur)}`, details: "Planned with Cognitune" });
+  const p = new URLSearchParams({ action: "TEMPLATE", text: b.title, dates: `${stamp(b.day, b.start)}/${stamp(b.day, b.start + b.dur)}`, details: "Planned with Lagomo" });
   return "https://calendar.google.com/calendar/render?" + p.toString();
 }
 export function icsFor(blocks: Block[]) {

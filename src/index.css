@@ -153,3 +153,8 @@
 @media (prefers-reduced-motion: reduce) { .animate-breathe, .animate-morph, .animate-rise, .animate-float { animation: none; } }
 
 @keyframes fall { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(105vh) rotate(var(--r)); opacity: .9; } }
+
+/* Tune the rabbit hops once when you press Start */
+@keyframes lagomo-hop { 0% { transform: translateY(0) scale(1, 1); } 30% { transform: translateY(-22px) scale(.94, 1.08); } 60% { transform: translateY(0) scale(1.08, .92); } 80% { transform: translateY(-6px); } 100% { transform: translateY(0) scale(1, 1); } }
+.animate-hop { animation: lagomo-hop .7s ease-out; }
+@media (prefers-reduced-motion: reduce) { .animate-hop { animation: none; } }

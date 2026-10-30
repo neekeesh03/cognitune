@@ -30,7 +30,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
         <div className="mt-1 grid grid-cols-7 gap-1">{grid.map(d => { const k = dayKey(d), inM = d.getMonth() === month.m, dd = dots[k]; return (
           <button key={k} onClick={() => setSel(k)} aria-label={d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })} aria-pressed={sel === k} className={`flex h-12 flex-col items-center justify-center rounded-2xl text-sm transition ${sel === k ? "bg-primary text-primary-foreground" : k === today ? "border border-primary text-foreground" : "hover:bg-foreground/5"} ${inM ? "" : "opacity-35"}`}>
             {d.getDate()}<span className="mt-0.5 flex h-1.5 gap-0.5">{dd?.mine > 0 && <i className={`h-1.5 w-1.5 rounded-full ${sel === k ? "bg-primary-foreground" : "bg-primary"}`} />}{dd?.ext > 0 && <i className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(var(--f-grain))" }} />}</span></button>); })}</div>
-        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground"><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-primary" />Planned in Cognitune</span><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full" style={{ background: "hsl(var(--f-grain))" }} />From your calendar</span></div>
+        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground"><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-primary" />Planned in Lagomo</span><span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full" style={{ background: "hsl(var(--f-grain))" }} />From your calendar</span></div>
       </div>
 
       <div className="glass rounded-3xl p-4">
@@ -39,7 +39,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
           <div className="space-y-2">{items.map((i: CalItem) => (
             <div key={i.kind + i.id} className={`flex items-center gap-3 rounded-2xl border p-3 ${i.kind === "ext" ? "border-border bg-foreground/[.03]" : "border-primary/40 bg-primary/5"} ${i.done ? "opacity-60" : ""}`}>
               <div className="w-20 shrink-0 text-xs text-muted-foreground">{i.allDay ? "All day" : `${fmtClock(i.start)}`}</div>
-              <div className="min-w-0 flex-1"><div className={`truncate font-medium ${i.done ? "line-through" : ""}`}>{i.title}</div><div className="text-xs text-muted-foreground">{i.kind === "ext" ? "From your calendar" : "Planned in Cognitune"}{!i.allDay && ` · until ${fmtClock(i.end)}`}</div></div>
+              <div className="min-w-0 flex-1"><div className={`truncate font-medium ${i.done ? "line-through" : ""}`}>{i.title}</div><div className="text-xs text-muted-foreground">{i.kind === "ext" ? "From your calendar" : "Planned in Lagomo"}{!i.allDay && ` · until ${fmtClock(i.end)}`}</div></div>
               {i.kind === "block" && i.blockId && <div className="flex gap-1">
                 <button aria-label={i.done ? "Mark not done" : "Mark done"} className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => { plan.patchBlock(i.blockId!, { done: !i.done }); if (!i.done) game.earn("block"); }}><Check className="h-4 w-4" /></button>
                 <button aria-label="Delete block" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => plan.removeBlock(i.blockId!)}><Trash2 className="h-4 w-4" /></button></div>}
@@ -67,7 +67,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
                 <div className="flex gap-2"><Input className="h-10 rounded-2xl bg-secondary/60" placeholder="Paste the secret iCal address" value={link} onChange={e => setLink(e.target.value)} /><Button variant="hero" className="rounded-full" disabled={!link.trim() || cal.busy} onClick={async () => { await cal.connect(link); setLink(""); }}>{cal.busy ? "Loading..." : "Connect"}</Button></div>)}
             </div>
             <div className="space-y-2 border-t border-border pt-4">
-              <div className="font-semibold">2. Show your Cognitune plans in Google Calendar</div>
+              <div className="font-semibold">2. Show your Lagomo plans in Google Calendar</div>
               <p className="text-muted-foreground">Turn this on to get a private calendar link. Add it to Google Calendar once, and your planned blocks appear there. Google refreshes added calendars every few hours, so changes are not instant.</p>
               {!cal.feed ? <Button variant="hero" className="rounded-full" onClick={cal.enableFeed}>Turn on my calendar link</Button> : (
                 <div className="space-y-2"><div className="truncate rounded-2xl bg-foreground/[.05] px-3 py-2 text-xs text-muted-foreground">{feedUrl}</div>

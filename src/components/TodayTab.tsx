@@ -11,8 +11,12 @@ import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
 import { fmtTime } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
+import { StartHero } from "@/components/StartHero";
+import { HopStrip } from "@/components/HopStrip";
+import type { Friend } from "@/store/usePeople";
+import type { HopsApi } from "@/store/useHops";
 
-export function TodayTab({ j, name, go, game, plan, agenda }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[] }) {
+export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, hops }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; friends: Friend[]; hops: HopsApi }) {
   const nextBlock = plan.blocks.filter(b => b.day === dkey() && !b.done).sort((a, b) => a.start - b.start)[0];
   const nextStep = plan.tasks.filter(t => !t.doneAt).flatMap(t => t.steps.filter(s => !s.done).map(s => ({ s, t })))[0];
   const boxReady = game.g.todayActive && game.g.boxDay !== dkey();
@@ -28,7 +32,9 @@ export function TodayTab({ j, name, go, game, plan, agenda }: { j: JournalApi; n
   const hour = new Date().getHours(); const hello = `${hour < 12 ? "Good morning" : hour < 18 ? "Hi" : "Good evening"}, ${name.split(" ")[0]}.`;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6">
-      <div className="text-center"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">What is one small thing you could start today?</p></div>
+      <div className="text-center"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">One start is enough for today.</p></div>
+      <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
+      <HopStrip friends={friends} hops={hops} />
 
       <>
         <div className="flex items-center justify-center gap-3 text-sm">

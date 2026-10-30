@@ -14,13 +14,13 @@ export function EvidenceTab() {
     <div className="space-y-6">
       <Card className="glass border-0 rounded-3xl"><CardHeader><CardTitle>How much to trust each part</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <p className="text-muted-foreground">Cognitune is a helper, not a medical tool. Some parts come from established ideas, others are experiments. Here is which is which.</p>
+          <p className="text-muted-foreground">Lagomo is a helper, not a medical tool. Some parts come from established ideas, others are experiments. Here is which is which.</p>
           {rows.map(r => <div key={r[0]} className="rounded-md border p-3"><div className="font-semibold">{r[0]}</div><div className="text-xs uppercase tracking-wide text-muted-foreground">{r[1]}</div><div>{r[2]}</div></div>)}
         </CardContent></Card>
       <Card className="glass border-0 rounded-3xl"><CardHeader><CardTitle>Privacy and ethics</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>All data stays in your browser. Export or delete at any time.</p>
-          <p>Latent-state sensing raises cognitive-privacy concerns, so Cognitune only uses what you type in and never infers hidden states from other sources.</p>
+          <p>Latent-state sensing raises cognitive-privacy concerns, so Lagomo only uses what you type in and never infers hidden states from other sources.</p>
           <p>Not a medical device. If low drive is persistent and affects daily life, talk to a clinician.</p>
         </CardContent></Card>
     </div>

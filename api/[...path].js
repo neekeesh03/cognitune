@@ -1,7 +1,7 @@
 // Cognitune backend: accounts, friends, messages, calendar and the admin panel.
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
-import { rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
+import { dayStr, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
 import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_exp.js";
@@ -101,6 +101,26 @@ export default async function handler(req, res) {
       const sid = String(query.sid || "").slice(0, 60), w = String(query.w || "");
       if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
       const v = await getJ(`sp:${sid}:${w}`); return res.json({ state: v && Date.now() - v.ts < 30000 ? v.state : "none" });
+    }
+    // "Hopped in": a private, text-free signal that you started today. Friends only.
+    if (path === "hop" && method === "POST") {
+      const n = await rd("INCR", `rl:hop:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:hop:${me.id}:${dayStr()}`, 172800);
+      if (n > 40) return res.json({ ok: true });
+      await rd("SET", "hop:" + me.id, JSON.stringify({ ts: Date.now() }), "EX", 129600);
+      await bump("hop"); return res.json({ ok: true });
+    }
+    if (path === "hops" && method === "GET") {
+      const fids = await rd("SMEMBERS", "f:" + me.id); const ids = Array.isArray(fids) ? fids : [];
+      const vals = ids.length ? await rdp(ids.map(i => ["GET", "hop:" + i])) : [];
+      const hops = {}; ids.forEach((i, k) => { if (vals[k]) { const v = JSON.parse(vals[k]); if (Date.now() - v.ts < 12 * 36e5) hops[i] = { ts: v.ts }; } });
+      const raw = await rd("LRANGE", "cheer:" + me.id, 0, 19); const cheers = (Array.isArray(raw) ? raw : []).map(x => JSON.parse(x)).filter(c => Date.now() - c.ts < 12 * 36e5);
+      return res.json({ hops, cheers });
+    }
+    if (path === "cheer" && method === "POST") {
+      const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
+      const n = await rd("INCR", `rl:cheer:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:cheer:${me.id}:${dayStr()}`, 172800); if (n > 80) return res.json({ ok: true });
+      await rdp([["LPUSH", "cheer:" + to, JSON.stringify({ from: me.id, ts: Date.now() })], ["LTRIM", "cheer:" + to, 0, 19], ["EXPIRE", "cheer:" + to, 172800]]);
+      await bump("cheer"); return res.json({ ok: true });
     }
     if (path === "room-create" && method === "POST") {
       const sid = String(body.sid || "").slice(0, 60), inv = [...new Set((Array.isArray(body.inv) ? body.inv : []).map(String))].slice(0, 5);

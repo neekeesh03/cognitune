@@ -16,11 +16,13 @@ import { PulseCard } from "@/components/PulseCard";
 import type { AvatarSpec } from "@/engine/avatar";
 import { track } from "@/lib/track";
 import { Avatar } from "@/components/Avatar";
+import { Mascot, Wordmark } from "@/components/Mascot";
 import { useHistory } from "@/store/useHistory";
 import { useJournal } from "@/store/useJournal";
 import { useGame } from "@/store/useGame";
 import { usePlan } from "@/store/usePlan";
 import { usePeople, totalUnread } from "@/store/usePeople";
+import { useHops } from "@/store/useHops";
 import { useAuth, type AuthApi, type User } from "@/store/useAuth";
 import { useCalendar } from "@/store/useCalendar";
 import { itemsForDay } from "@/engine/calendar";
@@ -62,6 +64,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
   const people = usePeople(true, f => { if (!(tabRef.current === "circle" && openRef.current === f.id)) toast(f.name, f.last?.text.slice(0, 60) ?? "New message"); });
   const unread = totalUnread(people.friends);
+  const hops = useHops(people.friends, true);
   useEffect(() => { track("app_open", undefined, true); }, []);
   useEffect(() => { const n = ({ circle: "tab_circle", plan: "tab_plan", checkin: "tab_checkin" } as Record<string, "tab_circle" | "tab_plan" | "tab_checkin">)[tab]; if (n) track(n, undefined, true); }, [tab]);
   void uid;
@@ -75,18 +78,18 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); }} onClose={() => setLive(null)} />}
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
         <div className="flex items-center gap-2.5">
-          <div className="h-7 w-7 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} />
-          <span className="text-2xl font-semibold tracking-tight">Cognitune</span>
+          <Mascot size={36} />
+          <Wordmark className="text-2xl font-semibold tracking-tight" />
         </div>
         <div className="flex items-center gap-2">
           <LofiButton />
           <button aria-label="Switch between light and dark" onClick={() => setDark(!dark)} className="glass rounded-full p-2.5 text-muted-foreground hover:text-foreground">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
-          <button aria-label="Log out" title="Log out" onClick={() => { if (confirm("Log out of Cognitune on this device?")) auth.logout(); }} className="glass flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground"><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Log out</span></button>
+          <button aria-label="Log out" title="Log out" onClick={() => { if (confirm("Log out of Lagomo on this device?")) auth.logout(); }} className="glass flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground"><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Log out</span></button>
           <button aria-label="Your profile" onClick={() => setTab("me")}><Avatar spec={user.avatar} size={40} ring /></button>
         </div>
       </header>
       <main className="mx-auto max-w-5xl overflow-x-clip px-5 pt-8">
-        {tab === "today" && <TodayTab j={j} name={user.name} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} />}
+        {tab === "today" && <TodayTab j={j} name={user.name} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); hops.hopIn(); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab people={people} game={game} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In The Corner" : `Focusing with ${name}`, dur, buddy })} />}

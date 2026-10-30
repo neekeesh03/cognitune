@@ -26,7 +26,7 @@ export async function drawCard(name: string, avatar: AvatarSpec, g: GameState): 
   const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#F2F2F2"); bg.addColorStop(1, "#E4EEE7"); x.fillStyle = bg; x.fillRect(0, 0, W, H);
   const blob = (cx: number, cy: number, r: number, col: string) => { const gr = x.createRadialGradient(cx, cy, 10, cx, cy, r); gr.addColorStop(0, col); gr.addColorStop(1, col.replace(/[\d.]+\)$/, "0)")); x.fillStyle = gr; x.fillRect(0, 0, W, H); };
   blob(900, 260, 620, "rgba(183,167,217,0.55)"); blob(120, 1500, 700, "rgba(219,131,42,0.28)");
-  x.fillStyle = "#101E17"; x.font = "600 54px 'Inter Tight', sans-serif"; x.fillText("cognitune", 90, 150);
+  x.fillStyle = "#101E17"; x.font = "600 54px 'Inter Tight', sans-serif"; x.fillText("lagomo", 90, 150);
   x.font = "500 46px 'Inter Tight', sans-serif"; x.fillStyle = "#696866"; x.fillText(`${name.split(" ")[0].toLowerCase()}'s week of small starts`, 90, 250);
   x.fillStyle = "#447D58"; x.font = "800 460px 'Inter Tight', sans-serif"; x.fillText(String(total), 80, 760);
   x.fillStyle = "#101E17"; x.font = "600 64px 'Inter Tight', sans-serif"; x.fillText(total === 1 ? "start this week" : "starts this week", 90, 860);
@@ -53,7 +53,7 @@ export function StartsCard({ name, avatar, g }: { name: string; avatar: AvatarSp
     try {
       const b = await drawCard(name, avatar, g); const url = URL.createObjectURL(b);
       const file = new File([b], "my-week-of-small-starts.png", { type: "image/png" }); void dataUrlToFile;
-      const ok = await shareNative(`my week of small starts. join me on cognitune: ${location.origin}`, file);
+      const ok = await shareNative(`my week of small starts. join me on lagomo: ${location.origin}`, file);
       if (!ok) { const a = document.createElement("a"); a.href = url; a.download = file.name; a.click(); setMsg("Saved your card. Post it wherever your friends are."); }
       setTimeout(() => URL.revokeObjectURL(url), 5000);
     } catch { setMsg("Could not make the card. Try again."); }

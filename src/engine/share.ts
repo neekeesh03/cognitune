@@ -25,7 +25,7 @@ export async function winCard(opts: { title: string; line: string; streak: numbe
   const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#346747"); bg.addColorStop(1, "#101E17"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
   const glow = g.createRadialGradient(W * 0.8, H * 0.2, 20, W * 0.8, H * 0.2, 520); glow.addColorStop(0, "rgba(219,131,42,0.55)"); glow.addColorStop(1, "rgba(219,131,42,0)"); g.fillStyle = glow; g.fillRect(0, 0, W, H);
   const lav = g.createRadialGradient(W * 0.15, H * 0.9, 20, W * 0.15, H * 0.9, 480); lav.addColorStop(0, "rgba(183,167,217,0.5)"); lav.addColorStop(1, "rgba(183,167,217,0)"); g.fillStyle = lav; g.fillRect(0, 0, W, H);
-  g.fillStyle = "#F2F7F3"; g.font = "600 44px 'Inter Tight', sans-serif"; g.fillText("Cognitune", 80, 120);
+  g.fillStyle = "#F2F7F3"; g.font = "600 44px 'Inter Tight', sans-serif"; g.fillText("Lagomo", 80, 120);
   g.font = "700 120px 'Inter Tight', sans-serif"; const words = opts.title.split(" "); let line = "", y = 420;
   words.forEach(w => { const t = line + w + " "; if (g.measureText(t).width > 900 && line) { g.fillText(line, 80, y); line = w + " "; y += 130; } else line = t; }); g.fillText(line, 80, y);
   g.font = "500 48px 'Inter Tight', sans-serif"; g.fillStyle = "#C0DAC6"; g.fillText(opts.line, 80, y + 100);
