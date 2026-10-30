@@ -6,11 +6,11 @@ import { Mascot } from "@/components/Mascot";
 
 /** The one thing Lagomo is for: press Start on something you have been putting off. */
 export function StartHero({ suggestion, onStart }: { suggestion: string; onStart: (title: string, firstStep: string) => void }) {
-  const [what, setWhat] = useState(""); const [hop, setHop] = useState(false);
+  const [what, setWhat] = useState(() => { const p = sessionStorage.getItem("lagomo.prefill") || ""; if (p) sessionStorage.removeItem("lagomo.prefill"); return p; }); const [hop, setHop] = useState(false);
   const title = (what.trim() || suggestion).trim();
   const step = title ? suggestSteps(title)[0]?.text ?? "Just open it" : "";
   return (
-    <div className="glass rounded-3xl p-6 text-center">
+    <div className="rounded-3xl border border-primary/25 p-7 text-center shadow-[var(--shadow-soft)]" style={{ background: "linear-gradient(160deg, hsl(var(--primary) / .14), hsl(var(--f-grain) / .22))" }}>
       <div className={`mx-auto mb-2 w-fit ${hop ? "animate-hop" : ""}`}><Mascot size={52} /></div>
       <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">Just enough to start</div>
       <h2 className="text-3xl leading-snug">What are you putting off?</h2>
