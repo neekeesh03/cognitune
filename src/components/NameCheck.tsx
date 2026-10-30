@@ -6,9 +6,8 @@ const SAY = [["right", "la-GO-mo"], ["other", "LAG-o-mo"], ["other", "la-GOH-moh
 const MEAN = [["ok", "Just the right amount, plus go"], ["miss", "A kind of rabbit"], ["miss", "A place in Sweden"], ["miss", "No idea"]] as const;
 /** Two anonymous questions, asked once, a day after you first open the app. Only counters are stored. */
 export function NameCheck() {
-  const first = Number(localStorage.getItem("lagomo.first") || 0);
   const [step, setStep] = useState(0);
-  const due = !localStorage.getItem(KEY) && first > 0 && Date.now() - first > 20 * 3600 * 1000;
+  const [due] = useState(() => { const first = Number(localStorage.getItem("lagomo.first") || 0); return !localStorage.getItem(KEY) && first > 0 && Date.now() - first > 20 * 3600 * 1000; });
   if (!due) return null;
   const finish = () => { localStorage.setItem(KEY, String(Date.now())); setStep(3); };
   return (
