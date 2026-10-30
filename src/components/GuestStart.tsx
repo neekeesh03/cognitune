@@ -19,7 +19,7 @@ export function GuestStart({ onSave }: { onSave: () => void }) {
         <Button variant="hero" className="h-12 w-full rounded-2xl px-6 text-base" disabled={!title} onClick={go}><Play className="mr-2 h-4 w-4" />Start for 2 minutes</Button>
       </div>
       {title ? <p className="mt-2 text-sm text-muted-foreground">{`First tiny step: ${step}`}</p> : <p className="mt-2 text-sm text-muted-foreground">No account needed. Nothing is judged.</p>}
-      {live && <FocusTimer color="var(--f-flexion)" task={live} minutes={2} autoStart onStarted={() => undefined} onDone={() => guestHit("guest_done")} onClose={() => setLive(null)} guest={{ onSave: () => { guestHit("guest_save"); sessionStorage.removeItem("lagomo.prefill"); setLive(null); onSave(); } }} />}
+      {live && <FocusTimer color="var(--f-flexion)" task={live} minutes={2} autoStart onStarted={() => undefined} onDone={() => guestHit("guest_done")} onClose={() => setLive(null)} cele={{}} guest={{ onSave: () => { guestHit("guest_save"); sessionStorage.removeItem("lagomo.prefill"); setLive(null); onSave(); } }} />}
     </div>);
 }
 

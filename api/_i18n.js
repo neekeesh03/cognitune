@@ -1,5 +1,6 @@
 // Words for push notifications, in the language each person chose. Message text itself is never included.
-export const LANGS = ["en", "zh", "fa", "id"];
+import { EXTRA } from "./_i18n_extra.js";
+export const LANGS = ["en", "zh", "fa", "id", "si", "dz", "ne"];
 const D = {
   hopped: { en: n => `${n} hopped in`, zh: n => `${n} 开始了`, fa: n => `${n} شروع کرد`, id: n => `${n} sudah mulai` },
   hopBody: { en: () => "Your turn? One small start is enough.", zh: () => "轮到你了？一个小小的开始就够了。", fa: () => "نوبت توست؟ یک شروع کوچک کافی است.", id: () => "Giliranmu? Satu langkah kecil sudah cukup." },
@@ -19,4 +20,4 @@ const D = {
   daily1: { en: () => "Pick the smallest thing and hop in.", zh: () => "挑最小的一件事，开始吧。", fa: () => "کوچک‌ترین کار را انتخاب کن و شروع کن.", id: () => "Pilih hal terkecil dan mulai." },
   daily2: { en: () => "Just open it. That counts as a start.", zh: () => "先打开它。这就算开始。", fa: () => "فقط بازش کن. همین هم شروع حساب می‌شود.", id: () => "Cukup buka saja. Itu sudah dihitung sebagai awal." },
 };
-export const T = (lang, key, name = "") => (D[key][LANGS.includes(lang) ? lang : "en"] || D[key].en)(name);
+export const T = (lang, key, name = "") => { const x = EXTRA[lang] && EXTRA[lang][key]; if (x) return x.split("{n}").join(name); return (D[key][LANGS.includes(lang) ? lang : "en"] || D[key].en)(name); };

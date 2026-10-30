@@ -4,30 +4,40 @@ import { ROWS3 } from "./entries3";
 import { ROWS4 } from "./entries4";
 import { ROWS5 } from "./entries5";
 import { ROWS6 } from "./entries6";
+import { ROWS7 } from "./entries7";
+import * as SI from "./lang_si";
+import * as DZ from "./lang_dz";
+import * as NE from "./lang_ne";
 
-export type Lang = "en" | "zh" | "fa" | "id";
+export type Lang = "en" | "zh" | "fa" | "id" | "si" | "dz" | "ne";
+type Old = "zh" | "fa" | "id"; type New = "si" | "dz" | "ne";
 export const LANGS: { code: Lang; label: string; dir: "ltr" | "rtl" }[] = [
   { code: "en", label: "English", dir: "ltr" },
   { code: "zh", label: "简体中文", dir: "ltr" },
   { code: "fa", label: "فارسی", dir: "rtl" },
   { code: "id", label: "Bahasa Indonesia", dir: "ltr" },
+  { code: "ne", label: "नेपाली", dir: "ltr" },
+  { code: "si", label: "සිංහල", dir: "ltr" },
+  { code: "dz", label: "རྫོང་ཁ", dir: "ltr" },
 ];
 const KEY = "lagomo.lang";
 type Tr = (s: string) => string;
-type Pattern = [RegExp, Record<Exclude<Lang, "en">, (m: RegExpExecArray, T: Tr) => string>];
+type Pattern = [RegExp, Record<Old, (m: RegExpExecArray, T: Tr) => string>];
 const IDX = { zh: 1, fa: 2, id: 3 } as const;
 
-const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {} };
-for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
+const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {}, si: SI.DICT, dz: DZ.DICT, ne: NE.DICT };
+const PATS: Record<New, Record<string, string>> = { si: SI.PAT, dz: DZ.PAT, ne: NE.PAT };
+const PID: (string | null)[] = ["greet","planned","plannedShort","buddyWorking","buddyFinished","buddyAway","buddyHere","waitingFor","roomState","activeMin","activeH","activeD","minAgo","hAgo","togetherDays","startedTogether","gettingStarted","moreMinutes","peopleToday","invitedYou","newMessages","hoppedIn","cheered","focusingWith","chatWith","report","remove","messageTo","checkinAvg","fromWriting","firstStep","dAgo",null,"openProfile","joined","plant","planFor","driveFalls","prevPart","nextPart","style","nowFriends","requestSent","sparksEarned","focusedFor","streakDays"];
+for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const GREET: Record<string, Record<Exclude<Lang, "en">, string>> = {
+const GREET: Record<string, Record<Old, string>> = {
   "Good morning": { zh: "早上好", fa: "صبح بخیر", id: "Selamat pagi" },
   Hi: { zh: "你好", fa: "سلام", id: "Hai" },
   "Good evening": { zh: "晚上好", fa: "عصر بخیر", id: "Selamat malam" },
 };
-const STATE: Record<string, Record<Exclude<Lang, "en">, string>> = {
+const STATE: Record<string, Record<Old, string>> = {
   working: { zh: "正在专注", fa: "در حال کار", id: "sedang bekerja" },
   finished: { zh: "已完成", fa: "تمام کرد", id: "selesai" },
   "stepped away": { zh: "暂时离开", fa: "کمی دور شد", id: "menjauh sebentar" },
@@ -85,6 +95,9 @@ const PATTERNS: Pattern[] = [
   [/^Style (\d+)$/, { zh: m => `样式 ${m[1]}`, fa: m => `سبک ${m[1]}`, id: m => `Gaya ${m[1]}` }],
   [/^You and @(.+) are now friends\.$/, { zh: m => `你和 @${m[1]} 现在是好友了。`, fa: m => `تو و @${m[1]} اکنون دوست هستید.`, id: m => `Kamu dan @${m[1]} kini berteman.` }],
   [/^Request sent to @(.+)\.$/, { zh: m => `已向 @${m[1]} 发送请求。`, fa: m => `درخواست برای @${m[1]} فرستاده شد.`, id: m => `Permintaan terkirim ke @${m[1]}.` }],
+  [/^\+(\d+) sparks$/, { zh: m => `+${m[1]} 火花`, fa: m => `+${m[1]} جرقه`, id: m => `+${m[1]} percikan` }],
+  [/^(\d+) min focused$/, { zh: m => `专注 ${m[1]} 分钟`, fa: m => `${m[1]} دقیقه تمرکز`, id: m => `Fokus ${m[1]} menit` }],
+  [/^(\d+) days? in a row$/, { zh: m => `连续 ${m[1]} 天`, fa: m => `${m[1]} روز پشت سر هم`, id: m => `${m[1]} hari berturut-turut` }],
 ];
 
 let lang: Lang = "en";
@@ -95,7 +108,15 @@ function lookup(s: string): string | null {
   const k = norm(s); if (!k) return null;
   const hit = entries[lang][k]; if (hit) return hit;
   const L = lang;
-  for (const [re, fns] of PATTERNS) { const m = re.exec(k); if (m) return fns[L](m, x => lookup(x) ?? x); }
+  for (let i = 0; i < PATTERNS.length; i++) {
+    const [re, fns] = PATTERNS[i]; const m = re.exec(k); if (!m) continue;
+    if (L === "si" || L === "dz" || L === "ne") {
+      const id = PID[i]; const tpl = id ? PATS[L][id] : undefined; if (!tpl) continue;
+      const T2 = (x: string) => lookup(x) ?? lookup(cap(x)) ?? x;
+      return tpl.replace(/([$#])(\d)/g, (_s, kind: string, n: string) => { const v = m[+n] ?? ""; return kind === "#" ? T2(v) : v; });
+    }
+    return fns[L](m, x => lookup(x) ?? x);
+  }
   return null;
 }
 /** Translate a string made in code (toasts, notifications). Unknown text stays as is. */
@@ -156,7 +177,7 @@ function setHtml() { const meta = LANGS.find(l => l.code === lang)!; document.do
 function detect(): Lang {
   try { const s = localStorage.getItem(KEY) as Lang | null; if (s && LANGS.some(l => l.code === s)) return s; } catch { /* ignore */ }
   const n = (navigator.language || "en").toLowerCase();
-  return n.startsWith("zh") ? "zh" : n.startsWith("fa") ? "fa" : n.startsWith("id") || n.startsWith("in") ? "id" : "en";
+  return n.startsWith("zh") ? "zh" : n.startsWith("fa") ? "fa" : n.startsWith("id") || n.startsWith("in") ? "id" : n.startsWith("ne") ? "ne" : n.startsWith("si") ? "si" : n.startsWith("dz") ? "dz" : "en";
 }
 export function setLang(l: Lang) {
   lang = l; try { localStorage.setItem(KEY, l); } catch { /* ignore */ }

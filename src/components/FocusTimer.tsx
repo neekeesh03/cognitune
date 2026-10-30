@@ -5,20 +5,21 @@ import { LofiPanel } from "@/components/LofiPanel";
 import { Mascot } from "@/components/Mascot";
 import { AfterStart } from "@/components/AfterStart";
 import { GuestSave } from "@/components/GuestStart";
+import { Celebration } from "@/components/Celebration";
 import { Avatar } from "@/components/Avatar";
 import { useBuddy, useRoom, type Buddy } from "@/net/useBuddy";
 import type { AvatarSpec } from "@/engine/avatar";
 
-interface Props { color: string; task: string; onStarted: () => void; onClose: () => void; onDone?: () => void; minutes?: number; autoStart?: boolean; buddy?: Buddy & { avatar: AvatarSpec }; hasFriends?: boolean; username?: string; guest?: { onSave: () => void }; extra?: ReactNode }
+interface Props { color: string; task: string; onStarted: () => void; onClose: () => void; onDone?: () => void; minutes?: number; autoStart?: boolean; buddy?: Buddy & { avatar: AvatarSpec }; hasFriends?: boolean; username?: string; guest?: { onSave: () => void }; extra?: ReactNode; cele?: { sparks?: number; streak?: number; me?: AvatarSpec } }
 const PRESETS = [{ m: 2, label: "2 min entry" }, { m: 10, label: "10 min sprint" }, { m: 25, label: "25 min block" }];
-export function FocusTimer({ color, task, onStarted, onClose, onDone, minutes, autoStart, buddy, hasFriends, username, guest, extra }: Props) {
+export function FocusTimer({ color, task, onStarted, onClose, onDone, minutes, autoStart, buddy, hasFriends, username, guest, extra, cele }: Props) {
   const start = (minutes ?? 2) * 60;
   const [total, setTotal] = useState(start);
   const [left, setLeft] = useState(start);
   const [run, setRun] = useState(!!autoStart);
   const [done, setDone] = useState(false);
   const [how, setHow] = useState<string | null>(null);
-  const fired = useRef(false); const doneFired = useRef(false);
+  const fired = useRef(false); const doneFired = useRef(false); const [celeSeen, setCeleSeen] = useState(false);
   const more = (m: number) => { setTotal(m * 60); setLeft(m * 60); setDone(false); setHow(null); setRun(true); };
   const mineState = done ? "done" : run ? "working" : "waiting";
   const isRoom = !!buddy?.room;
@@ -36,6 +37,11 @@ export function FocusTimer({ color, task, onStarted, onClose, onDone, minutes, a
   useEffect(() => { if (run && !fired.current) { fired.current = true; onStarted(); } }, [run, onStarted]);
   const size = 260, r = 112, c = 2 * Math.PI * r, frac = left / total;
   const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
+  if (done && !celeSeen) return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background/95 backdrop-blur-xl animate-rise">
+      <Celebration minutes={Math.max(1, Math.round(total / 60))} sparks={cele?.sparks} streak={cele?.streak} me={cele?.me} buddy={buddy && !isRoom ? buddy.avatar : undefined}
+        title={roomDone ? "Everyone finished!" : buddy && !isRoom && buddyState === "done" ? "You both finished!" : undefined} onContinue={() => setCeleSeen(true)} />
+    </div>);
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto py-8 bg-background/95 backdrop-blur-xl animate-rise">
       <button aria-label="Close" onClick={onClose} className="absolute right-5 top-5 rounded-full p-2 text-muted-foreground hover:text-foreground"><X /></button>
