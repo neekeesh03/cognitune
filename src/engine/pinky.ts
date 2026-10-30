@@ -76,3 +76,23 @@ export const summary = (e: PinkyEvt): string => ({ make: "Made a Pinky", join: "
 
 export const TINY = ["open it for 2 minutes", "write one sentence", "put on my shoes", "do the first tiny step", "set a 2-minute timer"];
 export const CUES = ["I get home", "I sit at my desk", "after dinner", "tomorrow morning", "I finish this"];
+
+// ---- Phase 2: weekly rhythm and the shared burrow. Both only ever go up. ----
+export const WEEK_GOAL = 3;
+/** Monday 00:00 (local) of the week that contains ts. */
+export const weekStart = (ts: number): number => { const d = new Date(ts); const back = (d.getDay() + 6) % 7; return new Date(d.getFullYear(), d.getMonth(), d.getDate() - back).getTime(); };
+/** When a pact was kept together: the time of the last "done" among its parts. */
+const keptAt = (p: Pact): number => Math.max(...Object.values(p.parts).map(x => x.doneAt ?? 0));
+export interface Rhythm { thisWeek: number; goal: number; weeksHit: number; reached: boolean }
+/** Pinkies kept this week and how many weeks reached the goal. A quiet week never takes anything away. */
+export function rhythm(pacts: Pact[], now = Date.now(), goal = WEEK_GOAL): Rhythm {
+  const per = new Map<number, number>();
+  for (const p of pacts) if (keptTogether(p)) { const w = weekStart(keptAt(p)); per.set(w, (per.get(w) ?? 0) + 1); }
+  const cur = per.get(weekStart(now)) ?? 0; let weeksHit = 0; for (const n of per.values()) if (n >= goal) weeksHit++;
+  return { thisWeek: cur, goal, weeksHit, reached: cur >= goal };
+}
+export type BurrowItem = "sprout" | "carrot" | "flower" | "mushroom";
+const ORDER: BurrowItem[] = ["sprout", "carrot", "flower", "carrot", "mushroom", "flower"];
+/** What grows in the shared burrow: one item per kept Pinky, up to 12 shown. Items never disappear. */
+export const burrowItems = (kept: number): BurrowItem[] => Array.from({ length: Math.min(kept, 12) }, (_, i) => ORDER[i % ORDER.length]);
+export const burrowName = (kept: number): string => kept === 0 ? "Empty burrow" : kept < 3 ? "Little burrow" : kept < 6 ? "Cozy burrow" : kept < 10 ? "Blooming burrow" : "Garden burrow";

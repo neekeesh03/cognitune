@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { burst, toast } from "@/lib/fx";
 import { PinkyCard, PinkyForm } from "@/components/Pinky";
-import { HOUR, activePact, keptCount, keptTogether, reducePacts, reminderSlot, windowEnd, type Pact, type PinkyEvt } from "@/engine/pinky";
+import { Burrow } from "@/components/Burrow";
+import { HOUR, activePact, keptCount, keptTogether, reducePacts, rhythm, reminderSlot, windowEnd, type Pact, type PinkyEvt } from "@/engine/pinky";
 import { lastSeenText } from "@/lib/notify";
 import { inviteText } from "@/lib/invite";
 import { EmojiPicker, QUICK_REACTIONS, onlyEmoji } from "@/components/EmojiPicker";
@@ -144,7 +145,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   const pinkyRun = async (fn: () => Promise<unknown>) => { setPbusy(true); await run(fn); setPbusy(false); };
   const myText = (p: Pact) => p.parts[me.id]?.text ?? "";
   const pinkyMake = async (e: PinkyEvt, remind: boolean) => { await chat.sendPinky(e); if (remind) pinkyBlock(e.id, e.text!, e.end!); game.earn("chat"); track("pinky_make"); };
-  const pinkyDone = (p: Pact, receipt: "tap" | "timer") => pinkyRun(async () => { await chat.sendPinky({ id: p.id, op: "done", receipt }); plan.blocks.filter(b => b.sharedId === "pinky:" + p.id).forEach(b => plan.patchBlock(b.id, { done: true })); if (receipt === "tap") game.earn("block"); track("pinky_done"); });
+  const pinkyDone = (p: Pact, receipt: "tap" | "timer") => pinkyRun(async () => { await chat.sendPinky({ id: p.id, op: "done", receipt }); plan.blocks.filter(b => b.sharedId === "pinky:" + p.id).forEach(b => plan.patchBlock(b.id, { done: true })); if (receipt === "tap") game.earn("pinky"); track("pinky_done"); });
   const pinkyCard = (p: Pact) => (
     <PinkyCard pact={p} me={me.id} first={first} now={now} busy={pbusy}
       onJoin={t => pinkyRun(async () => { const late = p.end < Date.now() + HOUR; const end = late ? windowEnd("day") : undefined; await chat.sendPinky({ id: p.id, op: "join", text: t, end }); pinkyBlock(p.id, t || p.parts[p.creator].text, end ?? p.end); track("pinky_join"); })}
@@ -153,6 +154,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
       onKeep={() => pinkyRun(async () => { const end = windowEnd("day"); await chat.sendPinky({ id: p.id, op: "keep", end }, true); pinkyBlock(p.id, myText(p), end); track("pinky_roll"); })}
       onSmaller={t => pinkyRun(async () => { const end = windowEnd("day"); await chat.sendPinky({ id: p.id, op: "smaller", text: t, end }, true); pinkyBlock(p.id, t, end); track("pinky_roll"); })}
       onLetGo={() => pinkyRun(async () => { await chat.sendPinky({ id: p.id, op: "letgo" }, true); const b = plan.blocks.find(x => x.sharedId === "pinky:" + p.id); if (b) plan.removeBlock(b.id, true); track("pinky_roll"); })}
+      onHop={() => pinkyRun(async () => { await chat.invite(2); toast("Invite sent", "Start your 2 minutes too"); track("pinky_hop"); })}
       onCheer={() => pinkyRun(async () => { await chat.sendText("I am cheering for your Pinky."); })} />);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [shownMsgs.length, chat.typing]);
   useEffect(() => { people.refresh(); }, [chat.messages.length]); // eslint-disable-line
@@ -206,7 +208,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
           {!pickDur && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPlanOpen(o => !o)}><CalendarPlus className="mr-1 h-3.5 w-3.5" />Plan together</Button>}
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
         </div>
-        {keptN > 0 && <div className="text-center text-xs text-muted-foreground">Kept together: <b className="text-foreground">{keptN}</b></div>}
+        {pacts.length > 0 && <Burrow first={first} kept={keptN} r={rhythm(pacts, now)} />}
         {pinkyOpen && !activeP && <PinkyForm first={first} onClose={() => setPinkyOpen(false)} onSend={pinkyMake} />}
         {planOpen && <PlanTogetherForm first={first} onClose={() => setPlanOpen(false)} onSend={async (p, addMine) => { await chat.sendPlan(p); if (addMine) plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id }); game.earn("chat"); track("plan_send"); }} />}
         {(err || chat.error) && <p className="text-xs text-destructive" role="alert">{err || chat.error}</p>}
