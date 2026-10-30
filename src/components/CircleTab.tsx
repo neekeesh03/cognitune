@@ -171,7 +171,7 @@ function Conversation({ f, me, people, game, startSession, back, openProfile }: 
         {chat.typing && <div className="flex items-end gap-2"><Avatar spec={f.avatar} size={28} /><div className="rounded-2xl rounded-bl-sm bg-foreground/[.07] px-4 py-3"><span className="inline-flex gap-1">{[0, 1, 2].map(i => <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: `${i * 0.15}s` }} />)}</span></div></div>}
         <div ref={end} />
       </div>
-      <div className="space-y-2">
+      <>
         <div className="flex flex-wrap gap-2">
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
         </div>
@@ -186,6 +186,6 @@ function Conversation({ f, me, people, game, startSession, back, openProfile }: 
         </div>
         </div>
         <p className="text-center text-[11px] text-muted-foreground">Photos are shrunk to fit. Other files can be up to about 700 KB.</p>
-      </div>
+      </>
     </div>);
 }
