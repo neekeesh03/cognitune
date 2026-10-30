@@ -24,7 +24,7 @@ export function PlanTab({ plan, game, history, cal }: { plan: PlanApi; game: Gam
   const [view, setView] = useState<"todo" | "day" | "week" | "cal">("todo"); const [jump, setJump] = useState<string | undefined>(undefined);
   return (
     <div className={`animate-rise mx-auto ${view === "cal" ? "max-w-3xl" : "max-w-2xl"}`}>
-      <div className="mb-6 flex w-fit gap-1 rounded-full bg-foreground/[.05] p-1">{([["todo", "Tiny to-dos"], ["day", "Day planner"], ["week", "Week"], ["cal", "Calendar"]] as const).map(([id, l]) => <button key={id} onClick={() => { if (id === "day") setJump(undefined); if (id === "week") track("week_open"); setView(id); }} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      <div className="mb-6 flex w-fit max-w-full flex-wrap gap-1 rounded-3xl bg-foreground/[.05] p-1 sm:rounded-full">{([["todo", "Tiny to-dos"], ["day", "Day planner"], ["week", "Week"], ["cal", "Calendar"]] as const).map(([id, l]) => <button key={id} onClick={() => { if (id === "day") setJump(undefined); if (id === "week") track("week_open"); setView(id); }} className={`whitespace-nowrap rounded-full px-3 py-2 text-[13px] sm:px-4 sm:text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
       {view === "todo" ? <Todos plan={plan} game={game} /> : view === "day" ? <Day key={jump ?? "today"} initialDay={jump} plan={plan} game={game} history={history} /> : view === "week" ? <WeekView plan={plan} cal={cal} onOpenDay={d => { setJump(d); setView("day"); }} /> : <CalendarView plan={plan} cal={cal} game={game} />}
     </div>
   );
@@ -46,7 +46,7 @@ function Todos({ plan, game }: { plan: PlanApi; game: GameApi }) {
       <div className="glass rounded-3xl p-4">
         <p className="mb-2 text-sm text-muted-foreground">What's something you want to get done? Big is fine. We will make it tiny.</p>
         <Input className="h-12 rounded-2xl bg-secondary/60" placeholder="e.g. Write the methods section" value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && create(true)} />
-        <div className="mt-3 flex gap-2"><Button variant="hero" className="h-11 flex-1 rounded-2xl" disabled={!title.trim()} onClick={() => create(true)}><Wand2 className="mr-2 h-4 w-4" />Add and make it tiny</Button><Button variant="outline" className="h-11 rounded-2xl" disabled={!title.trim()} onClick={() => create(false)}><Plus className="mr-1 h-4 w-4" />Just add</Button></div>
+        <div className="mt-3 flex flex-wrap gap-2"><Button variant="hero" className="h-11 min-w-0 flex-1 rounded-2xl" disabled={!title.trim()} onClick={() => create(true)}><Wand2 className="mr-2 h-4 w-4" />Add and make it tiny</Button><Button variant="outline" className="h-11 rounded-2xl" disabled={!title.trim()} onClick={() => create(false)}><Plus className="mr-1 h-4 w-4" />Just add</Button></div>
       </div>
       {active.length === 0 && <p className="py-6 text-center text-muted-foreground">Nothing here yet. Add one thing and I will help you start it.</p>}
       {active.map(t => {
@@ -90,7 +90,7 @@ function Day({ plan, game, history, initialDay }: { plan: PlanApi; game: GameApi
       {timer && <FocusTimer color="var(--v-ready)" task={timer.title} resources={timer} onStarted={() => game.earn("started", { early: new Date().getHours() < 9 })} onClose={() => setTimer(null)} />}
       <div className="flex items-center justify-between">
         <button aria-label="Previous day" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => setDay(shift(day, -1))}><ChevronLeft /></button>
-        <div className="text-center"><div className="text-2xl font-semibold">{label}</div><button className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => setDay(dkey())}>Jump to today</button></div>
+        <div className="text-center"><div className="text-2xl font-semibold">{label}</div><button className="-my-1 px-2 py-2 text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => setDay(dkey())}>Jump to today</button></div>
         <button aria-label="Next day" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => setDay(shift(day, 1))}><ChevronRight /></button>
       </div>
       <div className="glass rounded-3xl p-4">

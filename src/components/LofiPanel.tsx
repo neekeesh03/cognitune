@@ -30,7 +30,7 @@ export function LofiButton() {
   useEffect(() => { if (!open) return; const k = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [open]);
   return (
     <div className="relative">
-      <button aria-label="Lofi music" aria-expanded={open} onClick={() => setOpen(o => !o)} className={`glass rounded-full p-2.5 ${l.playing ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}><Music className={`h-4 w-4 ${l.playing ? "animate-pulse" : ""}`} /></button>
+      <button aria-label="Lofi music" aria-expanded={open} onClick={() => setOpen(o => !o)} className={`glass rounded-full p-2 sm:p-2.5 ${l.playing ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}><Music className={`h-4 w-4 ${l.playing ? "animate-pulse" : ""}`} /></button>
       {open && <div className="glass absolute right-0 top-12 z-50 w-[300px] rounded-3xl p-4 animate-rise"><div className="mb-3 text-center text-sm font-semibold">Lofi for starting</div><LofiPanel /></div>}
     </div>
   );

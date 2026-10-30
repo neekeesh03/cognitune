@@ -53,7 +53,7 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
       <NameCheck />
 
       <>
-        <div className="flex items-center justify-center gap-3 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:gap-3">
           {!calm && <>
           <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Flame className="h-4 w-4" style={{ color: "hsl(var(--f-primode))" }} /><b>{game.g.streak.current}</b> showing-up days</span>
           <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Sparkles className="h-4 w-4 text-primary" /><b>{game.g.sparks}</b> sparks</span>

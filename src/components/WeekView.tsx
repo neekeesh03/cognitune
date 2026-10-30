@@ -26,7 +26,7 @@ export function WeekView({ plan, cal, onOpenDay }: { plan: PlanApi; cal: Calenda
         {days.map((d, n) => { const k = dayKey(d); const items = all[n]; const isToday = k === today; const past = k < today;
           return (
             <div key={k} className={`glass rounded-3xl p-3 ${isToday ? "ring-2 ring-primary/50" : ""} ${past ? "opacity-70" : ""}`}>
-              <button className="flex w-full items-center justify-between text-start" onClick={() => { onOpenDay(k); }} aria-label={d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}>
+              <button className="flex min-h-9 w-full items-center justify-between text-start" onClick={() => { onOpenDay(k); }} aria-label={d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}>
                 <span className="font-semibold">{d.toLocaleDateString([], { weekday: "short" })} <span className="text-muted-foreground" translate="no">{d.getDate()}</span>{isToday && <span className="ms-2 rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">Today</span>}</span>
                 <span className="text-xs text-muted-foreground">{items.length === 0 ? "Free" : `${items.length} ${items.length === 1 ? "thing" : "things"}`}</span>
               </button>

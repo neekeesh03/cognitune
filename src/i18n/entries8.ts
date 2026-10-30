@@ -57,4 +57,5 @@ export const ROWS8: Row[] = [
 ["Undo", "撤销", "واگرد", "Urungkan"],
 ["Deleted", "已删除", "حذف شد", "Dihapus"],
 ["Restored", "已恢复", "بازگردانی شد", "Dipulihkan"],
+["Calendar", "日历", "تقویم", "Kalender"],
 ];

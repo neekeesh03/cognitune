@@ -821,6 +821,7 @@ export const DICT: Record<string, string> = {
  "Undo": "ආපසු හරවන්න",
  "Deleted": "මකා දැමුවා",
  "Restored": "ප්‍රතිෂ්ඨාපනය කළා",
+ "Calendar": "දින දර්ශනය",
 };
 export const PAT: Record<string, string> = {
  "greet": "#1, $2.",

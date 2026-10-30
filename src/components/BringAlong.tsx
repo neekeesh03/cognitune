@@ -88,7 +88,7 @@ export function BringAlongToggle({ d, set }: { d: Draft; set: (d: Draft) => void
     <div className="mt-2">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-sm"><label htmlFor="repeat-sel" className="font-medium">Repeat</label>
         <select id="repeat-sel" value={d.repeat} onChange={e => set({ ...d, repeat: e.target.value as Repeat })} className="h-9 rounded-2xl border border-border bg-secondary/60 px-3">{(["none", "daily", "weekdays", "weekly"] as Repeat[]).map(r => <option key={r} value={r}>{repeatLabel(r)}</option>)}</select></div>
-      <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-sm text-primary hover:underline"><Paperclip className="h-4 w-4" />{open ? "Hide" : "Bring along"}{!open && (n > 0 || d.remind != null) && <span className="rounded-full bg-primary/15 px-2 text-xs">{n > 0 ? n : "1"}</span>}</button>
+      <button type="button" onClick={() => setOpen(o => !o)} className="flex min-h-9 items-center gap-1.5 text-sm text-primary hover:underline"><Paperclip className="h-4 w-4" />{open ? "Hide" : "Bring along"}{!open && (n > 0 || d.remind != null) && <span className="rounded-full bg-primary/15 px-2 text-xs">{n > 0 ? n : "1"}</span>}</button>
       {open && <div className="mt-2"><BringAlongEditor d={d} set={set} /></div>}
     </div>);
 }

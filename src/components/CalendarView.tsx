@@ -29,7 +29,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
     <div className="space-y-5">
       <div className="glass rounded-3xl p-4">
         <div className="mb-3 flex items-center justify-between"><button aria-label="Previous month" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => nav(-1)}><ChevronLeft /></button>
-          <div className="text-center"><div className="text-xl font-semibold">{new Date(month.y, month.m, 1).toLocaleDateString([], { month: "long", year: "numeric" })}</div><button className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => { const d = new Date(); setMonth({ y: d.getFullYear(), m: d.getMonth() }); setSel(today); }}>Jump to today</button></div>
+          <div className="text-center"><div className="text-xl font-semibold">{new Date(month.y, month.m, 1).toLocaleDateString([], { month: "long", year: "numeric" })}</div><button className="-my-1 px-2 py-2 text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => { const d = new Date(); setMonth({ y: d.getFullYear(), m: d.getMonth() }); setSel(today); }}>Jump to today</button></div>
           <button aria-label="Next month" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => nav(1)}><ChevronRight /></button></div>
         <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">{WEEK.map(w => <div key={w}>{w}</div>)}</div>
         <div className="mt-1 grid grid-cols-7 gap-1">{grid.map(d => { const k = dayKey(d), inM = d.getMonth() === month.m, dd = dots[k]; return (

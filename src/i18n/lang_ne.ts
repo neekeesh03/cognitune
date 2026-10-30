@@ -821,6 +821,7 @@ export const DICT: Record<string, string> = {
  "Undo": "पूर्ववत गर्नुहोस्",
  "Deleted": "मेटियो",
  "Restored": "फर्काइयो",
+ "Calendar": "पात्रो",
 };
 export const PAT: Record<string, string> = {
  "greet": "#1, $2।",

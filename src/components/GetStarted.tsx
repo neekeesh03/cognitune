@@ -21,7 +21,7 @@ export function GetStarted({ username, friends, started }: { username: string; f
   return (
     <div className="glass rounded-3xl p-5">
       <div className="mb-3 flex items-center justify-between"><span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{`Getting started · ${3 - left} of 3`}</span>
-        <button onClick={() => { localStorage.setItem(DONE, "1"); setHidden(true); }} className="text-xs text-muted-foreground hover:text-foreground">Hide</button></div>
+        <button onClick={() => { localStorage.setItem(DONE, "1"); setHidden(true); }} className="-m-2 p-2 text-xs text-muted-foreground hover:text-foreground">Hide</button></div>
       <div className="space-y-2">{items.map(i => (
         <div key={i.title} className="flex items-center gap-3">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${i.done ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{i.done && <Check className="h-4 w-4" />}</span>
