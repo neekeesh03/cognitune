@@ -61,7 +61,7 @@ export function FocusTimer({ color, task, onStarted, onClose, onDone, minutes, a
       {done && !how && !guest && <div className="mt-6 text-center"><p className="mb-2 text-sm text-muted-foreground">How did it go?</p><div className="flex flex-wrap justify-center gap-2">{[["Did it", "Nice. That counts."], ["Got going", "Starting was the hard part. You did it."], ["Not today", "That is okay. You showed up, and tomorrow is a fresh start."]].map(([k, v]) => <button key={k} onClick={() => setHow(v)} className="rounded-full border border-border px-4 py-1.5 text-sm hover:border-primary hover:text-primary">{k}</button>)}</div></div>}
       {done && how && <p className="mt-6 max-w-xs text-center text-sm" role="status">{how}</p>}
       {done && guest && <GuestSave onSave={guest.onSave} onLater={onClose} />}
-      {done && !guest && extra && <div className="mt-5">{extra}</div>}
+      {done && !guest && extra && how && <div className="mt-4">{extra}</div>}
       {done && !isRoom && !guest && <AfterStart onMore={more} hasFriends={!!hasFriends} username={username ?? ""} />}
       <div className="mt-8 flex gap-3">
         {!done && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={() => setRun(r => !r)}>{run ? <><Pause className="mr-2 h-4 w-4" />Pause</> : <><Play className="mr-2 h-4 w-4" />{left === total ? "Start" : "Resume"}</>}</Button>}

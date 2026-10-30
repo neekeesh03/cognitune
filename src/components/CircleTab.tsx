@@ -143,7 +143,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
                 ) : <div className="whitespace-pre-wrap">{m.text}</div>}
                 <div className={`mt-0.5 flex items-center justify-end gap-1 text-[10px] ${mine && !(m.kind === "text" && onlyEmoji(m.text)) ? "opacity-70" : "text-muted-foreground"}`}>{new Date(m.ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}{mine && <CheckCheck className="h-3 w-3" aria-label="Sent" />}</div>
               </div>
-              {(reacts.get(m.id)?.size ?? 0) > 0 && <div className="-mt-1.5 flex gap-1" translate="no">{[...new Set(reacts.get(m.id)!.values())].map(e => { const n = [...reacts.get(m.id)!.values()].filter(x => x === e).length; return <button key={e} onClick={() => doReact(m.id, e)} className={`rounded-full border px-1.5 text-sm leading-6 ${myReact(m.id) === e ? "border-primary bg-primary/15" : "border-border bg-background"}`}>{e}{n > 1 ? ` ${n}` : ""}</button>; })}</div>}
+              {(reacts.get(m.id)?.size ?? 0) > 0 && <div className={`${m.kind === "text" && onlyEmoji(m.text) ? "mt-1" : "-mt-1.5"} flex gap-1`} translate="no">{[...new Set(reacts.get(m.id)!.values())].map(e => { const n = [...reacts.get(m.id)!.values()].filter(x => x === e).length; return <button key={e} onClick={() => doReact(m.id, e)} className={`rounded-full border px-1.5 text-sm leading-6 ${myReact(m.id) === e ? "border-primary bg-primary/15" : "border-border bg-background"}`}>{e}{n > 1 ? ` ${n}` : ""}</button>; })}</div>}
               </div>
             </div>);
         })}
