@@ -69,6 +69,24 @@ export default async function handler(req, res) {
       const blocks = (await getJ("cal:" + uid)) || []; res.setHeader("Content-Type", "text/calendar; charset=utf-8"); res.setHeader("Cache-Control", "no-store"); return res.send(feedIcs(blocks));
     }
 
+    // Daily nudge sender. Called every 10 minutes by a free GitHub Actions schedule. Safe to call by anyone: it only
+    // sends what is due, at most one per person per day, and does nothing for people who already started or are in the app.
+    if (path === "cron-remind") {
+      const nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes(); const cur = Math.floor(nowMin / 10); const day = dayStr();
+      const buckets = [cur, (cur + 143) % 144, (cur + 142) % 144]; const lists = await rdp(buckets.map(b => ["SMEMBERS", "remb:" + b]));
+      const ids = [...new Set(lists.flat())].slice(0, 300); let sent = 0, skipped = 0;
+      for (const id of ids) {
+        if (!(await rd("SETNX", `remd:${id}:${day}`, "1"))) { skipped++; continue; } await rd("EXPIRE", `remd:${id}:${day}`, 172800);
+        if (await rd("SISMEMBER", "sd:" + id, day)) { skipped++; continue; }
+        const u = await getJ("user:" + id); if (!u || u.suspended) { skipped++; continue; }
+        const fids = ((await rd("SMEMBERS", "f:" + id)) || []).slice(0, 8); let who = "";
+        for (const f of fids) { if (await rd("SISMEMBER", "sd:" + f, day)) { const fu = await getJ("user:" + f); if (fu) { who = fu.name.split(" ")[0]; break; } } }
+        const body = who ? `${who} already hopped in. Your turn? Two minutes is enough.` : ["One small start? Two minutes is enough.", "Pick the smallest thing and hop in.", "Just open it. That counts as a start."][new Date().getUTCDate() % 3];
+        const n = await pushTo(id, { title: "Lagomo", body, tag: "daily", url: "/" }, {}); if (n) sent++; else skipped++;
+      }
+      return res.json({ ok: true, due: ids.length, sent, skipped });
+    }
+
     // ----- everything below needs a signed-in user -----
     const auth = String(req.headers.authorization || "").replace(/^Bearer /, ""); const claims = verify(auth);
     if (!claims) throw err(401, "Please sign in.");
@@ -105,6 +123,15 @@ export default async function handler(req, res) {
       if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
       const v = await getJ(`sp:${sid}:${w}`); return res.json({ state: v && Date.now() - v.ts < 30000 ? v.state : "none" });
     }
+    if (path === "reminder" && method === "GET") return res.json({ reminder: (await getJ("rem:" + me.id)) || null });
+    if (path === "reminder" && method === "POST") {
+      const m = /^(\d{2}):(\d{2})$/.exec(String(body.time || "")); const tz = Math.round(+body.tz);
+      if (!m || +m[1] > 23 || +m[2] > 59 || !Number.isFinite(tz) || Math.abs(tz) > 840) throw err(400, "Pick a time like 08:30.");
+      const utc = (((+m[1] * 60 + +m[2] + tz) % 1440) + 1440) % 1440; const bucket = Math.floor(utc / 10);
+      const old = await getJ("rem:" + me.id); if (old && old.bucket !== bucket) await rd("SREM", "remb:" + old.bucket, me.id);
+      await rd("SADD", "remb:" + bucket, me.id); await setJ("rem:" + me.id, { time: body.time, tz, bucket }); return res.json({ ok: true });
+    }
+    if (path === "reminder" && method === "DELETE") { const old = await getJ("rem:" + me.id); if (old) await rd("SREM", "remb:" + old.bucket, me.id); await rd("DEL", "rem:" + me.id); return res.json({ ok: true }); }
     if (path === "ping" && method === "POST") return res.json({ ok: true });
     if (path === "push-key" && method === "GET") return res.json({ key: await pushPublicKey() });
     if (path === "push-sub" && method === "POST") { await saveSub(me, body.sub); return res.json({ ok: true }); }
