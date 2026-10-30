@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
-import { CalendarPlus, Check, ChevronLeft, ChevronRight, Download, Play, Plus, Sparkles, Trash2, Wand2 } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { CalendarPlus, Check, ChevronLeft, ChevronRight, Download, Play, Plus, Sparkles, Trash2, Wand2, Bell, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { BringAlongEditor, BringAlongToggle, ResourceList, draftOf, draftToBlock, emptyDraft, type Draft } from "@/components/BringAlong";
+import { alertState } from "@/lib/push";
+import { deleteBlockFile } from "@/lib/blockfiles";
 import { FocusTimer } from "@/components/FocusTimer";
-import { Block, download, fmtTime, googleLink, icsFor, suggestSteps, uid } from "@/engine/plan";
+import { Block, download, fmtTime, googleLink, icsFor, suggestSteps, uid , hasResources } from "@/engine/plan";
 import { dkey } from "@/engine/game";
 import { timeOfDay, CheckIn } from "@/engine/analytics";
 import type { PlanApi } from "@/store/usePlan";
@@ -73,14 +76,16 @@ function Todos({ plan, game }: { plan: PlanApi; game: GameApi }) {
 function Day({ plan, game, history }: { plan: PlanApi; game: GameApi; history: CheckIn[] }) {
   const [day, setDay] = useState(dkey()); const [title, setTitle] = useState(""); const [start, setStart] = useState(10 * 60); const [dur, setDur] = useState(25);
   const [timer, setTimer] = useState<Block | null>(null); const [sel, setSel] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Draft>(emptyDraft); const [editing, setEditing] = useState<string | null>(null); const [ed, setEd] = useState<Draft>(emptyDraft); const [alertsOn, setAlertsOn] = useState<boolean | undefined>(undefined);
+  useEffect(() => { alertState().then(s => setAlertsOn(s === "on")); }, []);
   const blocks = plan.blocks.filter(b => b.day === day).sort((a, b) => a.start - b.start);
   const best = useMemo(() => { const t = timeOfDay(history).filter(x => x.drive != null && x.n >= 2).sort((a, b) => b.drive! - a.drive!)[0]; return t ? parseInt(t.label) : null; }, [history]);
   const label = day === dkey() ? "Today" : new Date(day + "T12:00").toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
-  const add = () => { if (!title.trim()) return; plan.addBlock({ title: title.trim(), day, start, dur }); setTitle(""); };
+  const add = () => { if (!title.trim()) return; plan.addBlock({ title: title.trim(), day, start, dur, ...draftToBlock(draft) }); setTitle(""); setDraft(emptyDraft()); };
   const overlap = blocks.some(b => start < b.start + b.dur && b.start < start + dur);
   return (
     <div className="space-y-5">
-      {timer && <FocusTimer color="var(--v-ready)" task={timer.title} onStarted={() => game.earn("started", { early: new Date().getHours() < 9 })} onClose={() => setTimer(null)} />}
+      {timer && <FocusTimer color="var(--v-ready)" task={timer.title} resources={timer} onStarted={() => game.earn("started", { early: new Date().getHours() < 9 })} onClose={() => setTimer(null)} />}
       <div className="flex items-center justify-between">
         <button aria-label="Previous day" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => setDay(shift(day, -1))}><ChevronLeft /></button>
         <div className="text-center"><div className="text-2xl font-semibold">{label}</div><button className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => setDay(dkey())}>Jump to today</button></div>
@@ -94,6 +99,7 @@ function Day({ plan, game, history }: { plan: PlanApi; game: GameApi; history: C
           <select aria-label="Start time" value={start} onChange={e => setStart(Number(e.target.value))} className="h-10 rounded-2xl border border-border bg-secondary/60 px-3 text-sm">{HOURS.flatMap(h => [0, 30].map(m => <option key={h * 60 + m} value={h * 60 + m}>{fmtTime(h * 60 + m)}</option>))}</select>
           {DURS.map(d => <button key={d} onClick={() => setDur(d)} className={`rounded-full border px-3 py-1.5 text-sm ${dur === d ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{d} min</button>)}
         </div>
+        <BringAlongToggle d={draft} set={setDraft} />
         {overlap && <p className="mt-2 text-xs text-warning">That overlaps another block. You can still add it.</p>}
         <Button variant="hero" className="mt-3 h-11 w-full rounded-2xl" disabled={!title.trim()} onClick={add}><CalendarPlus className="mr-2 h-4 w-4" />Add to my day</Button>
       </div>
@@ -103,12 +109,15 @@ function Day({ plan, game, history }: { plan: PlanApi; game: GameApi; history: C
             <div key={b.id} className={`rounded-2xl border border-border p-3 ${b.done ? "opacity-60" : ""}`}>
               <button className="flex w-full items-center justify-between gap-3 text-left" onClick={() => setSel(sel === b.id ? null : b.id)}>
                 <div><div className={`font-semibold ${b.done ? "line-through" : ""}`}>{b.title}</div><div className="text-xs text-muted-foreground">{fmtTime(b.start)} to {fmtTime(b.start + b.dur)} · {b.dur} min</div></div>
-                {b.done && <Check className="h-5 w-5 text-primary" />}
+                <span className="flex items-center gap-2 text-muted-foreground">{hasResources(b) && <Paperclip className="h-4 w-4" aria-label="Resources attached" />}{b.remind != null && !b.done && <Bell className="h-4 w-4" aria-label="Reminder on" />}{b.done && <Check className="h-5 w-5 text-primary" />}</span>
               </button>
+              {sel === b.id && hasResources(b) && editing !== b.id && <div className="mt-3"><ResourceList b={b} /></div>}
+              {sel === b.id && editing === b.id && <div className="mt-3 space-y-2"><BringAlongEditor d={ed} set={setEd} alertsOn={alertsOn} /><div className="flex gap-2"><Button size="sm" variant="hero" className="rounded-full" onClick={() => { plan.patchBlock(b.id, { note: undefined, links: undefined, files: undefined, remind: undefined, ...draftToBlock(ed), notified: false }); setEditing(null); }}>Save</Button><Button size="sm" variant="ghost" className="rounded-full" onClick={() => { const keep = new Set((b.files ?? []).map(f => f.id)); ed.files.filter(f => !keep.has(f.id)).forEach(f => deleteBlockFile(f.id)); setEditing(null); }}>Cancel</Button></div></div>}
               {sel === b.id && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {!b.done && <Button size="sm" variant="hero" className="rounded-full" onClick={() => setTimer(b)}><Play className="mr-1 h-3.5 w-3.5" />Start now</Button>}
                   <Button size="sm" variant="outline" className="rounded-full" onClick={() => { plan.patchBlock(b.id, { done: !b.done }); if (!b.done) game.earn("block"); }}>{b.done ? "Mark not done" : "Mark done"}</Button>
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => { setEd(draftOf(b)); setEditing(b.id); }}><Paperclip className="mr-1 h-3.5 w-3.5" />Bring along</Button>
                   <a className="inline-flex h-9 items-center rounded-full border border-border px-3 text-sm hover:bg-foreground/5" href={googleLink(b)} target="_blank" rel="noreferrer">Add to Google Calendar</a>
                   <Button size="sm" variant="ghost" className="rounded-full" onClick={() => plan.removeBlock(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>)}

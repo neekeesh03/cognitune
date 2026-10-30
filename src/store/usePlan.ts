@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Block, Task, uid } from "@/engine/plan";
+import { deleteBlockFile } from "@/lib/blockfiles";
 const KT = "lagomo.tasks.v1", KB = "lagomo.blocks.v1";
 const load = <T,>(k: string): T[] => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } };
 export function usePlan() {
@@ -11,7 +12,7 @@ export function usePlan() {
   const removeTask = useCallback((id: string) => setT(a => a.filter(t => t.id !== id)), []);
   const addBlock = useCallback((b: Omit<Block, "id">) => { const x = { ...b, id: uid() }; setB(a => [...a, x]); return x; }, []);
   const patchBlock = useCallback((id: string, p: Partial<Block>) => setB(a => a.map(b => b.id === id ? { ...b, ...p } : b)), []);
-  const removeBlock = useCallback((id: string) => setB(a => a.filter(b => b.id !== id)), []);
+  const removeBlock = useCallback((id: string) => setB(a => { a.find(b => b.id === id)?.files?.forEach(f => deleteBlockFile(f.id)); return a.filter(b => b.id !== id); }), []);
   return { tasks, blocks, addTask, patchTask, removeTask, addBlock, patchBlock, removeBlock };
 }
 export type PlanApi = ReturnType<typeof usePlan>;

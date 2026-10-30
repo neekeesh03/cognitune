@@ -18,7 +18,7 @@ export function useCalendar(blocks: Block[]) {
   useEffect(() => { if (st.url && Date.now() - st.fetched > STALE) refresh(); }, []); // eslint-disable-line
   const connect = useCallback(async (url: string) => { await refresh(url.trim()); }, [refresh]);
   const disconnect = useCallback(() => setSt(s => ({ ...s, url: "", events: [], fetched: 0 })), []);
-  const enableFeed = useCallback(async () => { setError(""); try { const r = await api<{ token: string }>("cal-feed-on", { body: {} }); setSt(s => ({ ...s, feed: true, token: r.token })); await api("cal-sync", { body: { blocks } }); } catch (e) { setError((e as Error).message); } }, [blocks]);
+  const enableFeed = useCallback(async () => { setError(""); try { const r = await api<{ token: string }>("cal-feed-on", { body: {} }); setSt(s => ({ ...s, feed: true, token: r.token })); await api("cal-sync", { body: { blocks: blocks.map(b => ({ id: b.id, title: b.title, day: b.day, start: b.start, dur: b.dur, done: b.done })) } }); } catch (e) { setError((e as Error).message); } }, [blocks]);
   const disableFeed = useCallback(async () => { try { await api("cal-feed-off", { body: {} }); } catch { /* ignore */ } setSt(s => ({ ...s, feed: false, token: null })); }, []);
   // keep the feed fresh while it is on
   const t = useRef<number>();

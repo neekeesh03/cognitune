@@ -5,6 +5,7 @@ import { ROWS4 } from "./entries4";
 import { ROWS5 } from "./entries5";
 import { ROWS6 } from "./entries6";
 import { ROWS7 } from "./entries7";
+import { ROWS8 } from "./entries8";
 import * as SI from "./lang_si";
 import * as DZ from "./lang_dz";
 import * as NE from "./lang_ne";
@@ -28,7 +29,7 @@ const IDX = { zh: 1, fa: 2, id: 3 } as const;
 const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {}, si: SI.DICT, dz: DZ.DICT, ne: NE.DICT };
 const PATS: Record<New, Record<string, string>> = { si: SI.PAT, dz: DZ.PAT, ne: NE.PAT };
 const PID: (string | null)[] = ["greet","planned","plannedShort","buddyWorking","buddyFinished","buddyAway","buddyHere","waitingFor","roomState","activeMin","activeH","activeD","minAgo","hAgo","togetherDays","startedTogether","gettingStarted","moreMinutes","peopleToday","invitedYou","newMessages","hoppedIn","cheered","focusingWith","chatWith","report","remove","messageTo","checkinAvg","fromWriting","firstStep","dAgo",null,"openProfile","joined","plant","planFor","driveFalls","prevPart","nextPart","style","nowFriends","requestSent","sparksEarned","focusedFor","streakDays"];
-for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
+for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7, ...ROWS8]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

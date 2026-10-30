@@ -32,6 +32,7 @@ import { useBurrow } from "@/store/useBurrow";
 import { LangPicker } from "@/components/LangPicker";
 import { getLang } from "@/i18n";
 import { takeGuestStart } from "@/lib/guest";
+import { useBlockReminders } from "@/store/useBlockReminders";
 import { StartsCard } from "@/components/StartsCard";
 import { invitedBy, clearInvite } from "@/lib/invite";
 import { suggestSteps, uid } from "@/engine/plan";
@@ -70,7 +71,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const [dark, setDark] = useTheme();
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
   const people = usePeople(true, (f, n) => { if (!(tabRef.current === "circle" && openRef.current === f.id && !document.hidden)) notify({ id: `msg:${f.id}:${f.unread}`, tag: "msg:" + f.id, title: f.name, body: n > 1 ? `${n} new messages` : "New message" }); });
-  const burrow = useBurrow();
+  const burrow = useBurrow(); useBlockReminders(plan);
   useEffect(() => {
     if (!takeGuestStart()) return;
     game.earn("started"); localStorage.setItem("lagomo.firstStart", "1"); track("timer_start");
@@ -104,17 +105,17 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <AnnounceBanner />
       <PulseCard />
       {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); }} onClose={() => setLive(null)} />}
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-5 pt-6">
-        <div className="flex items-center gap-2.5">
-          <Mascot size={36} />
-          <Wordmark className="text-2xl font-semibold tracking-tight" />
+      <header className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 pt-6 sm:px-5">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+          <Mascot size={32} />
+          <Wordmark className="text-xl font-semibold tracking-tight sm:text-2xl" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <LofiButton />
           <LangPicker />
           <button aria-label="Switch between light and dark" onClick={() => setDark(!dark)} className="glass rounded-full p-2.5 text-muted-foreground hover:text-foreground">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
           <button aria-label="Log out" title="Log out" onClick={() => { if (confirm("Log out of Lagomo on this device?")) auth.logout(); }} className="glass flex items-center gap-1.5 rounded-full px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground"><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Log out</span></button>
-          <button aria-label="Your profile" onClick={() => setTab("me")}><Avatar spec={user.avatar} size={40} ring /></button>
+          <button aria-label="Your profile" onClick={() => setTab("me")}><Avatar spec={user.avatar} size={38} ring /></button>
         </div>
       </header>
       <main className="mx-auto max-w-5xl overflow-x-clip px-5 pt-8">

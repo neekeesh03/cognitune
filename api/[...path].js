@@ -14,6 +14,19 @@ const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
 const MAX_FILE_B64 = 1_100_000; // about 750 KB of file data
 export { eventsFromIcs };
 
+/** Sends due block reminders. Only an id and a time are stored, never what the block is. */
+async function sendBlockReminders() {
+  const now = Date.now(); const due = (await rd("ZRANGEBYSCORE", "brz", "-inf", String(now + 300000), "LIMIT", 0, 200)) || []; let sent = 0, skipped = 0;
+  for (const m of due) {
+    const removed = await rd("ZREM", "brz", m); if (!removed) continue;
+    const uid = String(m).split(":")[0]; const at = +(await rd("HGET", "br:" + uid, m)) || 0; await rd("HDEL", "br:" + uid, m);
+    if (at < now - 900000) { skipped++; continue; }
+    const u = await getJ("user:" + uid); if (!u || u.suspended) { skipped++; continue; }
+    const n = await pushTo(uid, l => ({ title: "Lagomo", body: TT(l, "blockSoon"), tag: "block:" + m, url: "/" }), {}); if (n) sent++; else skipped++;
+  }
+  return { due: due.length, sent, skipped };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   try {
@@ -74,6 +87,7 @@ export default async function handler(req, res) {
     // Daily nudge sender. Called every 10 minutes by a free GitHub Actions schedule. Safe to call by anyone: it only
     // sends what is due, at most one per person per day, and does nothing for people who already started or are in the app.
     if (path === "cron-remind") {
+      const blocks = await sendBlockReminders().catch(() => ({ error: true }));
       const nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes(); const cur = Math.floor(nowMin / 10); const day = dayStr();
       const buckets = [cur, (cur + 143) % 144, (cur + 142) % 144]; const lists = await rdp(buckets.map(b => ["SMEMBERS", "remb:" + b]));
       const ids = [...new Set(lists.flat())].slice(0, 300); let sent = 0, skipped = 0;
@@ -86,7 +100,7 @@ export default async function handler(req, res) {
         const dk = "daily" + (new Date().getUTCDate() % 3);
         const n = await pushTo(id, l => ({ title: "Lagomo", body: who ? TT(l, "friendHop", who) : TT(l, dk), tag: "daily", url: "/" }), {}); if (n) sent++; else skipped++;
       }
-      return res.json({ ok: true, due: ids.length, sent, skipped });
+      return res.json({ ok: true, due: ids.length, sent, skipped, blocks });
     }
 
     // ----- everything below needs a signed-in user -----
@@ -96,6 +110,16 @@ export default async function handler(req, res) {
     if (me.suspended) throw err(403, "This account is paused. Please contact the Lagomo team.");
     const nowTs = String(Date.now()); await rdp([["SET", "seen:" + me.id, nowTs, "EX", 120], ["SET", "ls:" + me.id, nowTs, "EX", 7 * 864e3]]); touchActive(me.id).catch(() => {});
     const isOn = v => !!v && (v === "1" || Date.now() - (+v || 0) < 50000);
+
+    if (path === "block-remind" && method === "POST") {
+      const items = (Array.isArray(body.items) ? body.items : []).slice(0, 50).filter(x => x && /^[\w-]{8,64}$/.test(String(x.id)) && Number.isFinite(+x.at) && +x.at > Date.now() - 900000 && +x.at < Date.now() + 366 * 864e5);
+      const old = (await rd("HKEYS", "br:" + me.id)) || [];
+      for (const k of old) await rd("ZREM", "brz", k);
+      await rd("DEL", "br:" + me.id);
+      for (const x of items) { const k = me.id + ":" + x.id; await rd("ZADD", "brz", String(Math.round(+x.at)), k); await rd("HSET", "br:" + me.id, k, String(Math.round(+x.at))); }
+      if (items.length) await rd("EXPIRE", "br:" + me.id, 370 * 864e3);
+      return res.json({ ok: true, count: items.length });
+    }
 
     if (path === "me" && method === "GET") {
       const [friendIds, inIds, outIds, blocked] = await rdp([["SMEMBERS", "f:" + me.id], ["SMEMBERS", "fin:" + me.id], ["SMEMBERS", "fout:" + me.id], ["SMEMBERS", "blk:" + me.id]]);

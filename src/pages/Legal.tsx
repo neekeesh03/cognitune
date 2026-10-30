@@ -29,6 +29,7 @@ export function Privacy() {
         <li>Your chat messages and files, locked on your device before they are sent (end-to-end encrypted). We store only the scrambled data, who sent it and when. We cannot read it. Files are deleted after 60 days.</li>
         <li>A copy of your private chat key, locked with your password or chat passcode, so you can read your chats on a new device. We cannot open it.</li>
         <li>If you turn it on: your planned time blocks, to publish a private calendar link for you. You can turn it off any time.</li>
+        <li>If you set a reminder on a planned block and turn on alerts: only the time to send the alert, with no title, note, link or file. The alert says only that a planned block is starting. Notes, links and files you add to a block stay on your device.</li>
         <li>Simple counts such as sign-ups and messages per day, and the time you were last active.</li>
       </ul>
       <h2>Who handles it</h2>

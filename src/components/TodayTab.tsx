@@ -9,7 +9,7 @@ import { dayKey } from "@/store/useJournal";
 import type { GameApi } from "@/store/useGame";
 import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
-import { fmtTime } from "@/engine/plan";
+import { fmtTime, hasResources } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
 import { StartHero } from "@/components/StartHero";
 import { HopStrip } from "@/components/HopStrip";
@@ -65,7 +65,7 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, ho
           <button onClick={() => go("plan")} className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 text-left transition hover:scale-[1.01]">
             <div className="min-w-0"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
               <div className="truncate text-lg font-semibold">{nextBlock ? nextBlock.title : nextStep ? nextStep.s.text : agenda[0]?.title}</div>
-              <div className="truncate text-sm text-muted-foreground">{nextBlock ? `${fmtTime(nextBlock.start)} · ${nextBlock.dur} min` : nextStep ? nextStep.t.title : agenda[0] ? (agenda[0].allDay ? "All day" : fmtClock(agenda[0].start)) : ""}{agenda.length > 1 ? ` · ${agenda.length} things today` : ""}</div></div>
+              <div className="truncate text-sm text-muted-foreground">{nextBlock ? `${fmtTime(nextBlock.start)} · ${nextBlock.dur} min${hasResources(nextBlock) ? " · resources attached" : ""}` : nextStep ? nextStep.t.title : agenda[0] ? (agenda[0].allDay ? "All day" : fmtClock(agenda[0].start)) : ""}{agenda.length > 1 ? ` · ${agenda.length} things today` : ""}</div></div>
             <span className="shrink-0 text-sm text-primary">Open</span></button>)}
 
         {/* The journal prompt stays folded until you want it */}

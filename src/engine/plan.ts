@@ -1,6 +1,11 @@
 export interface Step { id: string; text: string; done: boolean; doneAt?: number }
 export interface Task { id: string; title: string; steps: Step[]; createdAt: number; doneAt?: number }
-export interface Block { id: string; title: string; day: string; start: number; dur: number; done?: boolean; taskId?: string }
+export interface BlockFile { id: string; name: string; type: string; size: number }
+/** A planned block. note, links and files are the things you will need ("bring along"); remind is minutes before the start (0 = at the start). All of it stays on this device. */
+export interface Block { id: string; title: string; day: string; start: number; dur: number; done?: boolean; taskId?: string; note?: string; links?: string[]; files?: BlockFile[]; remind?: number; notified?: boolean }
+export const blockStartMs = (b: Block) => { const [y, m, d] = b.day.split("-").map(Number); return new Date(y, m - 1, d, 0, b.start, 0, 0).getTime(); };
+export const hasResources = (b: Block) => !!(b.note || b.links?.length || b.files?.length);
+export const safeUrl = (s: string): string | null => { let t = s.trim(); if (!t) return null; if (!/^https?:\/\//i.test(t)) t = "https://" + t; try { const u = new URL(t); return /^https?:$/.test(u.protocol) && u.hostname.includes(".") ? u.toString() : null; } catch { return null; } };
 export const uid = () => crypto.randomUUID();
 
 const TEMPLATES: { re: RegExp; steps: string[] }[] = [
@@ -22,12 +27,12 @@ export const fmtTime = (min: number) => { const h = Math.floor(min / 60), m = mi
 const stamp = (day: string, min: number) => day.replace(/-/g, "") + "T" + String(Math.floor(min / 60)).padStart(2, "0") + String(min % 60).padStart(2, "0") + "00";
 
 export function googleLink(b: Block) {
-  const p = new URLSearchParams({ action: "TEMPLATE", text: b.title, dates: `${stamp(b.day, b.start)}/${stamp(b.day, b.start + b.dur)}`, details: "Planned with Lagomo" });
+  const p = new URLSearchParams({ action: "TEMPLATE", text: b.title, dates: `${stamp(b.day, b.start)}/${stamp(b.day, b.start + b.dur)}`, details: ["Planned with Lagomo", b.note, ...(b.links ?? [])].filter(Boolean).join("\n") });
   return "https://calendar.google.com/calendar/render?" + p.toString();
 }
 export function icsFor(blocks: Block[]) {
   const esc = (s: string) => s.replace(/[,;\\]/g, m => "\\" + m).replace(/\n/g, "\\n");
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lagomo//EN", ...blocks.flatMap(b => ["BEGIN:VEVENT", `UID:${b.id}@lagomo`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`, `DTSTART:${stamp(b.day, b.start)}`, `DTEND:${stamp(b.day, b.start + b.dur)}`, `SUMMARY:${esc(b.title)}`, "END:VEVENT"]), "END:VCALENDAR"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lagomo//EN", ...blocks.flatMap(b => ["BEGIN:VEVENT", `UID:${b.id}@lagomo`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`, `DTSTART:${stamp(b.day, b.start)}`, `DTEND:${stamp(b.day, b.start + b.dur)}`, `SUMMARY:${esc(b.title)}`, ...(b.note || b.links?.length ? [`DESCRIPTION:${esc([b.note, ...(b.links ?? [])].filter(Boolean).join("\n"))}`] : []), "END:VEVENT"]), "END:VCALENDAR"];
   return lines.join("\r\n");
 }
 export function download(name: string, text: string, type = "text/plain") {
