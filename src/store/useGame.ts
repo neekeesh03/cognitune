@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BADGES, BOX_LINES, EventKind, GameState, SPARKS, STREAK_EVENTS, bumpStreak, dkey, emptyGame, levelFor } from "@/engine/game";
 import { burst, toast } from "@/lib/fx";
-const K = "cognitune.game.v1";
+const K = "lagomo.game.v1";
 export function useGame() {
   const [g, setG] = useState<GameState>(() => { try { return { ...emptyGame(), ...JSON.parse(localStorage.getItem(K) || "{}") }; } catch { return emptyGame(); } });
   useEffect(() => { localStorage.setItem(K, JSON.stringify(g)); }, [g]);

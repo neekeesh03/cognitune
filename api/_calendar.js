@@ -6,8 +6,8 @@ const escIcs = t => String(t).replace(/[\\,;]/g, m => "\\" + m).replace(/\n/g, "
 export function feedIcs(blocks) {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
   const dt = (day, min) => day.replace(/-/g, "") + "T" + pad(Math.floor(min / 60) % 24) + pad(min % 60) + "00";
-  const ev = blocks.flatMap(b => ["BEGIN:VEVENT", `UID:${b.id}@cognitune`, `DTSTAMP:${stamp}`, `DTSTART:${dt(b.day, b.start)}`, `DTEND:${dt(b.day, Math.min(b.start + b.dur, 1439))}`, `SUMMARY:${escIcs((b.done ? "Done: " : "") + b.title)}`, "DESCRIPTION:Planned with Cognitune", "END:VEVENT"]);
-  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cognitune//EN", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Cognitune", ...ev, "END:VCALENDAR"].join("\r\n");
+  const ev = blocks.flatMap(b => ["BEGIN:VEVENT", `UID:${b.id}@lagomo`, `DTSTAMP:${stamp}`, `DTSTART:${dt(b.day, b.start)}`, `DTEND:${dt(b.day, Math.min(b.start + b.dur, 1439))}`, `SUMMARY:${escIcs((b.done ? "Done: " : "") + b.title)}`, "DESCRIPTION:Planned with Lagomo", "END:VEVENT"]);
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lagomo//EN", "CALSCALE:GREGORIAN", "X-WR-CALNAME:Lagomo", ...ev, "END:VCALENDAR"].join("\r\n");
 }
 const ALLOWED_CAL_HOST = /^(calendar\.google\.com|www\.google\.com|outlook\.live\.com|outlook\.office365\.com|[a-z0-9-]+\.icloud\.com)$/i;
 function tzToUtc(y, mo, d, h, mi, tz) {

@@ -12,8 +12,26 @@ export interface Wrapped { salt: string; iv: string; ct: string }
 export interface KeyBundle { pk: string; wk: Wrapped }
 
 // ---- where the unlocked private key lives on this device (IndexedDB, not extractable) ----
-const DB = "cognitune-keys";
-const idb = () => new Promise<IDBDatabase>((res, rej) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore("k"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const DB = "lagomo-keys";
+const OLD_DB = ["cogni", "tune-keys"].join("");
+const openRaw = (name: string) => new Promise<IDBDatabase>((res, rej) => { const r = indexedDB.open(name, 1); r.onupgradeneeded = () => r.result.createObjectStore("k"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+/** Moves the unlocked key from the previous app name's database to the new one, once. */
+let moved: Promise<void> | null = null;
+function moveLegacyDb(): Promise<void> {
+  if (moved) return moved;
+  moved = (async () => {
+    try {
+      const list = (await (indexedDB as unknown as { databases?: () => Promise<{ name?: string }[]> }).databases?.()) ?? [];
+      if (!list.some(d => d.name === OLD_DB)) return;
+      const from = await openRaw(OLD_DB), to = await openRaw(DB);
+      const rows = await new Promise<{ k: IDBValidKey; v: unknown }[]>((res, rej) => { const out: { k: IDBValidKey; v: unknown }[] = []; const c = from.transaction("k").objectStore("k").openCursor(); c.onsuccess = () => { const cur = c.result; if (cur) { out.push({ k: cur.key, v: cur.value }); cur.continue(); } else res(out); }; c.onerror = () => rej(c.error); });
+      await new Promise<void>((res, rej) => { const t = to.transaction("k", "readwrite"); const st = t.objectStore("k"); rows.forEach(r => st.put(r.v, r.k)); t.oncomplete = () => res(); t.onerror = () => rej(t.error); });
+      from.close(); to.close(); indexedDB.deleteDatabase(OLD_DB);
+    } catch { /* nothing to move */ }
+  })();
+  return moved;
+}
+const idb = () => moveLegacyDb().then(() => new Promise<IDBDatabase>((res, rej) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore("k"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
 async function idbGet<T>(key: string): Promise<T | undefined> { const db = await idb(); return new Promise((res, rej) => { const q = db.transaction("k").objectStore("k").get(key); q.onsuccess = () => res(q.result as T); q.onerror = () => rej(q.error); }); }
 async function idbSet(key: string, v: unknown) { const db = await idb(); return new Promise<void>((res, rej) => { const t = db.transaction("k", "readwrite"); t.objectStore("k").put(v, key); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
 async function idbDel(key: string) { const db = await idb(); return new Promise<void>((res, rej) => { const t = db.transaction("k", "readwrite"); t.objectStore("k").delete(key); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }

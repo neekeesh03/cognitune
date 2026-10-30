@@ -27,7 +27,7 @@ export function googleLink(b: Block) {
 }
 export function icsFor(blocks: Block[]) {
   const esc = (s: string) => s.replace(/[,;\\]/g, m => "\\" + m).replace(/\n/g, "\\n");
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Cognitune//EN", ...blocks.flatMap(b => ["BEGIN:VEVENT", `UID:${b.id}@cognitune`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`, `DTSTART:${stamp(b.day, b.start)}`, `DTEND:${stamp(b.day, b.start + b.dur)}`, `SUMMARY:${esc(b.title)}`, "END:VEVENT"]), "END:VCALENDAR"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lagomo//EN", ...blocks.flatMap(b => ["BEGIN:VEVENT", `UID:${b.id}@lagomo`, `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}Z`, `DTSTART:${stamp(b.day, b.start)}`, `DTEND:${stamp(b.day, b.start + b.dur)}`, `SUMMARY:${esc(b.title)}`, "END:VEVENT"]), "END:VCALENDAR"];
   return lines.join("\r\n");
 }
 export function download(name: string, text: string, type = "text/plain") {

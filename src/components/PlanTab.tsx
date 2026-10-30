@@ -113,7 +113,7 @@ function Day({ plan, game, history }: { plan: PlanApi; game: GameApi; history: C
                   <Button size="sm" variant="ghost" className="rounded-full" onClick={() => plan.removeBlock(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </div>)}
             </div>))}</div>)}
-        {blocks.length > 0 && <div className="mt-3 flex justify-end"><Button size="sm" variant="ghost" className="rounded-full" onClick={() => download(`cognitune-${day}.ics`, icsFor(blocks), "text/calendar")}><Download className="mr-1 h-3.5 w-3.5" />Save day to any calendar (.ics)</Button></div>}
+        {blocks.length > 0 && <div className="mt-3 flex justify-end"><Button size="sm" variant="ghost" className="rounded-full" onClick={() => download(`lagomo-${day}.ics`, icsFor(blocks), "text/calendar")}><Download className="mr-1 h-3.5 w-3.5" />Save day to any calendar (.ics)</Button></div>}
       </div>
     </div>
   );

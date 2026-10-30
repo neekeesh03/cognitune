@@ -1,4 +1,4 @@
-// Cognitune engine v2. Implements the LTA/CDA Drive equation (Lagun 2025) plus
+// Lagomo engine v2. Implements the LTA/CDA Drive equation (Lagun 2025) plus
 // uncertainty, failure-mode diagnosis, sensitivity ranking and deadline context.
 export type VarKey = "Primode" | "CAP" | "Flexion" | "Anchory" | "Grain" | "Slip";
 export const VAR_KEYS: VarKey[] = ["Primode", "CAP", "Flexion", "Anchory", "Grain", "Slip"];

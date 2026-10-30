@@ -4,7 +4,7 @@ import { buildProfile } from "@/engine/profile";
 import { analyze } from "@/engine/text";
 import type { CheckIn } from "@/engine/analytics";
 
-const KE = "cognitune.entries.v1", KS = "cognitune.settings.v1";
+const KE = "lagomo.entries.v1", KS = "lagomo.settings.v1";
 interface Settings { name: string; resolved: string[]; shuffle: Record<string, number> }
 const load = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) || "") as T; } catch { return d; } };
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;

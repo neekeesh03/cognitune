@@ -17,7 +17,7 @@ export function useAuth() {
     if (!getToken()) return;
     api<{ user: User }>("me").then(r => enter(r.user)).catch(() => setToken(null)).finally(() => setLoading(false));
     const out = () => { setUser(null); };
-    window.addEventListener("cognitune:signedout", out); return () => window.removeEventListener("cognitune:signedout", out);
+    window.addEventListener("lagomo:signedout", out); return () => window.removeEventListener("lagomo:signedout", out);
   }, []);
   const register = useCallback(async (b: { username: string; password: string; name: string; avatar?: AvatarSpec }) => { const k = await prepareKeys(b.password); const r = await api<AuthResp>("register", { body: { ...b, pk: k.bundle.pk, wk: k.bundle.wk } }); await k.keep(r.user.id); setToken(r.token); setNeedsAvatar(true); enter(r.user); }, []);
   const unlockWith = async (r: AuthResp, password: string) => {

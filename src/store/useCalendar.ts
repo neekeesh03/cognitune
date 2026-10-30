@@ -3,7 +3,7 @@ import { api } from "@/lib/api";
 import type { Block } from "@/engine/plan";
 import type { ExtEvent } from "@/engine/calendar";
 
-const K = "cognitune.cal.v1"; const STALE = 15 * 60e3;
+const K = "lagomo.cal.v1"; const STALE = 15 * 60e3;
 interface St { url: string; events: ExtEvent[]; fetched: number; feed: boolean; token: string | null }
 const load = (): St => { try { return { url: "", events: [], fetched: 0, feed: false, token: null, ...JSON.parse(localStorage.getItem(K) || "{}") }; } catch { return { url: "", events: [], fetched: 0, feed: false, token: null }; } };
 

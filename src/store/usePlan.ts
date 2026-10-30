@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Block, Task, uid } from "@/engine/plan";
-const KT = "cognitune.tasks.v1", KB = "cognitune.blocks.v1";
+const KT = "lagomo.tasks.v1", KB = "lagomo.blocks.v1";
 const load = <T,>(k: string): T[] => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } };
 export function usePlan() {
   const [tasks, setT] = useState<Task[]>(() => load<Task>(KT)); const [blocks, setB] = useState<Block[]>(() => load<Block>(KB));

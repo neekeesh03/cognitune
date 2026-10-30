@@ -7,8 +7,8 @@ export function FxHost() {
     let n = 0;
     const onT = (e: Event) => { const d = (e as CustomEvent).detail; const id = ++n; setT(a => [...a.slice(-2), { id, ...d }]); setTimeout(() => setT(a => a.filter(x => x.id !== id)), 3200); };
     const onB = () => { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; const base = Date.now(); setBits(Array.from({ length: 36 }, (_, i) => ({ id: base + i, x: Math.random() * 100, c: COLORS[i % COLORS.length], d: 1.6 + Math.random() * 1.4, r: Math.random() * 720 - 360, w: 6 + Math.random() * 6 }))); setTimeout(() => setBits([]), 3200); };
-    window.addEventListener("cognitune:toast", onT); window.addEventListener("cognitune:burst", onB);
-    return () => { window.removeEventListener("cognitune:toast", onT); window.removeEventListener("cognitune:burst", onB); };
+    window.addEventListener("lagomo:toast", onT); window.addEventListener("lagomo:burst", onB);
+    return () => { window.removeEventListener("lagomo:toast", onT); window.removeEventListener("lagomo:burst", onB); };
   }, []);
   return (
     <>

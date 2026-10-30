@@ -1,4 +1,4 @@
-// Cognitune backend: accounts, friends, messages, calendar and the admin panel.
+// Lagomo backend: accounts, friends, messages, calendar and the admin panel.
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
 import { dayStr, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       const rl = await rd("INCR", `rl:login:${ip}:${Math.floor(Date.now() / 6e4)}`); if (rl > 15) throw err(429, "Too many tries. Wait a minute.");
       const username = String(body.username || "").toLowerCase().trim(); const id = await rd("GET", "u:" + username); const user = id && await getJ("user:" + id);
       if (!user || !user.pw || !checkPw(String(body.password || ""), user.pw)) throw err(401, "Wrong username or password.");
-      if (user.suspended) throw err(403, "This account is paused. Please contact the Cognitune team.");
+      if (user.suspended) throw err(403, "This account is paused. Please contact the Lagomo team.");
       return res.json({ token: tokenFor(user), user: selfPub(user), keys: user.pk && user.wk ? { pk: user.pk, wk: user.wk } : null });
     }
 
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
         user = { id, username, name: cleanName(g.given_name || g.name) || username, avatar: av, pw: null, gsub: g.sub, created: Date.now() };
         await setJ("user:" + id, user); await rdp([["SET", "g:" + g.sub, id], ["ZADD", "users:z", 0, username]]); bump("signups");
       }
-      if (user.suspended) throw err(403, "This account is paused. Please contact the Cognitune team.");
+      if (user.suspended) throw err(403, "This account is paused. Please contact the Lagomo team.");
       return res.json({ token: tokenFor(user), user: selfPub(user), isNew, keys: user.pk && user.wk ? { pk: user.pk, wk: user.wk } : null });
     }
 
@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     const auth = String(req.headers.authorization || "").replace(/^Bearer /, ""); const claims = verify(auth);
     if (!claims) throw err(401, "Please sign in.");
     const me = await getJ("user:" + claims.sub); if (!me || (claims.v || 0) !== (me.pwv || 0)) throw err(401, "Please sign in.");
-    if (me.suspended) throw err(403, "This account is paused. Please contact the Cognitune team.");
+    if (me.suspended) throw err(403, "This account is paused. Please contact the Lagomo team.");
     await rd("SET", "seen:" + me.id, "1", "EX", 45); touchActive(me.id).catch(() => {});
 
     if (path === "me" && method === "GET") {

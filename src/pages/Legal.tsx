@@ -16,7 +16,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
 export function Privacy() {
   return (
     <Shell title="Privacy">
-      <p>Lagomo is a companion for getting started on things, together. It is made by Cognitune. This page explains, in plain words, what it keeps and where.</p>
+      <p>Lagomo is a companion for getting started on things, together. This page explains, in plain words, what it keeps and where.</p>
       <h2>What stays on your device</h2>
       <p>Your journal, plans, check-ins, rewards and calendar blocks are saved on your device only. We cannot see them. Clearing your browser data erases them, so use Save backup in Me.</p>
       <h2>What we store on our server</h2>

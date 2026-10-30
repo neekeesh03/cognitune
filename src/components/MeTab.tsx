@@ -18,7 +18,7 @@ import type { GameApi } from "@/store/useGame";
 import type { Profile } from "@/engine/profile";
 import type { CheckIn } from "@/engine/analytics";
 
-const KEYS = ["cognitune.history.v2", "cognitune.entries.v1", "cognitune.settings.v1", "cognitune.game.v1", "cognitune.tasks.v1", "cognitune.blocks.v1"];
+const KEYS = ["lagomo.history.v2", "lagomo.entries.v1", "lagomo.settings.v1", "lagomo.game.v1", "lagomo.tasks.v1", "lagomo.blocks.v1"];
 interface Props { j: JournalApi; auth: AuthApi; game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
 
 export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, onDelete }: Props) {
@@ -30,7 +30,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
   const { g } = game; const lv = levelFor(g.lifetime); const file = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(""); const [cost, setCost] = useState("50");
   const boxReady = g.todayActive && g.boxDay !== dkey();
-  const exportAll = () => { const o: Record<string, string | null> = {}; KEYS.forEach(k => (o[k] = localStorage.getItem(k))); const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: "application/json" })); a.download = `cognitune-backup-${dkey()}.json`; a.click(); };
+  const exportAll = () => { const o: Record<string, string | null> = {}; KEYS.forEach(k => (o[k] = localStorage.getItem(k))); const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: "application/json" })); a.download = `lagomo-backup-${dkey()}.json`; a.click(); };
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
   return (
     <div className="animate-rise mx-auto max-w-3xl">

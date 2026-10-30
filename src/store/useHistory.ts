@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import type { CheckIn } from "@/engine/analytics";
-const KEY = "cognitune.history.v2"; // stored only in this browser
+const KEY = "lagomo.history.v2"; // stored only in this browser
 export function useHistory() {
   const [h, setH] = useState<CheckIn[]>(() => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } });
   useEffect(() => { localStorage.setItem(KEY, JSON.stringify(h)); }, [h]);

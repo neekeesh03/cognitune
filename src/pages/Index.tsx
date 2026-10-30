@@ -40,8 +40,8 @@ const TABS = [
 type Tab = (typeof TABS)[number]["id"];
 
 const useTheme = () => {
-  const [dark, setDark] = useState(() => localStorage.getItem("cognitune.theme") === "dark");
-  useEffect(() => { document.documentElement.classList.toggle("dark", dark); localStorage.setItem("cognitune.theme", dark ? "dark" : "light"); }, [dark]);
+  const [dark, setDark] = useState(() => localStorage.getItem("lagomo.theme") === "dark");
+  useEffect(() => { document.documentElement.classList.toggle("dark", dark); localStorage.setItem("lagomo.theme", dark ? "dark" : "light"); }, [dark]);
   return [dark, setDark] as const;
 };
 

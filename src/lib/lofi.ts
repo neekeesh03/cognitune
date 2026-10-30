@@ -1,4 +1,4 @@
-// Cognitune's own lofi. Generated live in the browser with the Web Audio API, so there are no licensing issues,
+// Lagomo's own lofi. Generated live in the browser with the Web Audio API, so there are no licensing issues,
 // no downloads and it never repeats exactly. Soft chords, a lazy swung beat, vinyl crackle and optional rain.
 export type MoodId = "rainy" | "cafe" | "sunrise" | "rain";
 export interface Mood { id: MoodId; name: string; hint: string; bpm: number; drums: boolean; rain: boolean; crackle: boolean; keys: boolean; bass: boolean; chords: number[][][]; scale: number[] }
@@ -19,7 +19,7 @@ export const MOODS: Mood[] = [
   { id: "sunrise", name: "Soft sunrise", hint: "No drums, just gentle keys", bpm: 60, drums: false, rain: false, crackle: true, keys: true, bass: false, chords: MAJOR_SET, scale: [64, 67, 69, 71, 74, 76] },
   { id: "rain", name: "Just rain", hint: "Rain and nothing else", bpm: 60, drums: false, rain: true, crackle: false, keys: false, bass: false, chords: MINOR_SET, scale: [] },
 ];
-const K_MOOD = "cognitune.lofi.mood", K_VOL = "cognitune.lofi.vol";
+const K_MOOD = "lagomo.lofi.mood", K_VOL = "lagomo.lofi.vol";
 const mtof = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 

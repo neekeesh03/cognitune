@@ -24,7 +24,7 @@ export function InsightsTab({ profile, history, onFollowUp, onClear, onDelete }:
   const download = () => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([toCSV(history)], { type: "text/csv" }));
-    a.download = "cognitune-history.csv"; a.click();
+    a.download = "lagomo-history.csv"; a.click();
   };
 
   const seg = (

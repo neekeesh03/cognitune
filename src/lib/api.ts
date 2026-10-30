@@ -1,4 +1,4 @@
-const TK = "cognitune.token";
+const TK = "lagomo.token";
 export const getToken = () => localStorage.getItem(TK);
 export const setToken = (t: string | null) => (t ? localStorage.setItem(TK, t) : localStorage.removeItem(TK));
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
@@ -9,6 +9,6 @@ export async function api<T = unknown>(path: string, opts: { method?: string; bo
   catch { throw new ApiError(0, "You seem to be offline. Check your connection and try again."); }
   const ct = r.headers.get("content-type") || "";
   const j = ct.includes("json") ? await r.json() : null;
-  if (!r.ok) { if (r.status === 401 && t) { setToken(null); window.dispatchEvent(new Event("cognitune:signedout")); } throw new ApiError(r.status, j?.error || "Something went wrong. Please try again."); }
+  if (!r.ok) { if (r.status === 401 && t) { setToken(null); window.dispatchEvent(new Event("lagomo:signedout")); } throw new ApiError(r.status, j?.error || "Something went wrong. Please try again."); }
   return j as T;
 }
