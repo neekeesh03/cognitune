@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { toast } from "@/lib/fx";
+import { notify } from "@/lib/notify";
 import { track } from "@/lib/track";
 
 interface HopsResp { hops: Record<string, { ts: number }>; cheers: { from: string; ts: number }[] }
@@ -16,15 +16,15 @@ export function useHops(friends: Person[], active = true) {
     try {
       const r = await api<HopsResp>("hops");
       const next: Record<string, number> = {}; Object.entries(r.hops).forEach(([id, v]) => { next[id] = v.ts; });
-      if (!first.current) Object.entries(next).forEach(([id, ts]) => { if (ts > (seenHop.current[id] ?? 0)) { const f = fr.current.find(x => x.id === id); if (f) toast(f.name + " hopped in", "Your turn? One small start is enough."); } });
+      if (!first.current) Object.entries(next).forEach(([id, ts]) => { if (ts > (seenHop.current[id] ?? 0)) { const f = fr.current.find(x => x.id === id); if (f) notify({ id: `hop:${id}:${ts}`, tag: "hop:" + id, title: f.name + " hopped in", body: "Your turn? One small start is enough." }); } });
       seenHop.current = next; first.current = false; setHops(next);
-      r.cheers.filter(c => c.ts > seenCheer.current).forEach(c => { const f = fr.current.find(x => x.id === c.from); toast((f?.name ?? "A friend") + " cheered you on", "Nice hop."); });
+      r.cheers.filter(c => c.ts > seenCheer.current).forEach(c => { const f = fr.current.find(x => x.id === c.from); notify({ id: `cheer:${c.from}:${c.ts}`, tag: "cheer:" + c.from, title: (f?.name ?? "A friend") + " cheered you on", body: "Nice hop." }); });
       if (r.cheers.length) seenCheer.current = Math.max(seenCheer.current, ...r.cheers.map(c => c.ts));
     } catch { /* offline or signed out: stay quiet */ }
   }, []);
   useEffect(() => {
     if (!active) return; poll();
-    const t = setInterval(() => { if (document.visibilityState === "visible") poll(); }, 20000);
+    const t = setInterval(poll, document.hidden ? 40000 : 20000);
     return () => clearInterval(t);
   }, [active, poll]);
   const hopIn = useCallback(() => { api("hop", { body: {} }).catch(() => undefined); }, []);

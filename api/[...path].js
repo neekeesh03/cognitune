@@ -1,6 +1,7 @@
 // Lagomo backend: accounts, friends, messages, calendar and the admin panel.
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
+import { pushPublicKey, saveSub, dropSub, pushTo } from "./_push.js";
 import { dayStr, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
@@ -73,21 +74,23 @@ export default async function handler(req, res) {
     if (!claims) throw err(401, "Please sign in.");
     const me = await getJ("user:" + claims.sub); if (!me || (claims.v || 0) !== (me.pwv || 0)) throw err(401, "Please sign in.");
     if (me.suspended) throw err(403, "This account is paused. Please contact the Lagomo team.");
-    await rd("SET", "seen:" + me.id, "1", "EX", 45); touchActive(me.id).catch(() => {});
+    const nowTs = String(Date.now()); await rdp([["SET", "seen:" + me.id, nowTs, "EX", 120], ["SET", "ls:" + me.id, nowTs, "EX", 7 * 864e3]]); touchActive(me.id).catch(() => {});
+    const isOn = v => !!v && (v === "1" || Date.now() - (+v || 0) < 50000);
 
     if (path === "me" && method === "GET") {
       const [friendIds, inIds, outIds, blocked] = await rdp([["SMEMBERS", "f:" + me.id], ["SMEMBERS", "fin:" + me.id], ["SMEMBERS", "fout:" + me.id], ["SMEMBERS", "blk:" + me.id]]);
       const ids = [...new Set([...friendIds, ...inIds, ...outIds])];
       const users = ids.length ? (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(Boolean) : [];
       const seen = ids.length ? await rdp(ids.map(i => ["GET", "seen:" + i])) : [];
-      const online = Object.fromEntries(ids.map((i, n) => [i, !!seen[n]]));
+      const online = Object.fromEntries(ids.map((i, n) => [i, isOn(seen[n])]));
+      const lasts2 = ids.length ? await rdp(ids.map(i => ["GET", "ls:" + i])) : []; const lastSeen = Object.fromEntries(ids.map((i, n) => [i, +(lasts2[n] || 0) || null]));
       const byId = Object.fromEntries(users.map(u => [u.id, u]));
       const reads = friendIds.length ? await rdp(friendIds.map(f => ["GET", `rd:${me.id}:${f}`])) : [];
       const lasts = friendIds.length ? await rdp(friendIds.map(f => ["LRANGE", convoKey(me.id, f), -40, -1])) : [];
       const friends = friendIds.filter(i => byId[i]).map((i, n) => {
         const msgs = (lasts[n] || []).map(m => JSON.parse(m)); const lr = +(reads[n] || 0);
         const last = msgs[msgs.length - 1];
-        return { ...pub(byId[i]), online: online[i], unread: msgs.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
+        return { ...pub(byId[i]), online: online[i], lastSeen: lastSeen[i], unread: msgs.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
       });
       const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
     }
@@ -102,12 +105,18 @@ export default async function handler(req, res) {
       if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
       const v = await getJ(`sp:${sid}:${w}`); return res.json({ state: v && Date.now() - v.ts < 30000 ? v.state : "none" });
     }
+    if (path === "ping" && method === "POST") return res.json({ ok: true });
+    if (path === "push-key" && method === "GET") return res.json({ key: await pushPublicKey() });
+    if (path === "push-sub" && method === "POST") { await saveSub(me, body.sub); return res.json({ ok: true }); }
+    if (path === "push-sub" && method === "DELETE") { await dropSub(me, String(body.endpoint || "")); return res.json({ ok: true }); }
     // "Hopped in": a private, text-free signal that you started today. Friends only.
     if (path === "hop" && method === "POST") {
       const n = await rd("INCR", `rl:hop:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:hop:${me.id}:${dayStr()}`, 172800);
       if (n > 40) return res.json({ ok: true });
       await rd("SET", "hop:" + me.id, JSON.stringify({ ts: Date.now() }), "EX", 129600);
-      await bump("hop"); return res.json({ ok: true });
+      await bump("hop");
+      if (await rd("SETNX", `hopp:${me.id}:${dayStr()}`, "1")) { await rd("EXPIRE", `hopp:${me.id}:${dayStr()}`, 172800); const fids = (await rd("SMEMBERS", "f:" + me.id)) || []; await Promise.all(fids.map(f => pushTo(f, { title: me.name + " hopped in", body: "Your turn? One small start is enough.", tag: "hop:" + me.id }, { limitKey: `rl:hoppush:${f}:${dayStr()}`, limit: 4 }))); }
+      return res.json({ ok: true });
     }
     if (path === "hops" && method === "GET") {
       const fids = await rd("SMEMBERS", "f:" + me.id); const ids = Array.isArray(fids) ? fids : [];
@@ -120,7 +129,7 @@ export default async function handler(req, res) {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
       const n = await rd("INCR", `rl:cheer:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:cheer:${me.id}:${dayStr()}`, 172800); if (n > 80) return res.json({ ok: true });
       await rdp([["LPUSH", "cheer:" + to, JSON.stringify({ from: me.id, ts: Date.now() })], ["LTRIM", "cheer:" + to, 0, 19], ["EXPIRE", "cheer:" + to, 172800]]);
-      await bump("cheer"); return res.json({ ok: true });
+      await bump("cheer"); await pushTo(to, { title: me.name + " cheered you on", body: "Nice hop.", tag: "cheer:" + me.id }, { limitKey: `rl:cheerpush:${to}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
     }
     if (path === "room-create" && method === "POST") {
       const sid = String(body.sid || "").slice(0, 60), inv = [...new Set((Array.isArray(body.inv) ? body.inv : []).map(String))].slice(0, 5);
@@ -166,12 +175,12 @@ export default async function handler(req, res) {
       if (await rd("SISMEMBER", "blk:" + tid, me.id)) throw err(404, "No one with that username.");
       if (await rd("SISMEMBER", "f:" + me.id, tid)) return res.json({ ok: true, status: "friends" });
       if (await rd("SISMEMBER", "fout:" + tid, me.id)) { await rdp([["SADD", "f:" + me.id, tid], ["SADD", "f:" + tid, me.id], ["SREM", "fout:" + tid, me.id], ["SREM", "fin:" + me.id, tid]]); return res.json({ ok: true, status: "friends" }); }
-      await rdp([["SADD", "fout:" + me.id, tid], ["SADD", "fin:" + tid, me.id]]); return res.json({ ok: true, status: "sent" });
+      await rdp([["SADD", "fout:" + me.id, tid], ["SADD", "fin:" + tid, me.id]]); await pushTo(tid, { title: "New friend request", body: me.name + " wants to be friends", tag: "fr:" + me.id }, { limitKey: `rl:frpush:${tid}:${dayStr()}`, limit: 10 }); return res.json({ ok: true, status: "sent" });
     }
     if (path === "friend-respond" && method === "POST") {
       const id = String(body.id || ""); if (!(await rd("SISMEMBER", "fin:" + me.id, id))) throw err(404, "No such request.");
       const cmds = [["SREM", "fin:" + me.id, id], ["SREM", "fout:" + id, me.id]]; if (body.accept) cmds.push(["SADD", "f:" + me.id, id], ["SADD", "f:" + id, me.id]);
-      await rdp(cmds); return res.json({ ok: true });
+      await rdp(cmds); if (body.accept) await pushTo(id, { title: me.name + " is now your friend", body: "Say hi, or hop in together.", tag: "fr:" + me.id }, { limitKey: `rl:frpush:${id}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
     }
     if (path === "friend-remove" && method === "POST") {
       const id = String(body.id || ""); const cmds = [["SREM", "f:" + me.id, id], ["SREM", "f:" + id, me.id], ["SREM", "fout:" + me.id, id], ["SREM", "fin:" + me.id, id]];
@@ -182,7 +191,7 @@ export default async function handler(req, res) {
       const since = +query.since || 0; const raw = await rd("LRANGE", convoKey(me.id, w), -150, -1);
       const msgs = raw.map(m => JSON.parse(m)).filter(m => m.ts > since);
       const seen = await rd("GET", "seen:" + w); const typing = await rd("GET", `typ:${w}:${me.id}`);
-      return res.json({ messages: msgs, online: !!seen, typing: !!typing });
+      return res.json({ messages: msgs, online: isOn(seen), typing: !!typing });
     }
     if (path === "messages" && method === "POST") {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
@@ -196,7 +205,9 @@ export default async function handler(req, res) {
         const fid = crypto.randomUUID(); await setJ("file:" + fid, { data: f.data, to, from: me.id }, "EX", 60 * 864e3); msg.fileId = fid;
       }
       const ck = convoKey(me.id, to); await rdp([["RPUSH", ck, JSON.stringify(msg)], ["LTRIM", ck, -300, -1]]);
-      bump("msgs"); return res.json({ message: msg });
+      bump("msgs");
+      await pushTo(to, { title: me.name, body: kind === "file" ? "Sent you a file" : kind.startsWith("session") ? "Invited you to focus together" : "New message", tag: "msg:" + me.id }, { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
+      return res.json({ message: msg });
     }
     if (path === "typing" && method === "POST") { await rd("SET", `typ:${me.id}:${String(body.to || "")}`, "1", "EX", 4); return res.json({ ok: true }); }
     if (path === "read" && method === "POST") { await rd("SET", `rd:${me.id}:${String(body.with || "")}`, String(Date.now())); return res.json({ ok: true }); }

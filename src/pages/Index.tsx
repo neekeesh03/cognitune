@@ -26,7 +26,8 @@ import { useHops } from "@/store/useHops";
 import { useAuth, type AuthApi, type User } from "@/store/useAuth";
 import { useCalendar } from "@/store/useCalendar";
 import { itemsForDay } from "@/engine/calendar";
-import { toast } from "@/lib/fx";
+import { notify } from "@/lib/notify";
+import { api } from "@/lib/api";
 import { suggestSteps, uid } from "@/engine/plan";
 import { dkey } from "@/engine/game";
 
@@ -62,7 +63,12 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean; buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean } } | null>(null);
   const [dark, setDark] = useTheme();
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
-  const people = usePeople(true, f => { if (!(tabRef.current === "circle" && openRef.current === f.id)) toast(f.name, f.last?.text.slice(0, 60) ?? "New message"); });
+  const people = usePeople(true, (f, n) => { if (!(tabRef.current === "circle" && openRef.current === f.id && !document.hidden)) notify({ id: `msg:${f.id}:${f.unread}`, tag: "msg:" + f.id, title: f.name, body: n > 1 ? `${n} new messages` : "New message" }); });
+  useEffect(() => {
+    const ping = () => { if (!document.hidden) api("ping", { body: {} }).catch(() => undefined); };
+    ping(); const t = setInterval(ping, 25000); document.addEventListener("visibilitychange", ping); window.addEventListener("focus", ping);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", ping); window.removeEventListener("focus", ping); };
+  }, []);
   const unread = totalUnread(people.friends);
   const hops = useHops(people.friends, true);
   useEffect(() => { track("app_open", undefined, true); }, []);

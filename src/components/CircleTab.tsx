@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { lastSeenText } from "@/lib/notify";
+import AlertsCard from "@/components/AlertsCard";
 import { ArrowLeft, Check, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +50,7 @@ function Home({ people, game, me, setOpenId, startSession }: Props) {
   const share = async () => { if (navigator.share) { try { await navigator.share({ title: "Join me on Lagomo", text: invite }); return; } catch { /* cancelled */ } } await navigator.clipboard?.writeText(invite).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-5">
-      <div className="text-center"><h1 className="text-4xl">Your circle</h1><p className="mx-auto mt-2 max-w-md text-muted-foreground">Chat with the people who help you start. Send messages and files, work side by side,.</p></div>
+      <div className="text-center"><h1 className="text-4xl">Your circle</h1><p className="mx-auto mt-2 max-w-md text-muted-foreground">Chat with the people who help you start. Send messages and files, work side by side.</p></div>
       <div className="glass flex items-center gap-4 rounded-3xl p-4"><Avatar spec={me.avatar} size={56} /><div className="min-w-0 flex-1"><div className="font-semibold">{me.name}</div><div className="text-sm text-muted-foreground">@{me.username}</div></div>
         <Button variant="hero" className="rounded-full" onClick={share}>{copied ? <><Check className="mr-1 h-4 w-4" />Copied</> : <><Share2 className="mr-1 h-4 w-4" />Invite friends</>}</Button></div>
       {people.incoming.length > 0 && <div className="glass space-y-2 rounded-3xl p-4"><div className="text-sm font-semibold">Friend requests</div>{people.incoming.map(u => (
@@ -63,13 +65,15 @@ function Home({ people, game, me, setOpenId, startSession }: Props) {
         {q.trim().length >= 2 && found.length === 0 && <p className="text-xs text-muted-foreground">No one found yet. Ask your friend for their exact username.</p>}
         {msg && <p className="text-sm text-primary" role="status">{msg}</p>}
       </div>
+      <AlertsCard />
       <Corner people={people} me={me} startSession={startSession} />
       {people.friends.length === 0 ? <p className="py-4 text-center text-sm text-muted-foreground">No friends here yet. Invite someone, or search for a username above.</p> : (
         <div className="grid gap-3 sm:grid-cols-2">{people.friends.map(x => (
           <button key={x.id} aria-label={`Chat with ${x.name}`} onClick={() => setOpenId(x.id)} className="glass flex items-center gap-3 rounded-3xl p-4 text-left transition hover:scale-[1.01]">
             <div className="relative"><Avatar spec={x.avatar} size={52} /><span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${x.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
             <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate font-semibold">{x.name}</span>{x.unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{x.unread}</span>}</div>
-              <div className="truncate text-xs text-muted-foreground">{x.last ? (x.last.mine ? "You: " : "") + x.last.text : x.online ? "Online now" : "Say hi"}</div></div>
+              <div className="truncate text-xs text-muted-foreground">{x.last ? (x.last.mine ? "You: " : "") + x.last.text : x.online ? "Online now" : "Say hi"}</div>
+              <div className={`text-[11px] ${x.online ? "text-success" : "text-muted-foreground"}`}>{x.online ? "Online now" : lastSeenText(x.lastSeen)}</div></div>
           </button>))}</div>)}
       {people.outgoing.length > 0 && <p className="text-center text-xs text-muted-foreground">Waiting on: {people.outgoing.map(u => "@" + u.username).join(", ")}</p>}
       <p className="text-center text-xs text-muted-foreground">Messages and files are end-to-end encrypted. They are locked on your device and only you and your friend can open them. Our server only stores scrambled data so it can deliver it when your friend is away. Your journal never leaves your device.</p>
@@ -103,7 +107,7 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><Avatar spec={f.avatar} size={60} /><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
-          <div><h1 className="text-3xl">{f.name}</h1><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : "Away. Your messages will be waiting."}</div>{f.pk ? <div className="mt-0.5 text-xs text-muted-foreground" title="Compare this code with your friend, in person or on a call. If it matches, nobody is listening in.">Private chat. Safety code {code || "..."}</div> : <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
+          <div><h1 className="text-3xl">{f.name}</h1><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : lastSeenText(f.lastSeen) + ". Your messages will be waiting."}</div>{f.pk ? <div className="mt-0.5 text-xs text-muted-foreground" title="Compare this code with your friend, in person or on a call. If it matches, nobody is listening in.">Private chat. Safety code {code || "..."}</div> : <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
         <button aria-label={`Report ${f.name}`} className="p-2 text-xs text-muted-foreground hover:text-foreground" onClick={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Lagomo team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</button>
         <button aria-label={`Remove ${f.name}`} className="p-2 text-muted-foreground hover:text-foreground" onClick={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}><UserMinus className="h-4 w-4" /></button>
       </div>
