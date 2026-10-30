@@ -2,7 +2,7 @@
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
 import { pushPublicKey, saveSub, dropSub, pushTo } from "./_push.js";
-import { dayStr, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
+import { dayStr, lastDays, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
 import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_exp.js";
@@ -109,12 +109,21 @@ export default async function handler(req, res) {
     if (path === "push-key" && method === "GET") return res.json({ key: await pushPublicKey() });
     if (path === "push-sub" && method === "POST") { await saveSub(me, body.sub); return res.json({ ok: true }); }
     if (path === "push-sub" && method === "DELETE") { await dropSub(me, String(body.endpoint || "")); return res.json({ ok: true }); }
+    if (path === "burrow" && method === "GET") {
+      const days = lastDays(7); const fids = (await rd("SMEMBERS", "f:" + me.id)) || [];
+      const mine = new Set((await rd("SMEMBERS", "sd:" + me.id)) || []);
+      const theirs = fids.length ? await rdp(fids.map(f => ["SMEMBERS", "sd:" + f])) : [];
+      const pairs = {};
+      fids.forEach((f, i) => { const t = new Set(theirs[i] || []); pairs[f] = { both: days.filter(d => mine.has(d) && t.has(d)).length, either: days.filter(d => mine.has(d) || t.has(d)).length, mine: days.filter(d => mine.has(d)).length }; });
+      return res.json({ pairs, starters: (await rd("SCARD", "hd:" + dayStr())) || 0 });
+    }
     // "Hopped in": a private, text-free signal that you started today. Friends only.
     if (path === "hop" && method === "POST") {
       const n = await rd("INCR", `rl:hop:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:hop:${me.id}:${dayStr()}`, 172800);
       if (n > 40) return res.json({ ok: true });
       await rd("SET", "hop:" + me.id, JSON.stringify({ ts: Date.now() }), "EX", 129600);
       await bump("hop");
+      await rdp([["SADD", "sd:" + me.id, dayStr()], ["EXPIRE", "sd:" + me.id, 45 * 86400], ["SADD", "hd:" + dayStr(), me.id], ["EXPIRE", "hd:" + dayStr(), 3 * 86400]]);
       if (await rd("SETNX", `hopp:${me.id}:${dayStr()}`, "1")) { await rd("EXPIRE", `hopp:${me.id}:${dayStr()}`, 172800); const fids = (await rd("SMEMBERS", "f:" + me.id)) || []; await Promise.all(fids.map(f => pushTo(f, { title: me.name + " hopped in", body: "Your turn? One small start is enough.", tag: "hop:" + me.id }, { limitKey: `rl:hoppush:${f}:${dayStr()}`, limit: 4 }))); }
       return res.json({ ok: true });
     }

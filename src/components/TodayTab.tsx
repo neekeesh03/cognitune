@@ -15,10 +15,18 @@ import { StartHero } from "@/components/StartHero";
 import { HopStrip } from "@/components/HopStrip";
 import { StoryCard } from "@/components/StoryCard";
 import { NameCheck } from "@/components/NameCheck";
+import { GetStarted } from "@/components/GetStarted";
+import { InstallNudge } from "@/components/InstallNudge";
+import { Avatar } from "@/components/Avatar";
+import type { BurrowApi } from "@/store/useBurrow";
 import type { Friend } from "@/store/usePeople";
 import type { HopsApi } from "@/store/useHops";
 
-export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, hops }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; friends: Friend[]; hops: HopsApi }) {
+export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, hops, burrow, username }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
+  const [calm, setCalm] = useState(() => !!localStorage.getItem("lagomo.calm")); const toggleCalm = () => { const v = !calm; setCalm(v); v ? localStorage.setItem("lagomo.calm", "1") : localStorage.removeItem("lagomo.calm"); };
+  const started = !!localStorage.getItem("lagomo.firstStart") || (game.g.counts.started ?? 0) > 0;
+  const planned = (() => { try { const p = JSON.parse(localStorage.getItem("lagomo.nexthop") || "null"); return p && Date.now() - p.ts < 36e5 * 30 ? String(p.w).toLowerCase() : ""; } catch { return ""; } })();
+  const together = friends.filter(f => (burrow.pairs[f.id]?.both ?? 0) > 0).sort((a, b) => burrow.pairs[b.id].both - burrow.pairs[a.id].both).slice(0, 2);
   const nextBlock = plan.blocks.filter(b => b.day === dkey() && !b.done).sort((a, b) => a.start - b.start)[0];
   const nextStep = plan.tasks.filter(t => !t.doneAt).flatMap(t => t.steps.filter(s => !s.done).map(s => ({ s, t })))[0];
   const boxReady = game.g.todayActive && game.g.boxDay !== dkey();
@@ -34,17 +42,23 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, ho
   const hour = new Date().getHours(); const hello = `${hour < 12 ? "Good morning" : hour < 18 ? "Hi" : "Good evening"}, ${name.split(" ")[0]}.`;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6">
-      <div className="text-center"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">One start is enough for today.</p></div>
+      <div className="text-center"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">{planned ? `You planned to hop in ${planned}.` : "One start is enough for today."}</p></div>
       <StoryCard />
       <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
+      <GetStarted username={username} friends={friends.length} started={started} />
       <HopStrip friends={friends} hops={hops} />
+      {together.length > 0 && <div className="flex flex-wrap justify-center gap-2">{together.map(f => <span key={f.id} className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-sm"><Avatar spec={f.avatar} size={26} />You and {f.name.split(" ")[0]} started together {burrow.pairs[f.id].both} {burrow.pairs[f.id].both === 1 ? "day" : "days"} this week</span>)}</div>}
+      <InstallNudge started={started} />
       <NameCheck />
 
       <>
         <div className="flex items-center justify-center gap-3 text-sm">
+          {!calm && <>
           <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Flame className="h-4 w-4" style={{ color: "hsl(var(--f-primode))" }} /><b>{game.g.streak.current}</b> showing-up days</span>
           <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Sparkles className="h-4 w-4 text-primary" /><b>{game.g.sparks}</b> sparks</span>
+          </>}
           {boxReady && <button onClick={game.openBox} className="glass flex animate-breathe items-center gap-1.5 rounded-full px-4 py-2 text-primary"><Gift className="h-4 w-4" />Open spark box</button>}
+          <button onClick={toggleCalm} className="rounded-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground">{calm ? "Show numbers" : "Hide numbers"}</button>
         </div>
         {(nextBlock || nextStep || agenda.length > 0) && (
           <button onClick={() => go("plan")} className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 text-left transition hover:scale-[1.01]">

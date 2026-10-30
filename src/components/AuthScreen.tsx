@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { randomAvatar } from "@/engine/avatar";
 import { googleClientId, renderGoogleButton } from "@/lib/google";
 import type { AuthApi } from "@/store/useAuth";
+import { invitedBy } from "@/lib/invite";
 
 type Step = "welcome" | "signup" | "login";
 
@@ -42,6 +43,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         {[{ l: "6%", t: "38%", s: 64, r: -8 }, { l: "24%", t: "4%", s: 72, r: 6 }, { l: "42%", t: "30%", s: 92, r: 0 }, { l: "64%", t: "2%", s: 72, r: -6 }, { l: "78%", t: "40%", s: 62, r: 9 }].map((p, i) => (
           <div key={i} className="absolute" style={{ left: p.l, top: p.t, transform: `rotate(${p.r}deg)` }}><div className="animate-float" style={{ animationDelay: `${i * 0.6}s` }}><Avatar spec={crowd[i]} size={p.s} /></div></div>))}
       </div>
+      {invitedBy() && <p className="mt-6 rounded-full bg-primary/10 px-4 py-2 text-sm text-primary" role="status">@{invitedBy()} invited you. Sign up and you will be friends.</p>}
       <h1 className="mt-8 text-4xl leading-tight">Start something small. Together.</h1>
       <p className="mt-3 max-w-xs text-muted-foreground">Press Start. Get a two-minute first step. A friend sees you begin.</p><p className="mt-2 text-xs text-muted-foreground">Lagomo is lagom (just the right amount) + go. One small start is enough.</p>
       <div className="mt-8 w-full space-y-3">

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { lastSeenText } from "@/lib/notify";
+import { inviteText } from "@/lib/invite";
+import type { Pair } from "@/store/useBurrow";
 import AlertsCard from "@/components/AlertsCard";
 import { ArrowLeft, Check, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,7 @@ import type { User } from "@/store/useAuth";
 import type { GameApi } from "@/store/useGame";
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
-interface Props { people: PeopleApi; game: GameApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
+interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
 
 export function CircleTab(props: Props) {
   const { people, me, openId, setOpenId } = props;
@@ -41,13 +43,13 @@ function Corner({ people, me, startSession }: Pick<Props, "people" | "me" | "sta
     </div>);
 }
 
-function Home({ people, game, me, setOpenId, startSession }: Props) {
+function Home({ people, game, me, setOpenId, startSession, pairs }: Props) {
   const [q, setQ] = useState(""); const [found, setFound] = useState<Pub[]>([]); const [msg, setMsg] = useState(""); const [copied, setCopied] = useState(false);
   useEffect(() => { if (q.trim().length < 2) { setFound([]); return; } const t = setTimeout(() => api<{ users: Pub[] }>("search?q=" + encodeURIComponent(q.trim())).then(r => setFound(r.users)).catch(() => {}), 250); return () => clearTimeout(t); }, [q]);
   const status = (id: string) => people.friends.some(f => f.id === id) ? "friend" : people.outgoing.some(f => f.id === id) ? "sent" : people.incoming.some(f => f.id === id) ? "incoming" : "none";
   const add = async (username: string) => { setMsg(""); try { const s = await people.request(username); if (s === "friends") game.earn("nudge", { people: 1 }); setMsg(s === "friends" ? `You and @${username} are now friends.` : `Request sent to @${username}.`); } catch (e) { setMsg((e as Error).message); } };
-  const invite = `Join me on Lagomo, a friendly app for getting started on things. Sign up at ${location.origin} and add me: @${me.username}`;
-  const share = async () => { if (navigator.share) { try { await navigator.share({ title: "Join me on Lagomo", text: invite }); return; } catch { /* cancelled */ } } await navigator.clipboard?.writeText(invite).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
+  const invite = inviteText(me.username);
+  const share = async () => { localStorage.setItem("lagomo.invited", "1"); if (navigator.share) { try { await navigator.share({ title: "Join me on Lagomo", text: invite }); return; } catch { /* cancelled */ } } await navigator.clipboard?.writeText(invite).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-5">
       <div className="text-center"><h1 className="text-4xl">Your circle</h1><p className="mx-auto mt-2 max-w-md text-muted-foreground">Chat with the people who help you start. Send messages and files, work side by side.</p></div>
@@ -73,7 +75,7 @@ function Home({ people, game, me, setOpenId, startSession }: Props) {
             <div className="relative"><Avatar spec={x.avatar} size={52} /><span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${x.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
             <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate font-semibold">{x.name}</span>{x.unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{x.unread}</span>}</div>
               <div className="truncate text-xs text-muted-foreground">{x.last ? (x.last.mine ? "You: " : "") + x.last.text : x.online ? "Online now" : "Say hi"}</div>
-              <div className={`text-[11px] ${x.online ? "text-success" : "text-muted-foreground"}`}>{x.online ? "Online now" : lastSeenText(x.lastSeen)}</div></div>
+              <div className={`text-[11px] ${x.online ? "text-success" : "text-muted-foreground"}`}>{x.online ? "Online now" : lastSeenText(x.lastSeen)}{(pairs?.[x.id]?.both ?? 0) > 0 ? ` · together ${pairs![x.id].both}/7 days` : ""}</div></div>
           </button>))}</div>)}
       {people.outgoing.length > 0 && <p className="text-center text-xs text-muted-foreground">Waiting on: {people.outgoing.map(u => "@" + u.username).join(", ")}</p>}
       <p className="text-center text-xs text-muted-foreground">Messages and files are end-to-end encrypted. They are locked on your device and only you and your friend can open them. Our server only stores scrambled data so it can deliver it when your friend is away. Your journal never leaves your device.</p>
