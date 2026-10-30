@@ -1,8 +1,8 @@
-# Cognitune
+# Lagomo
 
 A friendly companion for getting started on things. Check how ready you are, break tasks into tiny steps, plan your day in time blocks, build gentle streaks, earn rewards, and keep friends in your corner.
 
-Live: https://cognitune-nikesh.vercel.app/
+Test site: hosted on Vercel (a real domain is coming).
 
 ## What is inside
 - **Today, Plan, Start, Circle, Me** tabs.
