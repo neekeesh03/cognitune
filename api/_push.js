@@ -32,6 +32,7 @@ export async function pushTo(userId, payload, { ifAway = true, limitKey = "", li
     if (ifAway) { const seen = await rd("GET", "seen:" + userId); if (seen && Date.now() - (+seen || 0) < 50000) return 0; }
     if (limitKey && limit) { const n = await rd("INCR", limitKey); await rd("EXPIRE", limitKey, 90000); if (n > limit) return 0; }
     const subs = (await rd("SMEMBERS", "ps:" + userId)) || []; if (!subs.length) return 0;
+    if (typeof payload === "function") payload = payload((await rd("GET", "lang:" + userId)) || "en");
     const k = await keys(); const send = globalThis.__pushSend || ((s, p, o) => webpush.sendNotification(s, p, o));
     let sent = 0;
     await Promise.all(subs.map(async raw => {

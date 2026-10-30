@@ -8,6 +8,7 @@ import { randomAvatar } from "@/engine/avatar";
 import { googleClientId, renderGoogleButton } from "@/lib/google";
 import type { AuthApi } from "@/store/useAuth";
 import { invitedBy } from "@/lib/invite";
+import { LangPicker } from "@/components/LangPicker";
 
 type Step = "welcome" | "signup" | "login";
 
@@ -38,12 +39,13 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
 
   if (step === "welcome") return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-10 text-center">
+      <div className="fixed end-4 top-4 z-10"><LangPicker /></div>
       <Brand />
       <div className="relative mt-10 h-44 w-full" aria-hidden="true">
         {[{ l: "6%", t: "38%", s: 64, r: -8 }, { l: "24%", t: "4%", s: 72, r: 6 }, { l: "42%", t: "30%", s: 92, r: 0 }, { l: "64%", t: "2%", s: 72, r: -6 }, { l: "78%", t: "40%", s: 62, r: 9 }].map((p, i) => (
           <div key={i} className="absolute" style={{ left: p.l, top: p.t, transform: `rotate(${p.r}deg)` }}><div className="animate-float" style={{ animationDelay: `${i * 0.6}s` }}><Avatar spec={crowd[i]} size={p.s} /></div></div>))}
       </div>
-      {invitedBy() && <p className="mt-6 rounded-full bg-primary/10 px-4 py-2 text-sm text-primary" role="status">@{invitedBy()} invited you. Sign up and you will be friends.</p>}
+      {invitedBy() && <p className="mt-6 rounded-full bg-primary/10 px-4 py-2 text-sm text-primary" role="status">{`@${invitedBy()} invited you. Sign up and you will be friends.`}</p>}
       <h1 className="mt-8 text-4xl leading-tight">Start something small. Together.</h1>
       <p className="mt-3 max-w-xs text-muted-foreground">Press Start. Get a two-minute first step. A friend sees you begin.</p><p className="mt-2 text-xs text-muted-foreground">Lagomo is lagom (just the right amount) + go. One small start is enough.</p>
       <div className="mt-8 w-full space-y-3">
@@ -55,6 +57,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10">
+      <div className="fixed end-4 top-4 z-10"><LangPicker /></div>
       <button onClick={() => to("welcome")} className="mb-4 flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Back</button>
       <Brand small />
       <h1 className="mt-5 text-center text-4xl leading-tight">{step === "signup" ? "Create your account" : "Welcome back."}</h1>

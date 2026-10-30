@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/Avatar";
 import { Mascot, Wordmark } from "@/components/Mascot";
+import { LangPicker } from "@/components/LangPicker";
 import { randomAvatar } from "@/engine/avatar";
 
 type V = "tiny" | "together" | "calm";
@@ -42,7 +43,7 @@ export default function Landing() {
     <div className="min-h-screen overflow-x-clip">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
         <div className="flex items-center gap-2.5"><Mascot size={36} /><Wordmark className="text-2xl font-semibold tracking-tight" /></div>
-        <a href="/" onClick={() => hit("click", v, s)} className="rounded-full px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10">Sign in</a>
+        <div className="flex items-center gap-2"><LangPicker /><a href="/" onClick={() => hit("click", v, s)} className="rounded-full px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10">Sign in</a></div>
       </header>
 
       {/* 1. Hero: one promise, one try-it box */}

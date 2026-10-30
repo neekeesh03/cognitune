@@ -158,3 +158,9 @@
 @keyframes lagomo-hop { 0% { transform: translateY(0) scale(1, 1); } 30% { transform: translateY(-22px) scale(.94, 1.08); } 60% { transform: translateY(0) scale(1.08, .92); } 80% { transform: translateY(-6px); } 100% { transform: translateY(0) scale(1, 1); } }
 .animate-hop { animation: lagomo-hop .7s ease-out; }
 @media (prefers-reduced-motion: reduce) { .animate-hop { animation: none; } }
+
+/* Languages: Chinese and Persian look better without tight letter spacing. Persian reads right to left. */
+html[lang="zh"] *, html[lang="fa"] * { letter-spacing: normal !important; }
+html[lang="zh"] body { font-family: "Inter Tight", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
+html[lang="fa"] body { font-family: "Inter Tight", "Vazirmatn", "Tahoma", "Segoe UI", system-ui, sans-serif; }
+html[dir="rtl"] .animate-float, html[dir="rtl"] .animate-hop { direction: ltr; }

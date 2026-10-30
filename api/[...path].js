@@ -1,6 +1,7 @@
 // Lagomo backend: accounts, friends, messages, calendar and the admin panel.
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
+import { T as TT, LANGS as LANG_CODES } from "./_i18n.js";
 import { pushPublicKey, saveSub, dropSub, pushTo } from "./_push.js";
 import { dayStr, lastDays, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
@@ -81,8 +82,8 @@ export default async function handler(req, res) {
         const u = await getJ("user:" + id); if (!u || u.suspended) { skipped++; continue; }
         const fids = ((await rd("SMEMBERS", "f:" + id)) || []).slice(0, 8); let who = "";
         for (const f of fids) { if (await rd("SISMEMBER", "sd:" + f, day)) { const fu = await getJ("user:" + f); if (fu) { who = fu.name.split(" ")[0]; break; } } }
-        const body = who ? `${who} already hopped in. Your turn? Two minutes is enough.` : ["One small start? Two minutes is enough.", "Pick the smallest thing and hop in.", "Just open it. That counts as a start."][new Date().getUTCDate() % 3];
-        const n = await pushTo(id, { title: "Lagomo", body, tag: "daily", url: "/" }, {}); if (n) sent++; else skipped++;
+        const dk = "daily" + (new Date().getUTCDate() % 3);
+        const n = await pushTo(id, l => ({ title: "Lagomo", body: who ? TT(l, "friendHop", who) : TT(l, dk), tag: "daily", url: "/" }), {}); if (n) sent++; else skipped++;
       }
       return res.json({ ok: true, due: ids.length, sent, skipped });
     }
@@ -132,6 +133,7 @@ export default async function handler(req, res) {
       await rd("SADD", "remb:" + bucket, me.id); await setJ("rem:" + me.id, { time: body.time, tz, bucket }); return res.json({ ok: true });
     }
     if (path === "reminder" && method === "DELETE") { const old = await getJ("rem:" + me.id); if (old) await rd("SREM", "remb:" + old.bucket, me.id); await rd("DEL", "rem:" + me.id); return res.json({ ok: true }); }
+    if (path === "lang" && method === "POST") { const l = String(body.lang || ""); if (!LANG_CODES.includes(l)) throw err(400, "Unknown language."); await rd("SET", "lang:" + me.id, l); return res.json({ ok: true }); }
     if (path === "ping" && method === "POST") return res.json({ ok: true });
     if (path === "push-key" && method === "GET") return res.json({ key: await pushPublicKey() });
     if (path === "push-sub" && method === "POST") { await saveSub(me, body.sub); return res.json({ ok: true }); }
@@ -151,7 +153,7 @@ export default async function handler(req, res) {
       await rd("SET", "hop:" + me.id, JSON.stringify({ ts: Date.now() }), "EX", 129600);
       await bump("hop");
       await rdp([["SADD", "sd:" + me.id, dayStr()], ["EXPIRE", "sd:" + me.id, 45 * 86400], ["SADD", "hd:" + dayStr(), me.id], ["EXPIRE", "hd:" + dayStr(), 3 * 86400]]);
-      if (await rd("SETNX", `hopp:${me.id}:${dayStr()}`, "1")) { await rd("EXPIRE", `hopp:${me.id}:${dayStr()}`, 172800); const fids = (await rd("SMEMBERS", "f:" + me.id)) || []; await Promise.all(fids.map(f => pushTo(f, { title: me.name + " hopped in", body: "Your turn? One small start is enough.", tag: "hop:" + me.id }, { limitKey: `rl:hoppush:${f}:${dayStr()}`, limit: 4 }))); }
+      if (await rd("SETNX", `hopp:${me.id}:${dayStr()}`, "1")) { await rd("EXPIRE", `hopp:${me.id}:${dayStr()}`, 172800); const fids = (await rd("SMEMBERS", "f:" + me.id)) || []; await Promise.all(fids.map(f => pushTo(f, l => ({ title: TT(l, "hopped", me.name), body: TT(l, "hopBody"), tag: "hop:" + me.id }), { limitKey: `rl:hoppush:${f}:${dayStr()}`, limit: 4 }))); }
       return res.json({ ok: true });
     }
     if (path === "hops" && method === "GET") {
@@ -165,7 +167,7 @@ export default async function handler(req, res) {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
       const n = await rd("INCR", `rl:cheer:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:cheer:${me.id}:${dayStr()}`, 172800); if (n > 80) return res.json({ ok: true });
       await rdp([["LPUSH", "cheer:" + to, JSON.stringify({ from: me.id, ts: Date.now() })], ["LTRIM", "cheer:" + to, 0, 19], ["EXPIRE", "cheer:" + to, 172800]]);
-      await bump("cheer"); await pushTo(to, { title: me.name + " cheered you on", body: "Nice hop.", tag: "cheer:" + me.id }, { limitKey: `rl:cheerpush:${to}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
+      await bump("cheer"); await pushTo(to, l => ({ title: TT(l, "cheered", me.name), body: TT(l, "cheerBody"), tag: "cheer:" + me.id }), { limitKey: `rl:cheerpush:${to}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
     }
     if (path === "room-create" && method === "POST") {
       const sid = String(body.sid || "").slice(0, 60), inv = [...new Set((Array.isArray(body.inv) ? body.inv : []).map(String))].slice(0, 5);
@@ -211,12 +213,12 @@ export default async function handler(req, res) {
       if (await rd("SISMEMBER", "blk:" + tid, me.id)) throw err(404, "No one with that username.");
       if (await rd("SISMEMBER", "f:" + me.id, tid)) return res.json({ ok: true, status: "friends" });
       if (await rd("SISMEMBER", "fout:" + tid, me.id)) { await rdp([["SADD", "f:" + me.id, tid], ["SADD", "f:" + tid, me.id], ["SREM", "fout:" + tid, me.id], ["SREM", "fin:" + me.id, tid]]); return res.json({ ok: true, status: "friends" }); }
-      await rdp([["SADD", "fout:" + me.id, tid], ["SADD", "fin:" + tid, me.id]]); await pushTo(tid, { title: "New friend request", body: me.name + " wants to be friends", tag: "fr:" + me.id }, { limitKey: `rl:frpush:${tid}:${dayStr()}`, limit: 10 }); return res.json({ ok: true, status: "sent" });
+      await rdp([["SADD", "fout:" + me.id, tid], ["SADD", "fin:" + tid, me.id]]); await pushTo(tid, l => ({ title: TT(l, "frTitle"), body: TT(l, "frBody", me.name), tag: "fr:" + me.id }), { limitKey: `rl:frpush:${tid}:${dayStr()}`, limit: 10 }); return res.json({ ok: true, status: "sent" });
     }
     if (path === "friend-respond" && method === "POST") {
       const id = String(body.id || ""); if (!(await rd("SISMEMBER", "fin:" + me.id, id))) throw err(404, "No such request.");
       const cmds = [["SREM", "fin:" + me.id, id], ["SREM", "fout:" + id, me.id]]; if (body.accept) cmds.push(["SADD", "f:" + me.id, id], ["SADD", "f:" + id, me.id]);
-      await rdp(cmds); if (body.accept) await pushTo(id, { title: me.name + " is now your friend", body: "Say hi, or hop in together.", tag: "fr:" + me.id }, { limitKey: `rl:frpush:${id}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
+      await rdp(cmds); if (body.accept) await pushTo(id, l => ({ title: TT(l, "frOkTitle", me.name), body: TT(l, "frOkBody"), tag: "fr:" + me.id }), { limitKey: `rl:frpush:${id}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
     }
     if (path === "friend-remove" && method === "POST") {
       const id = String(body.id || ""); const cmds = [["SREM", "f:" + me.id, id], ["SREM", "f:" + id, me.id], ["SREM", "fout:" + me.id, id], ["SREM", "fin:" + me.id, id]];
@@ -242,7 +244,7 @@ export default async function handler(req, res) {
       }
       const ck = convoKey(me.id, to); await rdp([["RPUSH", ck, JSON.stringify(msg)], ["LTRIM", ck, -300, -1]]);
       bump("msgs");
-      await pushTo(to, { title: me.name, body: kind === "file" ? "Sent you a file" : kind.startsWith("session") ? "Invited you to focus together" : "New message", tag: "msg:" + me.id }, { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
+      await pushTo(to, l => ({ title: me.name, body: kind === "file" ? TT(l, "msgFile") : kind.startsWith("session") ? TT(l, "msgSession") : TT(l, "msgText"), tag: "msg:" + me.id }), { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
       return res.json({ message: msg });
     }
     if (path === "typing" && method === "POST") { await rd("SET", `typ:${me.id}:${String(body.to || "")}`, "1", "EX", 4); return res.json({ ok: true }); }

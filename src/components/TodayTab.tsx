@@ -47,7 +47,8 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, ho
       <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
       <GetStarted username={username} friends={friends.length} started={started} />
       <HopStrip friends={friends} hops={hops} />
-      {together.length > 0 && <div className="flex flex-wrap justify-center gap-2">{together.map(f => <span key={f.id} className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-sm"><Avatar spec={f.avatar} size={26} />You and {f.name.split(" ")[0]} started together {burrow.pairs[f.id].both} {burrow.pairs[f.id].both === 1 ? "day" : "days"} this week</span>)}</div>}
+      {together.length > 0 && <div className="flex flex-wrap justify-center gap-2">{together.map(f => <span key={f.id} className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-sm"><Avatar spec={f.avatar} size={26} />{`You and ${f.name.split(" ")[0]} started together ${burrow.pairs[f.id].both} ${burrow.pairs[f.id].both === 1 ? "day" : "days"} this week`}</span>)}</div>}
+      {burrow.starters >= 5 && <p className="text-center text-xs text-muted-foreground">{`${burrow.starters} people started today`}</p>}
       <InstallNudge started={started} />
       <NameCheck />
 

@@ -1,8 +1,10 @@
 import { toast } from "@/lib/fx";
+import { tr } from "@/i18n";
 
 const shown = new Map<string, number>();
 /** One place for every "something happened" ping. Same event never shows twice, and the same friend never stacks up. */
-export async function notify(o: { id: string; tag: string; title: string; body?: string; windowMs?: number }) {
+export async function notify(o0: { id: string; tag: string; title: string; body?: string; windowMs?: number }) {
+  const o = { ...o0, title: tr(o0.title), body: o0.body ? tr(o0.body) : o0.body };
   const now = Date.now(); const last = shown.get(o.id);
   if (last && now - last < (o.windowMs ?? 60000)) return; shown.set(o.id, now);
   const away = document.hidden || !document.hasFocus();
