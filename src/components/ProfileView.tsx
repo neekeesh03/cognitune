@@ -29,7 +29,7 @@ export function ProfileView({ username, people, onBack, onMessage, onSaved }: { 
       {d && <>
         <section className="glass rounded-3xl p-6 text-center">
           <div className="mx-auto w-fit"><Avatar spec={d.user.avatar} size={104} /></div>
-          <h1 className="mt-3 text-3xl">{d.user.name}</h1>
+          <h1 className="mt-3 text-3xl" translate="no" dir="auto">{d.user.name}</h1>
           <div className="text-sm text-muted-foreground">{`@${d.user.username}${d.joined ? ` · Joined ${new Date(d.joined).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : ""}`}</div>
           {editing ? (
             <div className="mx-auto mt-3 max-w-md text-start">
@@ -37,7 +37,7 @@ export function ProfileView({ username, people, onBack, onMessage, onSaved }: { 
               <div className="mt-2 flex items-center gap-2"><span className="text-xs text-muted-foreground">{bio.length}/160</span><Button size="sm" variant="ghost" className="ms-auto rounded-full" onClick={() => { setEditing(false); setBio(d.bio); }}>Cancel</Button><Button size="sm" variant="hero" className="rounded-full" onClick={saveBio}>Save</Button></div>
             </div>
           ) : (
-            <p className="mx-auto mt-3 max-w-md whitespace-pre-wrap text-[15px]">{d.bio || (d.self ? "" : "No bio yet.")}</p>
+            d.bio ? <p className="mx-auto mt-3 max-w-md whitespace-pre-wrap text-[15px]" translate="no" dir="auto">{d.bio}</p> : <p className="mx-auto mt-3 max-w-md text-[15px]">{d.self ? "" : "No bio yet."}</p>
           )}
           {d.self && !editing && <Button size="sm" variant="outline" className="mt-3 rounded-full" onClick={() => setEditing(true)}>{d.bio ? "Edit bio" : "Add a bio"}</Button>}
           {msg && <p className="mt-2 text-xs text-primary" role="status">{msg}</p>}

@@ -44,7 +44,7 @@ export function PostCard({ p, feed, onProfile, onReply }: { p: Post; feed: Pick<
       <header className="flex items-center gap-3">
         <button disabled={p.team || !p.author || !onProfile} onClick={() => p.author && onProfile?.(p.author.username)} aria-label={`Open ${name}'s profile`} className="shrink-0">{p.team || !p.author ? <Mascot size={42} /> : <Avatar spec={p.author.avatar} size={42} />}</button>
         <div className="min-w-0 flex-1">
-          <button disabled={p.team || !onProfile} onClick={() => p.author && onProfile?.(p.author.username)} className="block truncate text-start font-semibold hover:underline disabled:no-underline">{name}</button>
+          <button disabled={p.team || !onProfile} onClick={() => p.author && onProfile?.(p.author.username)} className="block truncate text-start font-semibold hover:underline disabled:no-underline"><span translate={p.team ? undefined : "no"}>{name}</span></button>
           <div className="text-xs text-muted-foreground">{timeAgo(p.ts)}{p.team ? " · From the Lagomo team" : ""}</div>
         </div>
         {KIND[p.kind]?.badge && <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-xs text-accent-foreground">{KIND[p.kind].badge}</span>}
@@ -56,14 +56,14 @@ export function PostCard({ p, feed, onProfile, onReply }: { p: Post; feed: Pick<
           </div>}
         </div>
       </header>
-      <div className={`mt-3 whitespace-pre-wrap break-words ${onlyEmoji(p.text) ? "text-5xl leading-tight" : "text-[15px]"}`}>{p.text}</div>
-      <footer className="mt-3 flex flex-wrap items-center gap-1.5" translate="no">
+      <div translate="no" dir="auto" className={`mt-3 whitespace-pre-wrap break-words text-start ${onlyEmoji(p.text) ? "text-5xl leading-tight" : "text-[15px]"}`}>{p.text}</div>
+      <footer className="mt-3 flex flex-wrap items-center gap-1.5">
         {Object.entries(p.reacts).sort((a, b) => b[1] - a[1]).map(([e, n]) => <button key={e} onClick={() => feed.react(p.id, e)} className={`rounded-full border px-2 text-sm leading-7 ${p.mine === e ? "border-primary bg-primary/15" : "border-border bg-background/60"}`}>{e} {n}</button>)}
         <div className="relative">
           <button aria-label="React" onClick={() => setPicking(x => !x)} className="flex items-center rounded-full border border-border px-2 py-1 text-muted-foreground hover:text-foreground"><SmilePlus className="h-4 w-4" /></button>
           {picking && <div className="absolute bottom-9 start-0 z-20 flex gap-0.5 rounded-full border border-border bg-popover p-1 shadow-lg">{QUICK_REACTIONS.map(e => <button key={e} onClick={() => { setPicking(false); feed.react(p.id, e); }} aria-label={e} className={`rounded-full px-1.5 py-0.5 text-xl leading-none transition hover:scale-125 ${p.mine === e ? "bg-primary/20" : ""}`}>{e}</button>)}</div>}
         </div>
-        {!p.own && !p.team && p.author && onReply && <button onClick={() => onReply(p.author!.id)} className="ms-auto flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground"><MessageCircle className="h-4 w-4" /><span translate="yes">Reply privately</span></button>}
+        {!p.own && !p.team && p.author && onReply && <button onClick={() => onReply(p.author!.id)} className="ms-auto flex items-center gap-1 rounded-full px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground"><MessageCircle className="h-4 w-4" /><span>Reply privately</span></button>}
       </footer>
       {note && <p role="status" className="mt-2 text-xs text-primary">{note}</p>}
     </article>);
