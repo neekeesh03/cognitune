@@ -1,6 +1,7 @@
 import { ROWS1 } from "./entries1";
 import { ROWS2 } from "./entries2";
 import { ROWS3 } from "./entries3";
+import { ROWS4 } from "./entries4";
 
 export type Lang = "en" | "zh" | "fa" | "id";
 export const LANGS: { code: Lang; label: string; dir: "ltr" | "rtl" }[] = [
@@ -15,7 +16,7 @@ type Pattern = [RegExp, Record<Exclude<Lang, "en">, (m: RegExpExecArray, T: Tr) 
 const IDX = { zh: 1, fa: 2, id: 3 } as const;
 
 const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {} };
-for (const row of [...ROWS1, ...ROWS2, ...ROWS3]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
+for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -33,7 +34,7 @@ const STATE: Record<string, Record<Exclude<Lang, "en">, string>> = {
 };
 // Sentences with names, numbers or times in them.
 const PATTERNS: Pattern[] = [
-  [/^(Good morning|Hi|Good evening), (.+)\.$/, { zh: m => `${GREET[m[1]].zh}，${m[2]}。`, fa: m => `${GREET[m[1]].fa}، ${m[2]}.`, id: m => `${GREET[m[1]].id}, ${m[2]}.` }],
+  [/^(Good morning|Hi|Good evening), (.+)\.$/, { zh: m => `${GREET[m[1]].zh}，${m[2]}。`, fa: m => `${GREET[m[1]].fa}، ${m[2]}\u200F.`, id: m => `${GREET[m[1]].id}, ${m[2]}.` }],
   [/^You planned to hop in (.+)\.$/, { zh: (m, T) => `你计划在${T(cap(m[1]))}开始。`, fa: (m, T) => `برنامه داشتی ${T(cap(m[1]))} شروع کنی.`, id: (m, T) => `Kamu berencana mulai ${lower(T(cap(m[1])))}.` }],
   [/^Planned: (.+)\. Easy\.$/, { zh: (m, T) => `已计划：${T(cap(m[1]))}。很轻松。`, fa: (m, T) => `برنامه‌ریزی شد: ${T(cap(m[1]))}. آسان.`, id: (m, T) => `Direncanakan: ${lower(T(cap(m[1])))}. Mudah.` }],
   [/^(.+) is working too$/, { zh: m => `${m[1]} 也在专注`, fa: m => `${m[1]} هم دارد کار می‌کند`, id: m => `${m[1]} juga sedang bekerja` }],
