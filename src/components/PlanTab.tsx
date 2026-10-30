@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { BringAlongEditor, BringAlongToggle, ResourceList, draftOf, draftToBlock, emptyDraft, type Draft } from "@/components/BringAlong";
 import { alertState } from "@/lib/push";
 import { deleteBlockFile } from "@/lib/blockfiles";
+import { WeekView } from "@/components/WeekView";
 import { FocusTimer } from "@/components/FocusTimer";
 import { Block, download, fmtTime, googleLink, icsFor, suggestSteps, uid , hasResources, repeatLabel } from "@/engine/plan";
 import { dkey } from "@/engine/game";
@@ -20,11 +21,11 @@ const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 6am..10pm
 const shift = (day: string, n: number) => { const d = new Date(day + "T12:00"); d.setDate(d.getDate() + n); return dkey(d); };
 
 export function PlanTab({ plan, game, history, cal }: { plan: PlanApi; game: GameApi; history: CheckIn[]; cal: CalendarApi }) {
-  const [view, setView] = useState<"todo" | "day" | "cal">("todo");
+  const [view, setView] = useState<"todo" | "day" | "week" | "cal">("todo"); const [jump, setJump] = useState<string | undefined>(undefined);
   return (
     <div className={`animate-rise mx-auto ${view === "cal" ? "max-w-3xl" : "max-w-2xl"}`}>
-      <div className="mb-6 flex w-fit gap-1 rounded-full bg-foreground/[.05] p-1">{([["todo", "Tiny to-dos"], ["day", "Day planner"], ["cal", "Calendar"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
-      {view === "todo" ? <Todos plan={plan} game={game} /> : view === "day" ? <Day plan={plan} game={game} history={history} /> : <CalendarView plan={plan} cal={cal} game={game} />}
+      <div className="mb-6 flex w-fit gap-1 rounded-full bg-foreground/[.05] p-1">{([["todo", "Tiny to-dos"], ["day", "Day planner"], ["week", "Week"], ["cal", "Calendar"]] as const).map(([id, l]) => <button key={id} onClick={() => { if (id === "day") setJump(undefined); if (id === "week") track("week_open"); setView(id); }} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      {view === "todo" ? <Todos plan={plan} game={game} /> : view === "day" ? <Day key={jump ?? "today"} initialDay={jump} plan={plan} game={game} history={history} /> : view === "week" ? <WeekView plan={plan} cal={cal} onOpenDay={d => { setJump(d); setView("day"); }} /> : <CalendarView plan={plan} cal={cal} game={game} />}
     </div>
   );
 }
@@ -74,8 +75,8 @@ function Todos({ plan, game }: { plan: PlanApi; game: GameApi }) {
   );
 }
 
-function Day({ plan, game, history }: { plan: PlanApi; game: GameApi; history: CheckIn[] }) {
-  const [day, setDay] = useState(dkey()); const [title, setTitle] = useState(""); const [start, setStart] = useState(10 * 60); const [dur, setDur] = useState(25);
+function Day({ plan, game, history, initialDay }: { plan: PlanApi; game: GameApi; history: CheckIn[]; initialDay?: string }) {
+  const [day, setDay] = useState(initialDay ?? dkey()); const [title, setTitle] = useState(""); const [start, setStart] = useState(10 * 60); const [dur, setDur] = useState(25);
   const [timer, setTimer] = useState<Block | null>(null); const [sel, setSel] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft); const [editing, setEditing] = useState<string | null>(null); const [ed, setEd] = useState<Draft>(emptyDraft); const [alertsOn, setAlertsOn] = useState<boolean | undefined>(undefined);
   useEffect(() => { alertState().then(s => setAlertsOn(s === "on")); }, []);

@@ -9,4 +9,4 @@ self.addEventListener("push",e=>{let d={};try{d=e.data?e.data.json():{}}catch(_)
     return self.registration.showNotification(d.title||"Lagomo",{body:d.body||"",tag:d.tag||"lagomo",renotify:false,icon:"/icon.svg",badge:"/icon.svg",data:{url:d.url||"/"}});
   }))});
 self.addEventListener("notificationclick",e=>{e.notification.close();const url=(e.notification.data&&e.notification.data.url)||"/";
-  e.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(cs=>{for(const c of cs){if("focus"in c){c.focus();return;}}return self.clients.openWindow(url);}))});
+  e.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(cs=>{for(const c of cs){if("focus"in c){try{c.postMessage({type:"open",url:url});}catch(_){}return c.focus();}}return self.clients.openWindow(url);}))});

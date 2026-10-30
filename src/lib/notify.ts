@@ -3,15 +3,15 @@ import { tr } from "@/i18n";
 
 const shown = new Map<string, number>();
 /** One place for every "something happened" ping. Same event never shows twice, and the same friend never stacks up. */
-export async function notify(o0: { id: string; tag: string; title: string; body?: string; windowMs?: number }) {
+export async function notify(o0: { id: string; tag: string; title: string; body?: string; windowMs?: number; url?: string; actionLabel?: string }) {
   const o = { ...o0, title: tr(o0.title), body: o0.body ? tr(o0.body) : o0.body };
   const now = Date.now(); const last = shown.get(o.id);
   if (last && now - last < (o.windowMs ?? 60000)) return; shown.set(o.id, now);
   const away = document.hidden || !document.hasFocus();
   if (away && "Notification" in window && Notification.permission === "granted") {
-    try { const reg = await navigator.serviceWorker?.getRegistration(); if (reg) { await reg.showNotification(o.title, { body: o.body, tag: o.tag, icon: "/icon.svg", badge: "/icon.svg" }); return; } } catch { /* fall back to the in-app toast */ }
+    try { const reg = await navigator.serviceWorker?.getRegistration(); if (reg) { await reg.showNotification(o.title, { body: o.body, tag: o.tag, icon: "/icon.svg", badge: "/icon.svg", data: { url: o.url || "/" } }); return; } } catch { /* fall back to the in-app toast */ }
   }
-  toast(o.title, o.body);
+  toast(o.title, o.body, o.url ? { label: o.actionLabel || "Open", url: o.url } : undefined);
 }
 /** "Active 5 min ago" style text from a time stamp. */
 export function lastSeenText(ts?: number | null): string {

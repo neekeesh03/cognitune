@@ -16,7 +16,7 @@ export function useBlockReminders(plan: PlanApi) {
         const start = blockStartMs(b), fire = start - b.remind * 60000;
         if (now >= fire && now < start + b.dur * 60000) {
           ref.current.patchBlock(b.id, { notified: true });
-          notify({ id: "block:" + b.id, tag: "block:" + b.id, windowMs: 3600000, title: b.title, body: (now >= start ? "Starting now." : "Starting soon.") + (hasResources(b) ? " Your resources are ready." : "") });
+          notify({ id: "block:" + b.id, tag: "block:" + b.id, windowMs: 3600000, url: "/?start=" + b.id, actionLabel: "Start now", title: b.title, body: (now >= start ? "Starting now." : "Starting soon.") + (hasResources(b) ? " Your resources are ready." : "") });
         }
       }
     };

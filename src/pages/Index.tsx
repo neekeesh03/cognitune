@@ -33,6 +33,7 @@ import { LangPicker } from "@/components/LangPicker";
 import { getLang } from "@/i18n";
 import { takeGuestStart } from "@/lib/guest";
 import { useBlockReminders } from "@/store/useBlockReminders";
+import type { Block } from "@/engine/plan";
 import { StartsCard } from "@/components/StartsCard";
 import { invitedBy, clearInvite } from "@/lib/invite";
 import { suggestSteps, uid } from "@/engine/plan";
@@ -67,7 +68,17 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const j = useJournal(history); const game = useGame(); const plan = usePlan(); const cal = useCalendar(plan.blocks);
   const agenda = itemsForDay(dkey(), plan.blocks, cal.events);
   const [tab, setTab] = useState<Tab>("today"); const [openId, setOpenId] = useState<string | null>(null);
-  const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean; buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean } } | null>(null);
+  const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean; buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }; resources?: Block; blockId?: string } | null>(null);
+  // A reminder (toast or phone alert) opens "/?start=BLOCK_ID": go straight to that block's timer with its resources.
+  const planRef = useRef(plan); planRef.current = plan;
+  useEffect(() => {
+    const open = (raw: string) => { try { const id = new URL(raw, location.origin).searchParams.get("start"); if (!id) return; const b = planRef.current.blocks.find(x => x.id === id); if (b && !b.done) { setLive({ title: b.title, dur: Math.min(b.dur, 45), solo: true, resources: b, blockId: b.id }); track("block_start_from_reminder"); } } catch { /* ignore a bad link */ } };
+    if (new URLSearchParams(location.search).has("start")) { open(location.href); window.history.replaceState(null, "", location.pathname); }
+    const onLink = (e: Event) => open((e as CustomEvent).detail.url);
+    const onMsg = (e: MessageEvent) => { if (e.data?.type === "open" && typeof e.data.url === "string") open(e.data.url); };
+    window.addEventListener("lagomo:open", onLink); navigator.serviceWorker?.addEventListener("message", onMsg);
+    return () => { window.removeEventListener("lagomo:open", onLink); navigator.serviceWorker?.removeEventListener("message", onMsg); };
+  }, []);
   const [dark, setDark] = useTheme();
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
   const people = usePeople(true, (f, n) => { if (!(tabRef.current === "circle" && openRef.current === f.id && !document.hidden)) notify({ id: `msg:${f.id}:${f.unread}`, tag: "msg:" + f.id, title: f.name, body: n > 1 ? `${n} new messages` : "New message" }); });
@@ -104,7 +115,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <FxHost />
       <AnnounceBanner />
       <PulseCard />
-      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); }} onClose={() => setLive(null)} />}
+      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} resources={live.resources} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); if (live.blockId) plan.patchBlock(live.blockId, { done: true }); }} onClose={() => setLive(null)} />}
       <header className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 pt-6 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <Mascot size={32} />

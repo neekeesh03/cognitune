@@ -45,4 +45,10 @@ export const ROWS8: Row[] = [
 ["Sent. Not in your day yet.", "已发送。还没加入你的一天。", "ارسال شد. هنوز در روزت نیست.", "Terkirim. Belum ada di harimu."],
 ["Tomorrow", "明天", "فردا", "Besok"],
 ["Today", "今天", "امروز", "Hari ini"],
+["Week", "周", "هفته", "Minggu"],
+["Free", "空闲", "آزاد", "Kosong"],
+["Start now", "现在开始", "همین حالا شروع کن", "Mulai sekarang"],
+["Nothing planned yet", "还没有计划", "هنوز چیزی برنامه‌ریزی نشده", "Belum ada rencana"],
+["This week", "本周", "این هفته", "Minggu ini"],
+["Planned with a friend", "和朋友一起计划", "با یک دوست برنامه‌ریزی شده", "Direncanakan bersama teman"],
 ];

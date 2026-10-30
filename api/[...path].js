@@ -22,7 +22,7 @@ async function sendBlockReminders() {
     const uid = String(m).split(":")[0]; const at = +(await rd("HGET", "br:" + uid, m)) || 0; await rd("HDEL", "br:" + uid, m);
     if (at < now - 900000) { skipped++; continue; }
     const u = await getJ("user:" + uid); if (!u || u.suspended) { skipped++; continue; }
-    const n = await pushTo(uid, l => ({ title: "Lagomo", body: TT(l, "blockSoon"), tag: "block:" + m, url: "/" }), {}); if (n) sent++; else skipped++;
+    const n = await pushTo(uid, l => ({ title: "Lagomo", body: TT(l, "blockSoon"), tag: "block:" + m, url: "/?start=" + String(m).split(":")[1] }), {}); if (n) sent++; else skipped++;
   }
   return { due: due.length, sent, skipped };
 }
