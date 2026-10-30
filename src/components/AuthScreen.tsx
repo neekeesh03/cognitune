@@ -9,6 +9,8 @@ import { googleClientId, renderGoogleButton } from "@/lib/google";
 import type { AuthApi } from "@/store/useAuth";
 import { invitedBy } from "@/lib/invite";
 import { LangPicker } from "@/components/LangPicker";
+import { GuestStart } from "@/components/GuestStart";
+import { hasGuestStart } from "@/lib/guest";
 
 type Step = "welcome" | "signup" | "login";
 
@@ -49,8 +51,8 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
       <h1 className="mt-8 text-4xl leading-tight">Start something small. Together.</h1>
       <p className="mt-3 max-w-xs text-muted-foreground">Press Start. Get a two-minute first step. A friend sees you begin.</p><p className="mt-2 text-xs text-muted-foreground">Lagomo is lagom (just the right amount) + go. One small start is enough.</p>
       <div className="mt-8 w-full space-y-3">
-        <Button variant="hero" className="h-12 w-full rounded-2xl text-base" onClick={() => to("signup")}>Get started</Button>
-        <Button variant="outline" className="h-12 w-full rounded-2xl text-base" onClick={() => to("login")}>I already have an account</Button>
+        <GuestStart onSave={() => to("signup")} />
+        <div className="flex gap-2 pt-2"><Button variant="outline" className="h-11 flex-1 rounded-2xl" onClick={() => to("signup")}>Create account</Button><Button variant="ghost" className="h-11 flex-1 rounded-2xl" onClick={() => to("login")}>I already have an account</Button></div>
       </div>
       <p className="mt-6 text-xs text-muted-foreground">You must be 16 or older. By continuing you agree to the <a href="/terms" className="underline">Terms</a> and <a href="/privacy" className="underline">Privacy</a> notes.</p>
     </div>);
@@ -61,7 +63,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
       <button onClick={() => to("welcome")} className="mb-4 flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Back</button>
       <Brand small />
       <h1 className="mt-5 text-center text-4xl leading-tight">{step === "signup" ? "Create your account" : "Welcome back."}</h1>
-      <p className="mx-auto mt-2 max-w-xs text-center text-muted-foreground">{step === "signup" ? "Three quick things. You will meet your friend next." : "Sign in to pick up where you left off."}</p>
+      <p className="mx-auto mt-2 max-w-xs text-center text-muted-foreground">{step === "signup" ? (hasGuestStart() ? "Your start is waiting. Three quick things to keep it." : "Three quick things. You will meet your friend next.") : "Sign in to pick up where you left off."}</p>
       <div className="glass mt-6 space-y-3 rounded-3xl p-5">
         <GoogleButton key={step} auth={auth} text={step === "signup" ? "signup_with" : "signin_with"} onError={setErr} />
         {step === "signup" && <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Your name" value={name} maxLength={30} autoFocus onChange={e => setName(e.target.value)} />}

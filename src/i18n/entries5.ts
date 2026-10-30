@@ -206,4 +206,13 @@ export const ROWS5: Row[] = [
 [". Paste it here. It stays on this device, and events are read-only.", "。把它粘贴在这里。它只保存在这台设备上，事件为只读。", ". آن را اینجا بچسبان. فقط روی این دستگاه می‌ماند و رویدادها فقط‌خواندنی‌اند.", ". Tempel di sini. Hanya tersimpan di perangkat ini, dan acaranya hanya-baca."],
 ["Planner", "规划者", "برنامه‌ریز", "Perencana"],
 ["30 minutes of a show", "看 30 分钟的节目", "۳۰ دقیقه تماشای یک برنامه", "30 menit menonton acara"],
+["Start for 2 minutes", "开始 2 分钟", "۲ دقیقه شروع کن", "Mulai 2 menit"],
+["No account needed. Nothing is judged.", "无需账号。没有任何评判。", "حساب لازم نیست. هیچ قضاوتی در کار نیست.", "Tidak perlu akun. Tidak ada yang dinilai."],
+["You started. Keep it.", "你开始了。把它留下来。", "شروع کردی. نگهش دار.", "Kamu sudah mulai. Simpan itu."],
+["Make a free account to save this start and let a friend see you hop in next time.", "免费创建账号，保存这次开始，下次还能让朋友看到你开始了。", "یک حساب رایگان بساز تا این شروع ذخیره شود و دفعه‌ی بعد دوستی ببیند که شروع کردی.", "Buat akun gratis untuk menyimpan awal ini dan biarkan teman melihatmu mulai lain kali."],
+["Save my start", "保存我的开始", "شروعم را ذخیره کن", "Simpan awalku"],
+["Create account", "创建账号", "ساخت حساب", "Buat akun"],
+["Your start is waiting. Three quick things to keep it.", "你的开始在等你。只需三件小事就能保留它。", "شروعت منتظر است. سه کار سریع تا نگهش داری.", "Awalmu menunggu. Tiga hal singkat untuk menyimpannya."],
+["Your first start is saved", "你的第一次开始已保存", "اولین شروعت ذخیره شد", "Awal pertamamu tersimpan"],
+["That counts. Next time, a friend can see you hop in.", "这算数。下次，朋友就能看到你开始了。", "این حساب می‌شود. دفعه‌ی بعد دوستی می‌تواند ببیند که شروع کردی.", "Itu dihitung. Lain kali, teman bisa melihatmu mulai."],
 ];

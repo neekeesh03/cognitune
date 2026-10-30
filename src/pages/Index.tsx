@@ -31,6 +31,7 @@ import { api } from "@/lib/api";
 import { useBurrow } from "@/store/useBurrow";
 import { LangPicker } from "@/components/LangPicker";
 import { getLang } from "@/i18n";
+import { takeGuestStart } from "@/lib/guest";
 import { invitedBy, clearInvite } from "@/lib/invite";
 import { suggestSteps, uid } from "@/engine/plan";
 import { dkey } from "@/engine/game";
@@ -69,6 +70,12 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
   const people = usePeople(true, (f, n) => { if (!(tabRef.current === "circle" && openRef.current === f.id && !document.hidden)) notify({ id: `msg:${f.id}:${f.unread}`, tag: "msg:" + f.id, title: f.name, body: n > 1 ? `${n} new messages` : "New message" }); });
   const burrow = useBurrow();
+  useEffect(() => {
+    if (!takeGuestStart()) return;
+    game.earn("started"); localStorage.setItem("lagomo.firstStart", "1"); track("timer_start");
+    notify({ id: "guest-saved", tag: "guest", title: "Your first start is saved", body: "That counts. Next time, a friend can see you hop in." });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const sync = () => { api("lang", { body: { lang: getLang() } }).catch(() => undefined); };
     sync(); window.addEventListener("lagomo:lang", sync); return () => window.removeEventListener("lagomo:lang", sync);

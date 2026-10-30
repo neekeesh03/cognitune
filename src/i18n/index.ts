@@ -71,6 +71,7 @@ const PATTERNS: Pattern[] = [
     zh: m => `来自你的文字：最近感觉${({ high: "偏高", low: "偏低", middling: "一般" } as Record<string, string>)[m[1]]}。`,
     fa: m => `از نوشته‌ات: این اخیراً ${({ high: "بالا", low: "پایین", middling: "متوسط" } as Record<string, string>)[m[1]]} بوده است.`,
     id: m => `Dari tulisanmu: belakangan ini terasa ${({ high: "tinggi", low: "rendah", middling: "sedang" } as Record<string, string>)[m[1]]}.` }],
+  [/^First tiny step: (.+)$/, { zh: (m, T) => `第一个小步骤：${T(m[1])}`, fa: (m, T) => `اولین قدم کوچک: ${T(m[1])}`, id: (m, T) => `Langkah kecil pertama: ${T(m[1])}` }],
   [/^Your plant, level (\d+)$/, { zh: m => `你的植物，第 ${m[1]} 级`, fa: m => `گیاه تو، سطح ${m[1]}`, id: m => `Tanamanmu, level ${m[1]}` }],
   [/^Plan something for (today|this day)$/, { zh: m => m[1] === "today" ? "为今天计划点什么" : "为这一天计划点什么", fa: m => m[1] === "today" ? "برای امروز چیزی برنامه‌ریزی کن" : "برای این روز چیزی برنامه‌ریزی کن", id: m => m[1] === "today" ? "Rencanakan sesuatu untuk hari ini" : "Rencanakan sesuatu untuk hari yang dipilih" }],
   [/^Drive falls below the ready line around minute (\d+)\. Plan a reset before then\.$/, { zh: m => `动力大约在第 ${m[1]} 分钟降到准备线以下。在那之前先安排一次重置。`, fa: m => `انگیزه حدود دقیقه‌ی ${m[1]} زیر خط آمادگی می‌افتد. پیش از آن یک بازنشانی برنامه‌ریزی کن.`, id: m => `Dorongan turun di bawah garis siap sekitar menit ke-${m[1]}. Rencanakan reset sebelum itu.` }],

@@ -31,6 +31,7 @@ export async function pulseAnswer(me, body) {
 // public: landing-page counters (page views, clicks, waitlist sign-ups by variant and segment)
 export async function landingHit(ip, body) {
   const rl = await rd("INCR", `rl:hit:${ip}:${Math.floor(Date.now() / 6e4)}`); if (rl > 60) throw err(429, "Slow down.");
+  if (["guest_start", "guest_done", "guest_save"].includes(body.kind)) { await rdp([["INCR", "gst:" + body.kind]]); return; }
   const v = ["tiny", "together", "calm"].includes(body.v) ? body.v : "tiny", s = ["a", "b"].includes(body.s) ? body.s : "a", kind = ["view", "click", "signup"].includes(body.kind) ? body.kind : "view";
   await rdp([["INCR", `lp:${v}:${s}:${kind}`]]);
 }
@@ -79,6 +80,7 @@ export async function experimentStats() {
   const wlCount = await rd("LLEN", "wl");
   const weeklyActive7 = new Set(); for (const d of lastDays(7)) (await rd("SMEMBERS", "dau:" + d)).forEach(x => weeklyActive7.add(x));
   const pct = (a, b) => (b ? a / b : null);
+  const gstv = await rdp(["guest_start", "guest_done", "guest_save"].map(k => ["GET", "gst:" + k]));
   return {
     users: total, weeklyActive: weeklyActive7.size,
     funnel: Object.fromEntries(evNames.map(n => [n, evSets[n].size])),
@@ -90,6 +92,7 @@ export async function experimentStats() {
     pulse: { counts: pc, n: pr.length, veryPct: pct(pc.very, pr.length), comments: pr.filter(p => p.benefit || p.alt || p.improve).slice(-30).reverse().map(p => ({ ts: p.ts, answer: p.answer, benefit: p.benefit, alt: p.alt, improve: p.improve })) },
     plus: { counts: plus, total: pl.length, opened: opens, ofActive: pct(pl.filter(p => p.price !== "none").length, weeklyActive7.size || 0) },
     landing: Object.values(landing), waitlist: wlCount,
+    guest: Object.fromEntries(["guest_start", "guest_done", "guest_save"].map((k, i) => [k, +(gstv[i] || 0)])),
   };
 }
 export async function waitlistList() { return (await rd("LRANGE", "wl", 0, -1)).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean).reverse(); }
