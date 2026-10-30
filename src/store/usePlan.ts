@@ -37,12 +37,13 @@ export function usePlan() {
   const dropFiles = (b: Block | undefined, rest: Block[], rs: Series[]) => b?.files?.forEach(f => { if (!rest.some(o => o.files?.some(x => x.id === f.id)) && !rs.some(o => o.files?.some(x => x.id === f.id))) deleteBlockFile(f.id); });
   /** Deletes a block, but keeps it (and its photos) for 15 seconds so it can be brought back with Undo. */
   const finishTrash = useCallback(() => { const t = trash.current; if (!t) return; window.clearTimeout(t.timer); trash.current = null; dropFiles(t.b, blocksRef.current, seriesRef.current); }, []);
-  const removeBlock = useCallback((id: string) => {
+  const removeBlock = useCallback((id: string, quiet = false) => {
     const b = blocksRef.current.find(x => x.id === id); if (!b) return;
     finishTrash();
     if (b.series) setS(a => a.map(s => s.id === b.series ? { ...s, skip: [...s.skip, b.day] } : s));
     setB(blocksRef.current.filter(x => x.id !== id));
     trash.current = { b, timer: window.setTimeout(finishTrash, 15000) };
+    if (quiet) { const t = trash.current; if (t) { window.clearTimeout(t.timer); trash.current = null; dropFiles(t.b, blocksRef.current.filter(x => x.id !== id), seriesRef.current); } return; }
     toast(b.title, tr("Deleted"), { label: "Undo", url: "/?undo=1" });
   }, [finishTrash]);
   const undoRemove = useCallback(() => {

@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { burst, toast } from "@/lib/fx";
+import { PinkyCard, PinkyForm } from "@/components/Pinky";
+import { HOUR, activePact, keptCount, keptTogether, reducePacts, reminderSlot, windowEnd, type Pact, type PinkyEvt } from "@/engine/pinky";
 import { lastSeenText } from "@/lib/notify";
 import { inviteText } from "@/lib/invite";
 import { EmojiPicker, QUICK_REACTIONS, onlyEmoji } from "@/components/EmojiPicker";
@@ -8,7 +11,7 @@ import { useFeed } from "@/store/useFeed";
 import { track } from "@/lib/track";
 import type { Pair } from "@/store/useBurrow";
 import AlertsCard from "@/components/AlertsCard";
-import { ArrowLeft, CalendarPlus, Check, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Check, HeartHandshake, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/Avatar";
@@ -25,7 +28,7 @@ import type { PlanApi } from "@/store/usePlan";
 import { PlanCard, PlanTogetherForm } from "@/components/SharePlan";
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
-interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi; plan: PlanApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
+interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi; plan: PlanApi; startPinky?: (title: string, onDone: () => void) => void; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
 
 export function CircleTab(props: Props) {
   const { people, me, openId, setOpenId } = props;
@@ -113,20 +116,44 @@ function FileBubble({ m, meId, pk }: { m: ChatMsg; meId: string; pk: string | nu
     {m.text && <div className="mt-1 whitespace-pre-wrap">{m.text}</div>}</div>);
 }
 
-function Conversation({ f, me, people, game, plan, startSession, back, openProfile }: Props & { f: Friend; back: () => void; openProfile: (u: string) => void }) {
+function Conversation({ f, me, people, game, plan, startSession, startPinky, back, openProfile }: Props & { f: Friend; back: () => void; openProfile: (u: string) => void }) {
   const chat = useChat(f.id, me.id, f.pk ?? null);
   const [code, setCode] = useState(""); useEffect(() => { setCode(""); (async () => { const k = await loadKey(me.id); if (k && f.pk) setCode(await safetyCode(k.pk, f.pk)); })().catch(() => {}); }, [me.id, f.pk]);
-  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [planOpen, setPlanOpen] = useState(false); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
+  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [planOpen, setPlanOpen] = useState(false); const [pinkyOpen, setPinkyOpen] = useState(() => sessionStorage.getItem("lagomo.pinky.open") === f.id); const [pbusy, setPbusy] = useState(false); const [now, setNow] = useState(Date.now());
+  useEffect(() => { if (sessionStorage.getItem("lagomo.pinky.open") === f.id) sessionStorage.removeItem("lagomo.pinky.open"); }, [f.id]);
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null); const end = useRef<HTMLDivElement>(null); const tt = useRef(0); const ta = useRef<HTMLTextAreaElement>(null);
   const [reactFor, setReactFor] = useState<string | null>(null);
   // Reactions: one per person per message, latest wins, empty = removed.
   const reacts = new Map<string, Map<string, string>>();
   for (const m of chat.messages) if (m.kind === "react" && m.react) { const per = reacts.get(m.react.to) ?? new Map<string, string>(); if (m.react.e) per.set(m.from, m.react.e); else per.delete(m.from); reacts.set(m.react.to, per); }
-  const shownMsgs = chat.messages.filter(m => m.kind !== "react");
+  const shownMsgs = chat.messages.filter(m => m.kind !== "react" && !(m.kind === "pinky" && m.pinky?.op !== "make"));
+  const pacts = useMemo(() => reducePacts(chat.messages.map(m => ({ from: m.from, ts: m.ts, pinky: m.pinky }))), [chat.messages]);
+  const activeP = activePact(pacts); const keptN = keptCount(pacts);
+  const prevKept = useRef<number | null>(null);
+  useEffect(() => { // celebrate only a Pinky that finished just now, not old history that is loading
+    const lastDone = Math.max(0, ...chat.messages.filter(m => m.pinky?.op === "done").map(m => m.ts));
+    if (prevKept.current !== null && keptN > prevKept.current && Date.now() - lastDone < 30000) { burst(); toast("Kept together", first); track("pinky_kept_together"); }
+    prevKept.current = keptN;
+  }, [keptN]); // eslint-disable-line
   const myReact = (id: string) => reacts.get(id)?.get(me.id) ?? "";
   const doReact = (id: string, e: string) => { setReactFor(null); run(() => chat.react(id, myReact(id) === e ? "" : e)); };
   const insertEmoji = (e: string) => { const el = ta.current; if (!el) { setText(t => t + e); return; } const s = el.selectionStart ?? text.length, en = el.selectionEnd ?? text.length; const v = text.slice(0, s) + e + text.slice(en); onType(v); requestAnimationFrame(() => { el.focus(); el.setSelectionRange(s + e.length, s + e.length); }); };
   const first = f.name.split(" ")[0];
+  const pinkyBlock = (pid: string, text: string, end: number) => { const s = reminderSlot(end); const key = "pinky:" + pid; const old = plan.blocks.find(b => b.sharedId === key); if (!s) { if (old) plan.removeBlock(old.id, true); return; } if (old) plan.patchBlock(old.id, { day: s.day, start: s.start, done: false, notified: false, title: text }); else plan.addBlock({ title: text, day: s.day, start: s.start, dur: 5, remind: 0, sharedId: key }); };
+  const pinkyRun = async (fn: () => Promise<unknown>) => { setPbusy(true); await run(fn); setPbusy(false); };
+  const myText = (p: Pact) => p.parts[me.id]?.text ?? "";
+  const pinkyMake = async (e: PinkyEvt, remind: boolean) => { await chat.sendPinky(e); if (remind) pinkyBlock(e.id, e.text!, e.end!); game.earn("chat"); track("pinky_make"); };
+  const pinkyDone = (p: Pact, receipt: "tap" | "timer") => pinkyRun(async () => { await chat.sendPinky({ id: p.id, op: "done", receipt }); plan.blocks.filter(b => b.sharedId === "pinky:" + p.id).forEach(b => plan.patchBlock(b.id, { done: true })); if (receipt === "tap") game.earn("block"); track("pinky_done"); });
+  const pinkyCard = (p: Pact) => (
+    <PinkyCard pact={p} me={me.id} first={first} now={now} busy={pbusy}
+      onJoin={t => pinkyRun(async () => { const late = p.end < Date.now() + HOUR; const end = late ? windowEnd("day") : undefined; await chat.sendPinky({ id: p.id, op: "join", text: t, end }); pinkyBlock(p.id, t || p.parts[p.creator].text, end ?? p.end); track("pinky_join"); })}
+      onStart={() => startPinky ? startPinky(myText(p), () => { pinkyDone(p, "timer"); }) : pinkyDone(p, "tap")}
+      onDone={() => pinkyDone(p, "tap")}
+      onKeep={() => pinkyRun(async () => { const end = windowEnd("day"); await chat.sendPinky({ id: p.id, op: "keep", end }, true); pinkyBlock(p.id, myText(p), end); track("pinky_roll"); })}
+      onSmaller={t => pinkyRun(async () => { const end = windowEnd("day"); await chat.sendPinky({ id: p.id, op: "smaller", text: t, end }, true); pinkyBlock(p.id, t, end); track("pinky_roll"); })}
+      onLetGo={() => pinkyRun(async () => { await chat.sendPinky({ id: p.id, op: "letgo" }, true); const b = plan.blocks.find(x => x.sharedId === "pinky:" + p.id); if (b) plan.removeBlock(b.id, true); track("pinky_roll"); })}
+      onCheer={() => pinkyRun(async () => { await chat.sendText("I am cheering for your Pinky."); })} />);
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [shownMsgs.length, chat.typing]);
   useEffect(() => { people.refresh(); }, [chat.messages.length]); // eslint-disable-line
   const run = async (fn: () => Promise<unknown>) => { setErr(""); try { await fn(); } catch (e) { setErr((e as Error).message); } };
@@ -156,7 +183,7 @@ function Conversation({ f, me, people, game, plan, startSession, back, openProfi
               <div className={`relative flex max-w-[80%] flex-col ${mine ? "items-end" : "items-start"}`}>
               {reactFor === m.id && <div className={`absolute -top-11 z-20 flex gap-0.5 rounded-full border border-border bg-popover p-1 shadow-lg ${mine ? "end-0" : "start-0"}`} role="menu" aria-label="React" translate="no">{QUICK_REACTIONS.map(e => <button key={e} onClick={() => doReact(m.id, e)} aria-label={e} className={`rounded-full px-1.5 py-0.5 text-xl leading-none hover:scale-125 transition ${myReact(m.id) === e ? "bg-primary/20" : ""}`}>{e}</button>)}</div>}
               <div onClick={() => m.kind === "text" && setReactFor(r => r === m.id ? null : m.id)} className={`${m.kind === "text" && onlyEmoji(m.text) ? "px-1 text-5xl leading-tight" : `rounded-2xl px-3.5 py-2 text-[15px] ${mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-foreground/[.07]"}`} ${m.kind === "text" ? "cursor-pointer select-text" : ""}`}>
-                {m.kind === "file" ? <FileBubble m={m} meId={me.id} pk={f.pk ?? null} /> : m.kind === "plan" && m.plan ? <PlanCard p={m.plan} mine={mine} first={first} blocks={plan.blocks} onAdd={() => { const p = m.plan!; plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id }); run(() => chat.sendText("I am in for “" + p.title + "”.")); game.earn("chat"); track("plan_accept"); }} /> : m.kind === "session" && m.session ? (
+                {m.kind === "file" ? <FileBubble m={m} meId={me.id} pk={f.pk ?? null} /> : m.kind === "pinky" && m.pinky ? (() => { const pp = pacts.find(x => x.id === m.pinky!.id); return pp ? pinkyCard(pp) : null; })() : m.kind === "plan" && m.plan ? <PlanCard p={m.plan} mine={mine} first={first} blocks={plan.blocks} onAdd={() => { const p = m.plan!; plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id }); run(() => chat.sendText("I am in for “" + p.title + "”.")); game.earn("chat"); track("plan_accept"); }} /> : m.kind === "session" && m.session ? (
                   <div><div className="flex items-center gap-2 font-medium"><Timer className="h-4 w-4" />{m.text}</div>
                     {!mine && !sj && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => run(async () => { await chat.joinSession(m.session!.id, m.session!.dur, m.session!.room); begin(m.session!.id, m.session!.dur, m.session!.room); })}>Join now</Button>}
                     {!mine && sj && !started.includes(m.session.id) && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => begin(m.session!.id, m.session!.dur, m.session!.room)}>Open timer</Button>}
@@ -175,9 +202,12 @@ function Conversation({ f, me, people, game, plan, startSession, back, openProfi
       </div>
       <>
         <div className="flex flex-wrap gap-2">
+          {!pickDur && <Button size="sm" variant="outline" className="rounded-full" disabled={!!activeP && !pinkyOpen} title={activeP ? "A Pinky is already open with this friend" : undefined} onClick={() => setPinkyOpen(o => !o)}><HeartHandshake className="mr-1 h-3.5 w-3.5" />Pinky</Button>}
           {!pickDur && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPlanOpen(o => !o)}><CalendarPlus className="mr-1 h-3.5 w-3.5" />Plan together</Button>}
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
         </div>
+        {keptN > 0 && <div className="text-center text-xs text-muted-foreground">Kept together: <b className="text-foreground">{keptN}</b></div>}
+        {pinkyOpen && !activeP && <PinkyForm first={first} onClose={() => setPinkyOpen(false)} onSend={pinkyMake} />}
         {planOpen && <PlanTogetherForm first={first} onClose={() => setPlanOpen(false)} onSend={async (p, addMine) => { await chat.sendPlan(p); if (addMine) plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id }); game.earn("chat"); track("plan_send"); }} />}
         {(err || chat.error) && <p className="text-xs text-destructive" role="alert">{err || chat.error}</p>}
         <div className="sticky bottom-24 z-20 rounded-3xl bg-background shadow-md">

@@ -27,6 +27,7 @@ export function Privacy() {
         <li>Your friends list, friend requests and blocks.</li>
         <li>Your bio and the posts you share in the feed. Only your friends can see them (team posts are seen by everyone). Posts are not end-to-end encrypted, are kept for 90 days, and are deleted with your account.</li>
         <li>Your chat messages and files, locked on your device before they are sent (end-to-end encrypted). We store only the scrambled data, who sent it and when. We cannot read it. Files are deleted after 60 days.</li>
+        <li>Pinky promises, their updates and your replies are sent inside the same encrypted chat, so we cannot read them. If you set a reminder for a promise, it is saved only on your device, and an alert (if you turned them on) says only that a planned block is starting.</li>
         <li>A copy of your private chat key, locked with your password or chat passcode, so you can read your chats on a new device. We cannot open it.</li>
         <li>If you turn it on: your planned time blocks, to publish a private calendar link for you. You can turn it off any time.</li>
         <li>If you set a reminder on a planned block and turn on alerts: only the time to send the alert, with no title, note, link or file. The alert says only that a planned block is starting. Notes, links and files you add to a block stay on your device.</li>

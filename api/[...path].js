@@ -133,7 +133,7 @@ export default async function handler(req, res) {
       const lasts = friendIds.length ? await rdp(friendIds.map(f => ["LRANGE", convoKey(me.id, f), -40, -1])) : [];
       const friends = friendIds.filter(i => byId[i]).map((i, n) => {
         const msgs = (lasts[n] || []).map(m => JSON.parse(m)); const lr = +(reads[n] || 0);
-        const shown = msgs.filter(m => m.kind !== "react"); const last = shown[shown.length - 1];
+        const shown = msgs.filter(m => m.kind !== "react" && m.kind !== "pinky_quiet"); const last = shown[shown.length - 1];
         return { ...pub(byId[i]), online: online[i], lastSeen: lastSeen[i], unread: shown.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
       });
       const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
@@ -262,7 +262,7 @@ export default async function handler(req, res) {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
       if (await rd("SISMEMBER", "blk:" + to, me.id)) throw err(403, "Could not send.");
       const rl = await rd("INCR", `rl:msg:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 60) throw err(429, "Slow down a little.");
-      const kind = ["text", "file", "session", "session_join", "react", "plan"].includes(body.kind) ? body.kind : "text";
+      const kind = ["text", "file", "session", "session_join", "react", "plan", "pinky", "pinky_quiet"].includes(body.kind) ? body.kind : "text";
       if (!okSealed(body.enc)) throw err(400, "Please update the app: messages must be encrypted.");
       const msg = { id: crypto.randomUUID(), ts: Date.now(), from: me.id, kind, enc: body.enc };
       if (kind === "file") {
@@ -271,7 +271,7 @@ export default async function handler(req, res) {
       }
       const ck = convoKey(me.id, to); await rdp([["RPUSH", ck, JSON.stringify(msg)], ["LTRIM", ck, -300, -1]]);
       bump("msgs");
-      await pushTo(to, l => ({ title: me.name, body: kind === "file" ? TT(l, "msgFile") : kind === "react" ? TT(l, "msgReact") : kind.startsWith("session") ? TT(l, "msgSession") : kind === "plan" ? TT(l, "msgPlan") : TT(l, "msgText"), tag: "msg:" + me.id }), { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
+      if (kind !== "pinky_quiet") await pushTo(to, l => ({ title: me.name, body: kind === "pinky" ? TT(l, "msgPinky") : kind === "file" ? TT(l, "msgFile") : kind === "react" ? TT(l, "msgReact") : kind.startsWith("session") ? TT(l, "msgSession") : kind === "plan" ? TT(l, "msgPlan") : TT(l, "msgText"), tag: "msg:" + me.id }), { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
       return res.json({ message: msg });
     }
     if (path === "typing" && method === "POST") { await rd("SET", `typ:${me.id}:${String(body.to || "")}`, "1", "EX", 4); return res.json({ ok: true }); }

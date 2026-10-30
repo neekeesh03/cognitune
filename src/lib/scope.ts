@@ -1,5 +1,5 @@
 // Keeps each account's personal data (journal, plans, rewards...) separate on a shared browser.
-const SHARED = new Set(["lagomo.token", "lagomo.theme", "lagomo.migrated"]);
+const SHARED = new Set(["lagomo.token", "lagomo.theme", "lagomo.migrated", "lagomo.lang"]);
 const LEGACY = ["lagomo.history.v2", "lagomo.entries.v1", "lagomo.settings.v1", "lagomo.game.v1", "lagomo.tasks.v1", "lagomo.blocks.v1"];
 let uid: string | null = null; let patched = false;
 const orig = { get: Storage.prototype.getItem, set: Storage.prototype.setItem, del: Storage.prototype.removeItem };

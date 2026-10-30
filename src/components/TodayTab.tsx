@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Check, Flame, Gift, Play, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PinkyDoor } from "@/components/Pinky";
 import { Input } from "@/components/ui/input";
 import { analyze } from "@/engine/text";
 import { promptFor } from "@/engine/prompts";
@@ -22,13 +23,16 @@ import type { BurrowApi } from "@/store/useBurrow";
 import type { Friend } from "@/store/usePeople";
 import type { HopsApi } from "@/store/useHops";
 
-export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBlock, friends, hops, burrow, username }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; onStartBlock?: (b: Block) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
+export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBlock, onPinky, friends, hops, burrow, username }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; onStartBlock?: (b: Block) => void; onPinky?: (friendId: string) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
   const [calm, setCalm] = useState(() => !!localStorage.getItem("lagomo.calm")); const toggleCalm = () => { const v = !calm; setCalm(v); v ? localStorage.setItem("lagomo.calm", "1") : localStorage.removeItem("lagomo.calm"); };
   const started = !!localStorage.getItem("lagomo.firstStart") || (game.g.counts.started ?? 0) > 0;
   const planned = (() => { try { const p = JSON.parse(localStorage.getItem("lagomo.nexthop") || "null"); return p && Date.now() - p.ts < 36e5 * 30 ? String(p.w).toLowerCase() : ""; } catch { return ""; } })();
   const together = friends.filter(f => (burrow.pairs[f.id]?.both ?? 0) > 0).sort((a, b) => burrow.pairs[b.id].both - burrow.pairs[a.id].both).slice(0, 2);
   const nextBlock = plan.blocks.filter(b => b.day === dkey() && !b.done).sort((a, b) => a.start - b.start)[0];
   const nextStep = plan.tasks.filter(t => !t.doneAt).flatMap(t => t.steps.filter(s => !s.done).map(s => ({ s, t })))[0];
+  const [doorWhen, setDoorWhen] = useState<"morning" | "evening" | "any">(() => (localStorage.getItem("lagomo.pinky.when") as "morning" | "evening" | "any") || "any"); const [doorHidden, setDoorHidden] = useState(() => localStorage.getItem("lagomo.pinky.hide") === dkey());
+  const hr0 = new Date().getHours(); const inDoorWindow = doorWhen === "any" || (doorWhen === "morning" ? hr0 >= 5 && hr0 < 12 : hr0 >= 17);
+  const showDoor = !!onPinky && friends.length > 0 && game.g.todayActive && inDoorWindow && !doorHidden;
   const boxReady = game.g.todayActive && game.g.boxDay !== dkey();
   const { profile, settings, entries } = j;
   const [openJ, setOpenJ] = useState(false); const [text, setText] = useState(""); const [saved, setSaved] = useState(false); const [crisis, setCrisis] = useState(false);
@@ -47,6 +51,7 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
       <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
       <GetStarted username={username} friends={friends.length} started={started} />
       <HopStrip friends={friends} hops={hops} />
+      {showDoor && <PinkyDoor friends={friends} when={doorWhen} setWhen={w => { setDoorWhen(w); localStorage.setItem("lagomo.pinky.when", w); }} onHide={() => { localStorage.setItem("lagomo.pinky.hide", dkey()); setDoorHidden(true); }} onPick={id => onPinky!(id)} />}
       {together.length > 0 && <div className="flex flex-wrap justify-center gap-2">{together.map(f => <span key={f.id} className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-sm"><Avatar spec={f.avatar} size={26} />{`You and ${f.name.split(" ")[0]} started together ${burrow.pairs[f.id].both} ${burrow.pairs[f.id].both === 1 ? "day" : "days"} this week`}</span>)}</div>}
       {burrow.starters >= 5 && <p className="text-center text-xs text-muted-foreground">{`${burrow.starters} people started today`}</p>}
       <InstallNudge started={started} />

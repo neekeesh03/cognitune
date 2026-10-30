@@ -1,13 +1,14 @@
 // One conversation with one friend. Messages live on the server, so they arrive even when your friend is away.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { summary, type PinkyEvt } from "@/engine/pinky";
 import { filePayload } from "@/net/blobs";
 import { openJson, sealBytes, sealJson, unb64 } from "@/lib/e2ee";
-export interface ChatMsg { id: string; ts: number; from: string; kind: "text" | "file" | "session" | "session_join" | "react" | "plan"; text: string; plan?: SharedPlan; react?: { to: string; e: string }; file?: { id: string; name: string; type: string; size: number; iv?: string }; session?: { id: string; dur: number; room?: boolean }; pending?: boolean }
+export interface ChatMsg { id: string; ts: number; from: string; kind: "text" | "file" | "session" | "session_join" | "react" | "plan" | "pinky" | "pinky_quiet"; text: string; plan?: SharedPlan; pinky?: PinkyEvt; react?: { to: string; e: string }; file?: { id: string; name: string; type: string; size: number; iv?: string }; session?: { id: string; dur: number; room?: boolean }; pending?: boolean }
 
 export interface SharedPlan { id: string; title: string; day: string; start: number; dur: number; note?: string }
 interface Raw { id: string; ts: number; from: string; kind: ChatMsg["kind"]; enc?: string; fileId?: string; text?: string; file?: ChatMsg["file"]; session?: ChatMsg["session"] }
-interface Content { plan?: SharedPlan; react?: { to: string; e: string }; text?: string; session?: ChatMsg["session"]; file?: { name: string; type: string; size: number; iv: string } }
+interface Content { pinky?: PinkyEvt; plan?: SharedPlan; react?: { to: string; e: string }; text?: string; session?: ChatMsg["session"]; file?: { name: string; type: string; size: number; iv: string } }
 const NEEDS_PK = "Your friend needs to open Lagomo and sign in once to turn on private messaging before you can message them.";
 
 export function useChat(friendId: string | null, meId: string, friendPk: string | null = null) {
@@ -15,7 +16,7 @@ export function useChat(friendId: string | null, meId: string, friendPk: string 
   const last = useRef(0); const fid = useRef(friendId); fid.current = friendId; const pkRef = useRef(friendPk); pkRef.current = friendPk;
   const decode = useCallback(async (m: Raw): Promise<ChatMsg> => {
     if (!m.enc) return { id: m.id, ts: m.ts, from: m.from, kind: m.kind, text: m.text || "", file: m.file, session: m.session }; // sent before encryption existed
-    try { if (!pkRef.current) throw new Error("no key"); const c = await openJson<Content>(meId, pkRef.current, m.enc); return { id: m.id, ts: m.ts, from: m.from, kind: c.react ? "react" : c.plan ? "plan" : m.kind, text: c.text || "", react: c.react, plan: c.plan, session: c.session, file: c.file && m.fileId ? { id: m.fileId, ...c.file } : undefined }; }
+    try { if (!pkRef.current) throw new Error("no key"); const c = await openJson<Content>(meId, pkRef.current, m.enc); return { id: m.id, ts: m.ts, from: m.from, kind: c.react ? "react" : c.plan ? "plan" : c.pinky ? "pinky" : m.kind, text: c.text || "", react: c.react, plan: c.plan, pinky: c.pinky, session: c.session, file: c.file && m.fileId ? { id: m.fileId, ...c.file } : undefined }; }
     catch { return { id: m.id, ts: m.ts, from: m.from, kind: "text", text: "This message cannot be opened on this device." }; }
   }, [meId]);
   useEffect(() => { setMessages([]); last.current = 0; setError(""); }, [friendId, friendPk]);
@@ -49,7 +50,9 @@ export function useChat(friendId: string | null, meId: string, friendPk: string 
   const invite = useCallback((dur: number) => { const sid = crypto.randomUUID(); return post("session", { text: `Let's focus together for ${dur} minutes.`, session: { id: sid, dur } }); }, [post]);
   const joinSession = useCallback((sid: string, dur: number, room?: boolean) => post("session_join", { text: "Joined the focus session.", session: { id: sid, dur, ...(room ? { room: true } : {}) } }), [post]);
   const sendPlan = useCallback((plan: SharedPlan) => post("plan", { text: `Planned: ${plan.title}`, plan }), [post]);
+  /** Pinky moves travel as encrypted chat messages. Quiet ones (roll over, let go) never send a push alert. */
+  const sendPinky = useCallback((pinky: PinkyEvt, quiet = false) => post(quiet ? "pinky_quiet" : "pinky", { text: summary(pinky), pinky }), [post]);
   const sendTyping = useCallback(() => { if (fid.current) api("typing", { body: { to: fid.current } }).catch(() => {}); }, []);
-  return { messages, online, typing, error, sendText, react, sendFile, invite, joinSession, sendPlan, sendTyping, meId };
+  return { messages, online, typing, error, sendText, react, sendFile, invite, joinSession, sendPlan, sendPinky, sendTyping, meId };
 }
 export type ChatApi = ReturnType<typeof useChat>;
