@@ -3,6 +3,7 @@ import { ROWS2 } from "./entries2";
 import { ROWS3 } from "./entries3";
 import { ROWS4 } from "./entries4";
 import { ROWS5 } from "./entries5";
+import { ROWS6 } from "./entries6";
 
 export type Lang = "en" | "zh" | "fa" | "id";
 export const LANGS: { code: Lang; label: string; dir: "ltr" | "rtl" }[] = [
@@ -17,7 +18,7 @@ type Pattern = [RegExp, Record<Exclude<Lang, "en">, (m: RegExpExecArray, T: Tr) 
 const IDX = { zh: 1, fa: 2, id: 3 } as const;
 
 const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {} };
-for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
+for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -72,6 +73,10 @@ const PATTERNS: Pattern[] = [
     fa: m => `از نوشته‌ات: این اخیراً ${({ high: "بالا", low: "پایین", middling: "متوسط" } as Record<string, string>)[m[1]]} بوده است.`,
     id: m => `Dari tulisanmu: belakangan ini terasa ${({ high: "tinggi", low: "rendah", middling: "sedang" } as Record<string, string>)[m[1]]}.` }],
   [/^First tiny step: (.+)$/, { zh: (m, T) => `第一个小步骤：${T(m[1])}`, fa: (m, T) => `اولین قدم کوچک: ${T(m[1])}`, id: (m, T) => `Langkah kecil pertama: ${T(m[1])}` }],
+  [/^(\d+) d ago$/, { zh: m => `${m[1]} 天前`, fa: m => `${m[1]} روز پیش`, id: m => `${m[1]} hari lalu` }],
+  [/^(\d+) h ago · From the Lagomo team$|^(\d+) min ago · From the Lagomo team$/, { zh: m => m[1] ? `${m[1]} 小时前 · 来自 Lagomo 团队` : `${m[2]} 分钟前 · 来自 Lagomo 团队`, fa: m => m[1] ? `${m[1]} ساعت پیش · از طرف تیم لاگومو` : `${m[2]} دقیقه پیش · از طرف تیم لاگومو`, id: m => m[1] ? `${m[1]} jam lalu · Dari tim Lagomo` : `${m[2]} menit lalu · Dari tim Lagomo` }],
+  [/^Open (.+)'s profile$/, { zh: m => `打开 ${m[1]} 的资料`, fa: m => `باز کردن پروفایل ${m[1]}`, id: m => `Buka profil ${m[1]}` }],
+  [/^@(.+) · Joined (.+)$/, { zh: m => `@${m[1]} · ${m[2]} 加入`, fa: m => `@${m[1]} · عضویت از ${m[2]}`, id: m => `@${m[1]} · Bergabung ${m[2]}` }],
   [/^Your plant, level (\d+)$/, { zh: m => `你的植物，第 ${m[1]} 级`, fa: m => `گیاه تو، سطح ${m[1]}`, id: m => `Tanamanmu, level ${m[1]}` }],
   [/^Plan something for (today|this day)$/, { zh: m => m[1] === "today" ? "为今天计划点什么" : "为这一天计划点什么", fa: m => m[1] === "today" ? "برای امروز چیزی برنامه‌ریزی کن" : "برای این روز چیزی برنامه‌ریزی کن", id: m => m[1] === "today" ? "Rencanakan sesuatu untuk hari ini" : "Rencanakan sesuatu untuk hari yang dipilih" }],
   [/^Drive falls below the ready line around minute (\d+)\. Plan a reset before then\.$/, { zh: m => `动力大约在第 ${m[1]} 分钟降到准备线以下。在那之前先安排一次重置。`, fa: m => `انگیزه حدود دقیقه‌ی ${m[1]} زیر خط آمادگی می‌افتد. پیش از آن یک بازنشانی برنامه‌ریزی کن.`, id: m => `Dorongan turun di bawah garis siap sekitar menit ke-${m[1]}. Rencanakan reset sebelum itu.` }],

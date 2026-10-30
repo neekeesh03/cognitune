@@ -64,7 +64,7 @@ export default function Landing() {
         <div className="grid items-center gap-8 md:grid-cols-2">
           <div className="text-center md:text-left">
             <h2 className="text-4xl leading-tight">Starting is easier when someone is beside you.</h2>
-            <p className="mt-4 text-lg text-muted-foreground">Hop in, and your friends get one quiet ping. No feed, no scores, no pressure to reply.</p>
+            <p className="mt-4 text-lg text-muted-foreground">Hop in, and your friends get one quiet ping. No public feed, no scores, no pressure to reply.</p>
           </div>
           <div className="relative mx-auto w-full max-w-sm" aria-hidden="true">
             <div className="glass rounded-3xl p-5">
@@ -95,7 +95,7 @@ export default function Landing() {
         <h2 className="text-center text-4xl">Built to get you started. Not to keep you scrolling.</h2>
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl border border-border p-7"><div className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Most apps</div>
-            <ul className="mt-4 space-y-2 text-muted-foreground"><li>Endless task lists</li><li>Streaks that punish you</li><li>Feeds and likes</li><li>Strangers on camera</li><li>Paywalls and upsells</li></ul></div>
+            <ul className="mt-4 space-y-2 text-muted-foreground"><li>Endless task lists</li><li>Streaks that punish you</li><li>Public feeds and follower counts</li><li>Strangers on camera</li><li>Paywalls and upsells</li></ul></div>
           <div className="rounded-3xl bg-primary p-7 text-primary-foreground"><div className="text-sm uppercase tracking-[0.2em] opacity-80">Lagomo</div>
             <ul className="mt-4 space-y-2 text-lg"><li>One tiny step</li><li>No shame, ever</li><li>Just your real friends</li><li>Private by design</li><li>Free, for everyone</li></ul></div>
         </div>

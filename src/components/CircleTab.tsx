@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { lastSeenText } from "@/lib/notify";
 import { inviteText } from "@/lib/invite";
 import { EmojiPicker, QUICK_REACTIONS, onlyEmoji } from "@/components/EmojiPicker";
+import { FeedView } from "@/components/FeedView";
+import { ProfileView } from "@/components/ProfileView";
+import { useFeed } from "@/store/useFeed";
+import { track } from "@/lib/track";
 import type { Pair } from "@/store/useBurrow";
 import AlertsCard from "@/components/AlertsCard";
 import { ArrowLeft, Check, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
@@ -23,9 +27,24 @@ interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi
 
 export function CircleTab(props: Props) {
   const { people, me, openId, setOpenId } = props;
+  const [profile, setProfile] = useState<string | null>(null);
+  const [view, setView] = useState<"feed" | "friends">(() => (localStorage.getItem("lagomo.circleView") === "friends" ? "friends" : "feed"));
+  const feed = useFeed(view === "feed" && !openId && !profile);
+  const pick = (v: "feed" | "friends") => { setView(v); localStorage.setItem("lagomo.circleView", v); };
+  const openProfile = (u: string) => { setProfile(u); track("profile_view"); window.scrollTo({ top: 0 }); };
   const f = people.friends.find(x => x.id === openId);
-  if (f) return <Conversation {...props} f={f} back={() => setOpenId(null)} />;
-  return <Home {...props} />;
+  if (profile) return <ProfileView username={profile} people={people} onBack={() => setProfile(null)} onMessage={id => { setProfile(null); setOpenId(id); }} onSaved={() => people.refresh()} />;
+  if (f) return <Conversation {...props} f={f} back={() => setOpenId(null)} openProfile={openProfile} />;
+  return (
+    <div className="animate-rise mx-auto max-w-2xl space-y-5">
+      <div className="text-center"><h1 className="text-4xl">Your circle</h1></div>
+      <div className="glass mx-auto flex w-fit gap-1 rounded-full p-1" role="tablist" aria-label="Circle">
+        {(["feed", "friends"] as const).map(v => <button key={v} role="tab" aria-selected={view === v} onClick={() => pick(v)} className={`rounded-full px-5 py-2 text-sm ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{v === "feed" ? "Feed" : "Friends and chats"}</button>)}
+      </div>
+      {view === "feed"
+        ? <FeedView feed={feed} me={me} hasFriends={people.friends.length > 0} onProfile={openProfile} onReply={id => setOpenId(id)} onInvite={() => pick("friends")} />
+        : <Home {...props} openProfile={openProfile} />}
+    </div>);
 }
 
 function Corner({ people, me, startSession }: Pick<Props, "people" | "me" | "startSession">) {
@@ -44,7 +63,7 @@ function Corner({ people, me, startSession }: Pick<Props, "people" | "me" | "sta
     </div>);
 }
 
-function Home({ people, game, me, setOpenId, startSession, pairs }: Props) {
+function Home({ people, game, me, setOpenId, startSession, pairs, openProfile }: Props & { openProfile: (u: string) => void }) {
   const [q, setQ] = useState(""); const [found, setFound] = useState<Pub[]>([]); const [msg, setMsg] = useState(""); const [copied, setCopied] = useState(false);
   useEffect(() => { if (q.trim().length < 2) { setFound([]); return; } const t = setTimeout(() => api<{ users: Pub[] }>("search?q=" + encodeURIComponent(q.trim())).then(r => setFound(r.users)).catch(() => {}), 250); return () => clearTimeout(t); }, [q]);
   const status = (id: string) => people.friends.some(f => f.id === id) ? "friend" : people.outgoing.some(f => f.id === id) ? "sent" : people.incoming.some(f => f.id === id) ? "incoming" : "none";
@@ -52,9 +71,9 @@ function Home({ people, game, me, setOpenId, startSession, pairs }: Props) {
   const invite = inviteText(me.username);
   const share = async () => { localStorage.setItem("lagomo.invited", "1"); if (navigator.share) { try { await navigator.share({ title: "Join me on Lagomo", text: invite }); return; } catch { /* cancelled */ } } await navigator.clipboard?.writeText(invite).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
-    <div className="animate-rise mx-auto max-w-2xl space-y-5">
-      <div className="text-center"><h1 className="text-4xl">Your circle</h1><p className="mx-auto mt-2 max-w-md text-muted-foreground">Chat with the people who help you start. Send messages and files, work side by side.</p></div>
-      <div className="glass flex items-center gap-4 rounded-3xl p-4"><Avatar spec={me.avatar} size={56} /><div className="min-w-0 flex-1"><div className="font-semibold">{me.name}</div><div className="text-sm text-muted-foreground">@{me.username}</div></div>
+    <div className="space-y-5">
+      <p className="mx-auto max-w-md text-center text-muted-foreground">Chat with the people who help you start. Send messages and files, work side by side.</p>
+      <div className="glass flex items-center gap-4 rounded-3xl p-4"><button aria-label="Open your profile" onClick={() => openProfile(me.username)}><Avatar spec={me.avatar} size={56} /></button><div className="min-w-0 flex-1"><button onClick={() => openProfile(me.username)} className="font-semibold hover:underline">{me.name}</button><div className="text-sm text-muted-foreground">@{me.username}</div></div>
         <Button variant="hero" className="rounded-full" onClick={share}>{copied ? <><Check className="mr-1 h-4 w-4" />Copied</> : <><Share2 className="mr-1 h-4 w-4" />Invite friends</>}</Button></div>
       {people.incoming.length > 0 && <div className="glass space-y-2 rounded-3xl p-4"><div className="text-sm font-semibold">Friend requests</div>{people.incoming.map(u => (
         <div key={u.id} className="flex items-center gap-3"><Avatar spec={u.avatar} size={40} /><div className="min-w-0 flex-1"><div className="truncate font-medium">{u.name}</div><div className="text-xs text-muted-foreground">@{u.username}</div></div>
@@ -73,7 +92,7 @@ function Home({ people, game, me, setOpenId, startSession, pairs }: Props) {
       {people.friends.length === 0 ? <p className="py-4 text-center text-sm text-muted-foreground">No friends here yet. Invite someone, or search for a username above.</p> : (
         <div className="grid gap-3 sm:grid-cols-2">{people.friends.map(x => (
           <button key={x.id} aria-label={`Chat with ${x.name}`} onClick={() => setOpenId(x.id)} className="glass flex items-center gap-3 rounded-3xl p-4 text-left transition hover:scale-[1.01]">
-            <div className="relative"><Avatar spec={x.avatar} size={52} /><span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${x.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
+            <div className="relative"><span role="button" tabIndex={0} aria-label={`Open ${x.name}'s profile`} onClick={e => { e.stopPropagation(); openProfile(x.username); }} onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); openProfile(x.username); } }}><Avatar spec={x.avatar} size={52} /></span><span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${x.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
             <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate font-semibold">{x.name}</span>{x.unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{x.unread}</span>}</div>
               <div className="truncate text-xs text-muted-foreground">{x.last ? (x.last.mine ? "You: " : "") + x.last.text : x.online ? "Online now" : "Say hi"}</div>
               <div className={`text-[11px] ${x.online ? "text-success" : "text-muted-foreground"}`}>{x.online ? "Online now" : lastSeenText(x.lastSeen)}{(pairs?.[x.id]?.both ?? 0) > 0 ? ` · together ${pairs![x.id].both}/7 days` : ""}</div></div>
@@ -92,7 +111,7 @@ function FileBubble({ m, meId, pk }: { m: ChatMsg; meId: string; pk: string | nu
     {m.text && <div className="mt-1 whitespace-pre-wrap">{m.text}</div>}</div>);
 }
 
-function Conversation({ f, me, people, game, startSession, back }: Props & { f: Friend; back: () => void }) {
+function Conversation({ f, me, people, game, startSession, back, openProfile }: Props & { f: Friend; back: () => void; openProfile: (u: string) => void }) {
   const chat = useChat(f.id, me.id, f.pk ?? null);
   const [code, setCode] = useState(""); useEffect(() => { setCode(""); (async () => { const k = await loadKey(me.id); if (k && f.pk) setCode(await safetyCode(k.pk, f.pk)); })().catch(() => {}); }, [me.id, f.pk]);
   const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
@@ -117,8 +136,8 @@ function Conversation({ f, me, people, game, startSession, back }: Props & { f: 
     <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4" style={{ minHeight: "calc(100vh - 11rem)" }}>
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3"><div className="relative"><Avatar spec={f.avatar} size={60} /><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
-          <div><h1 className="text-3xl">{f.name}</h1><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : lastSeenText(f.lastSeen) + ". Your messages will be waiting."}</div>{f.pk ? <div className="mt-0.5 text-xs text-muted-foreground" title="Compare this code with your friend, in person or on a call. If it matches, nobody is listening in.">Private chat. Safety code {code || "..."}</div> : <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
+        <div className="flex items-center gap-3"><div className="relative"><button aria-label={`Open ${f.name}'s profile`} onClick={() => openProfile(f.username)}><Avatar spec={f.avatar} size={60} /></button><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
+          <div><button onClick={() => openProfile(f.username)} className="text-start"><h1 className="text-3xl hover:underline">{f.name}</h1></button><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : lastSeenText(f.lastSeen) + ". Your messages will be waiting."}</div>{f.pk ? <div className="mt-0.5 text-xs text-muted-foreground" title="Compare this code with your friend, in person or on a call. If it matches, nobody is listening in.">Private chat. Safety code {code || "..."}</div> : <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
         <button aria-label={`Report ${f.name}`} className="p-2 text-xs text-muted-foreground hover:text-foreground" onClick={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Lagomo team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</button>
         <button aria-label={`Remove ${f.name}`} className="p-2 text-muted-foreground hover:text-foreground" onClick={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}><UserMinus className="h-4 w-4" /></button>
       </div>

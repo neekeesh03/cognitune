@@ -74,7 +74,7 @@ export const avRandom = () => Object.fromEntries(Object.entries(AV).map(([k, n])
 export async function claimAvatar(userId, av) { const k = "av:" + avKey(av); const ok = await rd("SETNX", k, userId); if (ok) return true; return (await rd("GET", k)) === userId; }
 
 // ---------- misc helpers ----------
-export const pub = u => ({ id: u.id, username: u.username, name: u.name, avatar: u.avatar, pk: u.pk || null });
+export const pub = u => ({ id: u.id, username: u.username, name: u.name, avatar: u.avatar, pk: u.pk || null, bio: u.bio || "" });
 export const selfPub = u => ({ ...pub(u), g: !!u.gsub });
 export const okPk = s => typeof s === "string" && s.length < 400 && /^\{"kty":"EC","crv":"P-256","x":"[\w-]{43}","y":"[\w-]{43}"\}$/.test(s);
 export const okWk = w => w && typeof w === "object" && ["salt", "iv", "ct"].every(k => typeof w[k] === "string" && w[k].length < 3000 && /^[\w+/=]+$/.test(w[k]));
@@ -106,5 +106,6 @@ export async function deleteAccount(me) {
   const fr = await rd("SMEMBERS", "f:" + me.id); const cmds = [["DEL", "u:" + me.username], ["ZREM", "users:z", me.username], ["DEL", "user:" + me.id], ["DEL", "av:" + avKey(me.avatar)], ["DEL", "f:" + me.id], ["DEL", "fin:" + me.id], ["DEL", "fout:" + me.id], ["DEL", "blk:" + me.id], ["DEL", "cal:" + me.id], ["DEL", "la:" + me.id], ["SREM", "admins", me.id]];
   if (me.gsub) cmds.push(["DEL", "g:" + me.gsub]);
   const tk = await rd("GET", "calu:" + me.id); if (tk) cmds.push(["DEL", "calt:" + tk], ["DEL", "calu:" + me.id]);
+  const pids = (await rd("LRANGE", "posts:" + me.id, 0, -1)) || []; pids.forEach(p => cmds.push(["DEL", "post:" + p], ["DEL", "prx:" + p], ["LREM", "posts:team", 0, p])); cmds.push(["DEL", "posts:" + me.id], ["DEL", "sd:" + me.id]);
   fr.forEach(f => cmds.push(["SREM", "f:" + f, me.id], ["DEL", convoKey(me.id, f)])); await rdp(cmds);
 }

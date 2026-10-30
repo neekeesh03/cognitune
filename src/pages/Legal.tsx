@@ -25,6 +25,7 @@ export function Privacy() {
         <li>If you sign in with Google: Google's private ID number for your account. We do not store your email address, and we only use your Google name and the start of your email to suggest a username and name. We never see your Google password.</li>
         <li>If you sign in with a password: a scrambled (hashed) version of it, never the password itself.</li>
         <li>Your friends list, friend requests and blocks.</li>
+        <li>Your bio and the posts you share in the feed. Only your friends can see them (team posts are seen by everyone). Posts are not end-to-end encrypted, are kept for 90 days, and are deleted with your account.</li>
         <li>Your chat messages and files, locked on your device before they are sent (end-to-end encrypted). We store only the scrambled data, who sent it and when. We cannot read it. Files are deleted after 60 days.</li>
         <li>A copy of your private chat key, locked with your password or chat passcode, so you can read your chats on a new device. We cannot open it.</li>
         <li>If you turn it on: your planned time blocks, to publish a private calendar link for you. You can turn it off any time.</li>

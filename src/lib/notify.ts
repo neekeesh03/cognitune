@@ -21,3 +21,10 @@ export function lastSeenText(ts?: number | null): string {
   const h = Math.round(m / 60); if (h < 24) return `Active ${h} h ago`;
   const d = Math.round(h / 24); return d === 1 ? "Active yesterday" : `Active ${d} days ago`;
 }
+/** "just now", "5 min ago", "3 h ago", "2 d ago". */
+export function timeAgo(ts: number): string {
+  const m = Math.floor((Date.now() - ts) / 60000);
+  if (m < 1) return "just now"; if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h} h ago`;
+  return `${Math.floor(h / 24)} d ago`;
+}

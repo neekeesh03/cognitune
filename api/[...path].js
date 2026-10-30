@@ -2,6 +2,7 @@
 // Runs as one Vercel serverless function. Data lives in Upstash Redis. Helpers live in _core.js, _calendar.js and _admin.js.
 import crypto from "node:crypto";
 import { T as TT, LANGS as LANG_CODES } from "./_i18n.js";
+import { feedRoute } from "./_feed.js";
 import { pushPublicKey, saveSub, dropSub, pushTo } from "./_push.js";
 import { dayStr, lastDays, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
@@ -133,6 +134,7 @@ export default async function handler(req, res) {
       await rd("SADD", "remb:" + bucket, me.id); await setJ("rem:" + me.id, { time: body.time, tz, bucket }); return res.json({ ok: true });
     }
     if (path === "reminder" && method === "DELETE") { const old = await getJ("rem:" + me.id); if (old) await rd("SREM", "remb:" + old.bucket, me.id); await rd("DEL", "rem:" + me.id); return res.json({ ok: true }); }
+    { const fr = await feedRoute(path, method, me, body, query); if (fr) { if (path === "post-react" && fr.reacted && fr.author !== me.id) await pushTo(fr.author, l => ({ title: TT(l, "postReact", me.name), body: "", tag: "prx:" + me.id }), { limitKey: `rl:prxpush:${fr.author}:${dayStr()}`, limit: 10 }); return res.json(fr); } }
     if (path === "lang" && method === "POST") { const l = String(body.lang || ""); if (!LANG_CODES.includes(l)) throw err(400, "Unknown language."); await rd("SET", "lang:" + me.id, l); return res.json({ ok: true }); }
     if (path === "ping" && method === "POST") return res.json({ ok: true });
     if (path === "push-key" && method === "GET") return res.json({ key: await pushPublicKey() });
@@ -193,6 +195,7 @@ export default async function handler(req, res) {
     }
     if (path === "profile" && method === "POST") {
       if (body.name != null) me.name = cleanName(body.name) || me.name;
+      if (body.bio != null) me.bio = String(body.bio).replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 160);
       if (body.avatar) {
         if (!avValid(body.avatar)) throw err(400, "Bad avatar.");
         if (avKey(body.avatar) !== avKey(me.avatar)) { if (!(await claimAvatar(me.id, body.avatar))) throw err(409, "Someone already has that exact avatar. Try another."); await rd("DEL", "av:" + avKey(me.avatar)); me.avatar = body.avatar; }

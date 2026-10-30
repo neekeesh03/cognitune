@@ -4,7 +4,7 @@ import { api } from "@/lib/api";
 import type { AvatarSpec } from "@/engine/avatar";
 import { openJson } from "@/lib/e2ee";
 import { track } from "@/lib/track";
-export interface Pub { id: string; username: string; name: string; avatar: AvatarSpec; pk?: string | null }
+export interface Pub { id: string; username: string; name: string; avatar: AvatarSpec; pk?: string | null; bio?: string }
 export interface Friend extends Pub { online: boolean; lastSeen?: number | null; unread: number; last: { text: string; ts: number; mine: boolean } | null }
 interface RawFriend extends Omit<Friend, "last"> { last: { enc: string | null; text: string; ts: number; mine: boolean } | null }
 interface MeResp { user: Pub; friends: RawFriend[]; incoming: Pub[]; outgoing: Pub[] }

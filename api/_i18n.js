@@ -12,6 +12,7 @@ const D = {
   msgFile: { en: () => "Sent you a file", zh: () => "给你发了一个文件", fa: () => "یک فایل برایت فرستاد", id: () => "Mengirimimu berkas" },
   msgSession: { en: () => "Invited you to focus together", zh: () => "邀请你一起专注", fa: () => "تو را به تمرکز با هم دعوت کرد", id: () => "Mengundangmu fokus bersama" },
   msgReact: { en: () => "Reacted to your message", zh: () => "回应了你的消息", fa: () => "به پیامت واکنش نشان داد", id: () => "Menanggapi pesanmu" },
+  postReact: { en: n => `${n} reacted to your post`, zh: n => `${n} 回应了你的帖子`, fa: n => `${n} به پستت واکنش نشان داد`, id: n => `${n} menanggapi postinganmu` },
   msgText: { en: () => "New message", zh: () => "新消息", fa: () => "پیام تازه", id: () => "Pesan baru" },
   friendHop: { en: n => `${n} already hopped in. Your turn? Two minutes is enough.`, zh: n => `${n} 已经开始了。轮到你了？两分钟就够。`, fa: n => `${n} شروع کرده است. نوبت توست؟ دو دقیقه کافی است.`, id: n => `${n} sudah mulai. Giliranmu? Dua menit sudah cukup.` },
   daily0: { en: () => "One small start? Two minutes is enough.", zh: () => "来一个小小的开始？两分钟就够。", fa: () => "یک شروع کوچک؟ دو دقیقه کافی است.", id: () => "Satu langkah kecil? Dua menit sudah cukup." },

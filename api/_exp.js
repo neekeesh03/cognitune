@@ -2,7 +2,7 @@
 // landing-page tracking and the waitlist. No message, journal or plan content is ever recorded here.
 import { rd, rdp, setJ, getJ, err, dayStr, lastDays } from "./_core.js";
 
-export const EVENTS = ["app_open", "checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "tab_checkin", "plus_open", "plus_price", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer", "invite_share", "invite_join", "alerts_prime_yes", "alerts_prime_no", "keep_going", "nexthop_set", "install_tap", "reminder_set"];
+export const EVENTS = ["app_open", "checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "tab_checkin", "plus_open", "plus_price", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer", "invite_share", "invite_join", "alerts_prime_yes", "alerts_prime_no", "keep_going", "nexthop_set", "install_tap", "reminder_set", "post_create", "post_react", "profile_view"];
 const PRICES = ["3", "5", "8", "none"];
 export const weekId = (t = Date.now()) => { const d = new Date(t); const day = (d.getUTCDay() + 6) % 7; return dayStr(t - day * 864e5); }; // Monday of the week
 const cl = (v, n) => String(v == null ? "" : v).replace(/[<>]/g, "").trim().slice(0, n);
