@@ -1,12 +1,13 @@
+import { track } from "@/lib/track";
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Link2, Paperclip, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
+import { Repeat, Bell, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Link2, Paperclip, Plus, RefreshCw, Trash2, Unplug } from "lucide-react";
 import { BringAlongEditor, BringAlongToggle, ResourceList, draftOf, draftToBlock, emptyDraft, type Draft } from "@/components/BringAlong";
 import { alertState } from "@/lib/push";
 import { deleteBlockFile } from "@/lib/blockfiles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalItem, dayKey, dotsFor, fmtClock, itemsForDay, monthGrid, parseDay } from "@/engine/calendar";
-import { fmtTime, hasResources } from "@/engine/plan";
+import { fmtTime, hasResources, repeatLabel } from "@/engine/plan";
 import type { PlanApi } from "@/store/usePlan";
 import type { CalendarApi } from "@/store/useCalendar";
 import type { GameApi } from "@/store/useGame";
@@ -19,7 +20,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
   const grid = useMemo(() => monthGrid(month.y, month.m), [month]); const dots = useMemo(() => dotsFor(grid, plan.blocks, cal.events), [grid, plan.blocks, cal.events]);
   const items = useMemo(() => itemsForDay(sel, plan.blocks, cal.events), [sel, plan.blocks, cal.events]);
   const nav = (n: number) => setMonth(({ y, m }) => { const d = new Date(y, m + n, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
-  const add = () => { if (!title.trim()) return; plan.addBlock({ title: title.trim(), day: sel, start, dur, ...draftToBlock(draft) }); setTitle(""); setDraft(emptyDraft()); };
+  const add = () => { if (!title.trim()) return; plan.addBlock({ title: title.trim(), day: sel, start, dur, ...draftToBlock(draft) }, draft.repeat); if (draft.repeat !== "none") track("block_repeat"); setTitle(""); setDraft(emptyDraft()); };
   const feedUrl = cal.token ? `${location.origin}/api/cal-feed?t=${cal.token}` : "";
   const subscribe = cal.token ? `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent("webcal://" + location.host + "/api/cal-feed?t=" + cal.token)}` : "";
   const copy = async () => { await navigator.clipboard?.writeText(feedUrl).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
@@ -51,6 +52,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
             </div>
             {i.kind === "block" && i.blockId && openId === i.blockId && (() => { const b = plan.blocks.find(x => x.id === i.blockId); if (!b) return null; return (
               <div className="mt-2 space-y-2 px-1">
+                {b.series && <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Repeat className="h-3.5 w-3.5" />{(() => { const r = plan.series.find(s => s.id === b.series)?.rule; return r ? repeatLabel(r) : "Repeats"; })()}<button className="text-primary underline-offset-2 hover:underline" onClick={() => { if (confirm("Stop repeating? Days already done stay.")) plan.stopSeries(b.series!); }}>Stop repeating</button></p>}
                 {b.remind != null && <p className="flex items-center gap-1 text-xs text-muted-foreground"><Bell className="h-3.5 w-3.5" />{b.remind === 0 ? "Reminder at the start" : b.remind === 60 ? "Reminder 1 hour before" : `Reminder ${b.remind} min before`}</p>}
                 {ed ? <><BringAlongEditor d={ed} set={setEd} alertsOn={alertsOn} /><div className="flex gap-2"><Button size="sm" variant="hero" className="rounded-full" onClick={() => { plan.patchBlock(b.id, { note: undefined, links: undefined, files: undefined, remind: undefined, ...draftToBlock(ed), notified: false }); setEd(null); }}>Save</Button><Button size="sm" variant="ghost" className="rounded-full" onClick={() => { const keep = new Set((b.files ?? []).map(f => f.id)); ed.files.filter(f => !keep.has(f.id)).forEach(f => deleteBlockFile(f.id)); setEd(null); }}>Cancel</Button></div></>
                   : <><ResourceList b={b} /><Button size="sm" variant="outline" className="rounded-full" onClick={() => setEd(draftOf(b))}><Paperclip className="mr-1 h-3.5 w-3.5" />{hasResources(b) || b.remind != null ? "Edit" : "Bring along"}</Button></>}

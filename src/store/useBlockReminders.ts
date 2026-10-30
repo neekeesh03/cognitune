@@ -24,7 +24,7 @@ export function useBlockReminders(plan: PlanApi) {
     return () => { clearInterval(t); document.removeEventListener("visibilitychange", tick); };
   }, []);
   // Tell the server only when to nudge. Skipped if alerts are off on this device.
-  const sig = JSON.stringify(plan.blocks.filter(b => b.remind != null && !b.done && !b.notified).map(b => [b.id, blockStartMs(b) - (b.remind ?? 0) * 60000]).filter(x => (x[1] as number) > Date.now() - 600000));
+  const sig = JSON.stringify(plan.blocks.filter(b => b.remind != null && !b.done && !b.notified).map(b => [b.id, blockStartMs(b) - (b.remind ?? 0) * 60000]).filter(x => (x[1] as number) > Date.now() - 600000).sort((a, b) => (a[1] as number) - (b[1] as number)));
   useEffect(() => {
     const t = setTimeout(async () => { try { if ((await alertState()) !== "on") return; await api("block-remind", { body: { items: (JSON.parse(sig) as [string, number][]).slice(0, 50).map(([id, at]) => ({ id, at })) } }); } catch { /* offline */ } }, 2000);
     return () => clearTimeout(t);

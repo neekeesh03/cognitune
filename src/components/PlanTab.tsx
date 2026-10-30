@@ -1,12 +1,13 @@
+import { track } from "@/lib/track";
 import { useMemo, useState, useEffect } from "react";
-import { CalendarPlus, Check, ChevronLeft, ChevronRight, Download, Play, Plus, Sparkles, Trash2, Wand2, Bell, Paperclip } from "lucide-react";
+import { CalendarPlus, Check, ChevronLeft, ChevronRight, Download, Play, Plus, Sparkles, Trash2, Wand2, Bell, Paperclip, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BringAlongEditor, BringAlongToggle, ResourceList, draftOf, draftToBlock, emptyDraft, type Draft } from "@/components/BringAlong";
 import { alertState } from "@/lib/push";
 import { deleteBlockFile } from "@/lib/blockfiles";
 import { FocusTimer } from "@/components/FocusTimer";
-import { Block, download, fmtTime, googleLink, icsFor, suggestSteps, uid , hasResources } from "@/engine/plan";
+import { Block, download, fmtTime, googleLink, icsFor, suggestSteps, uid , hasResources, repeatLabel } from "@/engine/plan";
 import { dkey } from "@/engine/game";
 import { timeOfDay, CheckIn } from "@/engine/analytics";
 import type { PlanApi } from "@/store/usePlan";
@@ -81,7 +82,7 @@ function Day({ plan, game, history }: { plan: PlanApi; game: GameApi; history: C
   const blocks = plan.blocks.filter(b => b.day === day).sort((a, b) => a.start - b.start);
   const best = useMemo(() => { const t = timeOfDay(history).filter(x => x.drive != null && x.n >= 2).sort((a, b) => b.drive! - a.drive!)[0]; return t ? parseInt(t.label) : null; }, [history]);
   const label = day === dkey() ? "Today" : new Date(day + "T12:00").toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
-  const add = () => { if (!title.trim()) return; plan.addBlock({ title: title.trim(), day, start, dur, ...draftToBlock(draft) }); setTitle(""); setDraft(emptyDraft()); };
+  const add = () => { if (!title.trim()) return; plan.addBlock({ title: title.trim(), day, start, dur, ...draftToBlock(draft) }, draft.repeat); if (draft.repeat !== "none") track("block_repeat"); setTitle(""); setDraft(emptyDraft()); };
   const overlap = blocks.some(b => start < b.start + b.dur && b.start < start + dur);
   return (
     <div className="space-y-5">
@@ -111,6 +112,7 @@ function Day({ plan, game, history }: { plan: PlanApi; game: GameApi; history: C
                 <div><div className={`font-semibold ${b.done ? "line-through" : ""}`}>{b.title}</div><div className="text-xs text-muted-foreground">{fmtTime(b.start)} to {fmtTime(b.start + b.dur)} · {b.dur} min</div></div>
                 <span className="flex items-center gap-2 text-muted-foreground">{hasResources(b) && <Paperclip className="h-4 w-4" aria-label="Resources attached" />}{b.remind != null && !b.done && <Bell className="h-4 w-4" aria-label="Reminder on" />}{b.done && <Check className="h-5 w-5 text-primary" />}</span>
               </button>
+              {sel === b.id && b.series && <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><Repeat className="h-3.5 w-3.5" />{(() => { const r = plan.series.find(s => s.id === b.series)?.rule; return r ? repeatLabel(r) : "Repeats"; })()}<button className="text-primary underline-offset-2 hover:underline" onClick={() => { if (confirm("Stop repeating? Days already done stay.")) plan.stopSeries(b.series!); }}>Stop repeating</button></p>}
               {sel === b.id && hasResources(b) && editing !== b.id && <div className="mt-3"><ResourceList b={b} /></div>}
               {sel === b.id && editing === b.id && <div className="mt-3 space-y-2"><BringAlongEditor d={ed} set={setEd} alertsOn={alertsOn} /><div className="flex gap-2"><Button size="sm" variant="hero" className="rounded-full" onClick={() => { plan.patchBlock(b.id, { note: undefined, links: undefined, files: undefined, remind: undefined, ...draftToBlock(ed), notified: false }); setEditing(null); }}>Save</Button><Button size="sm" variant="ghost" className="rounded-full" onClick={() => { const keep = new Set((b.files ?? []).map(f => f.id)); ed.files.filter(f => !keep.has(f.id)).forEach(f => deleteBlockFile(f.id)); setEditing(null); }}>Cancel</Button></div></div>}
               {sel === b.id && (

@@ -14,6 +14,7 @@ const D = {
   msgSession: { en: () => "Invited you to focus together", zh: () => "邀请你一起专注", fa: () => "تو را به تمرکز با هم دعوت کرد", id: () => "Mengundangmu fokus bersama" },
   msgReact: { en: () => "Reacted to your message", zh: () => "回应了你的消息", fa: () => "به پیامت واکنش نشان داد", id: () => "Menanggapi pesanmu" },
   postReact: { en: n => `${n} reacted to your post`, zh: n => `${n} 回应了你的帖子`, fa: n => `${n} به پستت واکنش نشان داد`, id: n => `${n} menanggapi postinganmu` },
+  msgPlan: { en: () => "Shared a plan with you", zh: () => "和你分享了一个计划", fa: () => "یک برنامه با تو به اشتراک گذاشت", id: () => "Membagikan rencana denganmu" },
   msgText: { en: () => "New message", zh: () => "新消息", fa: () => "پیام تازه", id: () => "Pesan baru" },
   friendHop: { en: n => `${n} already hopped in. Your turn? Two minutes is enough.`, zh: n => `${n} 已经开始了。轮到你了？两分钟就够。`, fa: n => `${n} شروع کرده است. نوبت توست؟ دو دقیقه کافی است.`, id: n => `${n} sudah mulai. Giliranmu? Dua menit sudah cukup.` },
   blockSoon: { en: () => "Your planned block is starting. Everything you attached is ready.", zh: () => "你计划的时间段要开始了。你附上的资料都准备好了。", fa: () => "بازه‌ی برنامه‌ریزی‌شده‌ات در شرف شروع است. هر چه پیوست کردی آماده است.", id: () => "Blok yang kamu rencanakan akan dimulai. Semua lampiranmu sudah siap." },

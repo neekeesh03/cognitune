@@ -262,7 +262,7 @@ export default async function handler(req, res) {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
       if (await rd("SISMEMBER", "blk:" + to, me.id)) throw err(403, "Could not send.");
       const rl = await rd("INCR", `rl:msg:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 60) throw err(429, "Slow down a little.");
-      const kind = ["text", "file", "session", "session_join", "react"].includes(body.kind) ? body.kind : "text";
+      const kind = ["text", "file", "session", "session_join", "react", "plan"].includes(body.kind) ? body.kind : "text";
       if (!okSealed(body.enc)) throw err(400, "Please update the app: messages must be encrypted.");
       const msg = { id: crypto.randomUUID(), ts: Date.now(), from: me.id, kind, enc: body.enc };
       if (kind === "file") {
@@ -271,7 +271,7 @@ export default async function handler(req, res) {
       }
       const ck = convoKey(me.id, to); await rdp([["RPUSH", ck, JSON.stringify(msg)], ["LTRIM", ck, -300, -1]]);
       bump("msgs");
-      await pushTo(to, l => ({ title: me.name, body: kind === "file" ? TT(l, "msgFile") : kind === "react" ? TT(l, "msgReact") : kind.startsWith("session") ? TT(l, "msgSession") : TT(l, "msgText"), tag: "msg:" + me.id }), { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
+      await pushTo(to, l => ({ title: me.name, body: kind === "file" ? TT(l, "msgFile") : kind === "react" ? TT(l, "msgReact") : kind.startsWith("session") ? TT(l, "msgSession") : kind === "plan" ? TT(l, "msgPlan") : TT(l, "msgText"), tag: "msg:" + me.id }), { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
       return res.json({ message: msg });
     }
     if (path === "typing" && method === "POST") { await rd("SET", `typ:${me.id}:${String(body.to || "")}`, "1", "EX", 4); return res.json({ ok: true }); }

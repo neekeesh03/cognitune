@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
 import { FileText, Link2, Paperclip, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { safeUrl, type Block, type BlockFile } from "@/engine/plan";
+import { repeatLabel, safeUrl, type Block, type BlockFile, type Repeat } from "@/engine/plan";
 import { MAX_FILES, deleteBlockFile, readBlockFile, saveBlockFile } from "@/lib/blockfiles";
 
-export interface Draft { note: string; links: string[]; files: BlockFile[]; remind: number | null }
-export const emptyDraft = (): Draft => ({ note: "", links: [], files: [], remind: null });
-export const draftOf = (b: Block): Draft => ({ note: b.note ?? "", links: b.links ?? [], files: b.files ?? [], remind: b.remind ?? null });
+export interface Draft { note: string; links: string[]; files: BlockFile[]; remind: number | null; repeat: Repeat }
+export const emptyDraft = (): Draft => ({ note: "", links: [], files: [], remind: null, repeat: "none" });
+export const draftOf = (b: Block): Draft => ({ note: b.note ?? "", links: b.links ?? [], files: b.files ?? [], remind: b.remind ?? null, repeat: "none" });
 export const draftToBlock = (d: Draft): Pick<Block, "note" | "links" | "files" | "remind"> => ({ note: d.note.trim() || undefined, links: d.links.length ? d.links : undefined, files: d.files.length ? d.files : undefined, remind: d.remind ?? undefined });
 const REMINDERS: [number | null, string][] = [[null, "No reminder"], [0, "At the start"], [5, "5 min before"], [10, "10 min before"], [30, "30 min before"], [60, "1 hour before"]];
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
@@ -62,6 +62,8 @@ export function BringAlongToggle({ d, set }: { d: Draft; set: (d: Draft) => void
   const n = (d.note ? 1 : 0) + d.links.length + d.files.length;
   return (
     <div className="mt-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-sm"><label htmlFor="repeat-sel" className="font-medium">Repeat</label>
+        <select id="repeat-sel" value={d.repeat} onChange={e => set({ ...d, repeat: e.target.value as Repeat })} className="h-9 rounded-2xl border border-border bg-secondary/60 px-3">{(["none", "daily", "weekdays", "weekly"] as Repeat[]).map(r => <option key={r} value={r}>{repeatLabel(r)}</option>)}</select></div>
       <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 text-sm text-primary hover:underline"><Paperclip className="h-4 w-4" />{open ? "Hide" : "Bring along"}{!open && (n > 0 || d.remind != null) && <span className="rounded-full bg-primary/15 px-2 text-xs">{n > 0 ? n : "1"}</span>}</button>
       {open && <div className="mt-2"><BringAlongEditor d={d} set={set} /></div>}
     </div>);

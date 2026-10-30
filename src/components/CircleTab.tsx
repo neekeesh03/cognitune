@@ -8,7 +8,7 @@ import { useFeed } from "@/store/useFeed";
 import { track } from "@/lib/track";
 import type { Pair } from "@/store/useBurrow";
 import AlertsCard from "@/components/AlertsCard";
-import { ArrowLeft, Check, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Check, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/Avatar";
@@ -21,9 +21,11 @@ import { inviteToRoom } from "@/net/room";
 import type { Friend, PeopleApi, Pub } from "@/store/usePeople";
 import type { User } from "@/store/useAuth";
 import type { GameApi } from "@/store/useGame";
+import type { PlanApi } from "@/store/usePlan";
+import { PlanCard, PlanTogetherForm } from "@/components/SharePlan";
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
-interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
+interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi; plan: PlanApi; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
 
 export function CircleTab(props: Props) {
   const { people, me, openId, setOpenId } = props;
@@ -111,10 +113,10 @@ function FileBubble({ m, meId, pk }: { m: ChatMsg; meId: string; pk: string | nu
     {m.text && <div className="mt-1 whitespace-pre-wrap">{m.text}</div>}</div>);
 }
 
-function Conversation({ f, me, people, game, startSession, back, openProfile }: Props & { f: Friend; back: () => void; openProfile: (u: string) => void }) {
+function Conversation({ f, me, people, game, plan, startSession, back, openProfile }: Props & { f: Friend; back: () => void; openProfile: (u: string) => void }) {
   const chat = useChat(f.id, me.id, f.pk ?? null);
   const [code, setCode] = useState(""); useEffect(() => { setCode(""); (async () => { const k = await loadKey(me.id); if (k && f.pk) setCode(await safetyCode(k.pk, f.pk)); })().catch(() => {}); }, [me.id, f.pk]);
-  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
+  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [planOpen, setPlanOpen] = useState(false); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null); const end = useRef<HTMLDivElement>(null); const tt = useRef(0); const ta = useRef<HTMLTextAreaElement>(null);
   const [reactFor, setReactFor] = useState<string | null>(null);
   // Reactions: one per person per message, latest wins, empty = removed.
@@ -154,7 +156,7 @@ function Conversation({ f, me, people, game, startSession, back, openProfile }: 
               <div className={`relative flex max-w-[80%] flex-col ${mine ? "items-end" : "items-start"}`}>
               {reactFor === m.id && <div className={`absolute -top-11 z-20 flex gap-0.5 rounded-full border border-border bg-popover p-1 shadow-lg ${mine ? "end-0" : "start-0"}`} role="menu" aria-label="React" translate="no">{QUICK_REACTIONS.map(e => <button key={e} onClick={() => doReact(m.id, e)} aria-label={e} className={`rounded-full px-1.5 py-0.5 text-xl leading-none hover:scale-125 transition ${myReact(m.id) === e ? "bg-primary/20" : ""}`}>{e}</button>)}</div>}
               <div onClick={() => m.kind === "text" && setReactFor(r => r === m.id ? null : m.id)} className={`${m.kind === "text" && onlyEmoji(m.text) ? "px-1 text-5xl leading-tight" : `rounded-2xl px-3.5 py-2 text-[15px] ${mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-foreground/[.07]"}`} ${m.kind === "text" ? "cursor-pointer select-text" : ""}`}>
-                {m.kind === "file" ? <FileBubble m={m} meId={me.id} pk={f.pk ?? null} /> : m.kind === "session" && m.session ? (
+                {m.kind === "file" ? <FileBubble m={m} meId={me.id} pk={f.pk ?? null} /> : m.kind === "plan" && m.plan ? <PlanCard p={m.plan} mine={mine} first={first} blocks={plan.blocks} onAdd={() => { const p = m.plan!; plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id }); run(() => chat.sendText("I am in for “" + p.title + "”.")); game.earn("chat"); track("plan_accept"); }} /> : m.kind === "session" && m.session ? (
                   <div><div className="flex items-center gap-2 font-medium"><Timer className="h-4 w-4" />{m.text}</div>
                     {!mine && !sj && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => run(async () => { await chat.joinSession(m.session!.id, m.session!.dur, m.session!.room); begin(m.session!.id, m.session!.dur, m.session!.room); })}>Join now</Button>}
                     {!mine && sj && !started.includes(m.session.id) && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => begin(m.session!.id, m.session!.dur, m.session!.room)}>Open timer</Button>}
@@ -173,8 +175,10 @@ function Conversation({ f, me, people, game, startSession, back, openProfile }: 
       </div>
       <>
         <div className="flex flex-wrap gap-2">
+          {!pickDur && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPlanOpen(o => !o)}><CalendarPlus className="mr-1 h-3.5 w-3.5" />Plan together</Button>}
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
         </div>
+        {planOpen && <PlanTogetherForm first={first} onClose={() => setPlanOpen(false)} onSend={async (p, addMine) => { await chat.sendPlan(p); if (addMine) plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id }); game.earn("chat"); track("plan_send"); }} />}
         {(err || chat.error) && <p className="text-xs text-destructive" role="alert">{err || chat.error}</p>}
         <div className="sticky bottom-24 z-20 rounded-3xl bg-background shadow-md">
         <div className="glass flex items-end gap-2 rounded-3xl p-2">

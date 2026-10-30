@@ -2,7 +2,20 @@ export interface Step { id: string; text: string; done: boolean; doneAt?: number
 export interface Task { id: string; title: string; steps: Step[]; createdAt: number; doneAt?: number }
 export interface BlockFile { id: string; name: string; type: string; size: number }
 /** A planned block. note, links and files are the things you will need ("bring along"); remind is minutes before the start (0 = at the start). All of it stays on this device. */
-export interface Block { id: string; title: string; day: string; start: number; dur: number; done?: boolean; taskId?: string; note?: string; links?: string[]; files?: BlockFile[]; remind?: number; notified?: boolean }
+export interface Block { id: string; title: string; day: string; start: number; dur: number; done?: boolean; taskId?: string; note?: string; links?: string[]; files?: BlockFile[]; remind?: number; notified?: boolean; series?: string; sharedId?: string }
+export type Repeat = "none" | "daily" | "weekdays" | "weekly";
+/** A repeating plan. Real blocks are made from it a few weeks ahead, so the calendar, reminders and timer work the same as for any block. */
+export interface Series { id: string; title: string; start: number; dur: number; rule: Exclude<Repeat, "none">; anchor: string; skip: string[]; note?: string; links?: string[]; files?: BlockFile[]; remind?: number }
+export const repeatLabel = (r: Repeat) => ({ none: "Does not repeat", daily: "Every day", weekdays: "Every weekday", weekly: "Every week" }[r]);
+const parseDayKey = (k: string) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d, 12); };
+const keyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/** The days (as YYYY-MM-DD) from today for the next `ahead` days on which the series happens. */
+export function seriesDays(s: Series, todayKey: string, ahead = 21): string[] {
+  const out: string[] = []; const a = parseDayKey(s.anchor); const t = parseDayKey(todayKey);
+  for (let i = 0; i <= ahead; i++) { const d = new Date(t.getFullYear(), t.getMonth(), t.getDate() + i, 12); const k = keyOf(d); if (d < a) continue; const wd = d.getDay();
+    if (s.rule === "weekdays" && (wd === 0 || wd === 6)) continue; if (s.rule === "weekly" && wd !== a.getDay()) continue; if (s.skip.includes(k)) continue; out.push(k); }
+  return out;
+}
 export const blockStartMs = (b: Block) => { const [y, m, d] = b.day.split("-").map(Number); return new Date(y, m - 1, d, 0, b.start, 0, 0).getTime(); };
 export const hasResources = (b: Block) => !!(b.note || b.links?.length || b.files?.length);
 export const safeUrl = (s: string): string | null => { let t = s.trim(); if (!t) return null; if (!/^https?:\/\//i.test(t)) t = "https://" + t; try { const u = new URL(t); return /^https?:$/.test(u.protocol) && u.hostname.includes(".") ? u.toString() : null; } catch { return null; } };
