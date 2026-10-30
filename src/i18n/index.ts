@@ -2,6 +2,7 @@ import { ROWS1 } from "./entries1";
 import { ROWS2 } from "./entries2";
 import { ROWS3 } from "./entries3";
 import { ROWS4 } from "./entries4";
+import { ROWS5 } from "./entries5";
 
 export type Lang = "en" | "zh" | "fa" | "id";
 export const LANGS: { code: Lang; label: string; dir: "ltr" | "rtl" }[] = [
@@ -16,7 +17,7 @@ type Pattern = [RegExp, Record<Exclude<Lang, "en">, (m: RegExpExecArray, T: Tr) 
 const IDX = { zh: 1, fa: 2, id: 3 } as const;
 
 const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {} };
-for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
+for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -62,6 +63,22 @@ const PATTERNS: Pattern[] = [
   [/^Report (.+)$/, { zh: m => `举报 ${m[1]}`, fa: m => `گزارش ${m[1]}`, id: m => `Laporkan ${m[1]}` }],
   [/^Remove (.+)$/, { zh: m => `移除 ${m[1]}`, fa: m => `حذف ${m[1]}`, id: m => `Hapus ${m[1]}` }],
   [/^Message (.+)\.\.\.$/, { zh: m => `给 ${m[1]} 发消息…`, fa: m => `پیام به ${m[1]}…`, id: m => `Pesan untuk ${m[1]}…` }],
+  [/^Your last (\d+) check-ins averaged ([\d.]+), and you are (trending up|trending down|steady)(\.| ?\. Low and bumpy right now, so be gentle with yourself and keep tasks small\.)$/, {
+    zh: m => `你最近 ${m[1]} 次检查的平均值是 ${m[2]}，${m[3] === "trending up" ? "而且呈上升趋势" : m[3] === "trending down" ? "而且呈下降趋势" : "而且很平稳"}${m[4] === "." ? "。" : "。目前偏低且起伏不定，请对自己温柔一点，把任务保持得小一些。"}`,
+    fa: m => `میانگین ${m[1]} بررسی آخرت ${m[2]} بود، ${m[3] === "trending up" ? "و روند رو به بالا داری" : m[3] === "trending down" ? "و روند رو به پایین داری" : "و ثابت هستی"}${m[4] === "." ? "." : ". الان پایین و ناپایداری، پس با خودت مهربان باش و کارها را کوچک نگه دار."}`,
+    id: m => `Rata-rata ${m[1]} cek-in terakhirmu adalah ${m[2]}, ${m[3] === "trending up" ? "dan kamu sedang naik" : m[3] === "trending down" ? "dan kamu sedang turun" : "dan kamu stabil"}${m[4] === "." ? "." : ". Sedang rendah dan naik-turun, jadi bersikaplah lembut pada dirimu dan buat tugas tetap kecil."}` }],
+  [/^From your writing: this has felt (high|low|middling) lately\.$/, {
+    zh: m => `来自你的文字：最近感觉${({ high: "偏高", low: "偏低", middling: "一般" } as Record<string, string>)[m[1]]}。`,
+    fa: m => `از نوشته‌ات: این اخیراً ${({ high: "بالا", low: "پایین", middling: "متوسط" } as Record<string, string>)[m[1]]} بوده است.`,
+    id: m => `Dari tulisanmu: belakangan ini terasa ${({ high: "tinggi", low: "rendah", middling: "sedang" } as Record<string, string>)[m[1]]}.` }],
+  [/^Your plant, level (\d+)$/, { zh: m => `你的植物，第 ${m[1]} 级`, fa: m => `گیاه تو، سطح ${m[1]}`, id: m => `Tanamanmu, level ${m[1]}` }],
+  [/^Plan something for (today|this day)$/, { zh: m => m[1] === "today" ? "为今天计划点什么" : "为这一天计划点什么", fa: m => m[1] === "today" ? "برای امروز چیزی برنامه‌ریزی کن" : "برای این روز چیزی برنامه‌ریزی کن", id: m => m[1] === "today" ? "Rencanakan sesuatu untuk hari ini" : "Rencanakan sesuatu untuk hari yang dipilih" }],
+  [/^Drive falls below the ready line around minute (\d+)\. Plan a reset before then\.$/, { zh: m => `动力大约在第 ${m[1]} 分钟降到准备线以下。在那之前先安排一次重置。`, fa: m => `انگیزه حدود دقیقه‌ی ${m[1]} زیر خط آمادگی می‌افتد. پیش از آن یک بازنشانی برنامه‌ریزی کن.`, id: m => `Dorongan turun di bawah garis siap sekitar menit ke-${m[1]}. Rencanakan reset sebelum itu.` }],
+  [/^Previous (Friend|Colour|Eyes|Smile|Extra|Cheeks)$/, { zh: (m, T) => `上一个${T(m[1])}`, fa: (m, T) => `${T(m[1])} قبلی`, id: (m, T) => `${T(m[1])} sebelumnya` }],
+  [/^Next (Friend|Colour|Eyes|Smile|Extra|Cheeks)$/, { zh: (m, T) => `下一个${T(m[1])}`, fa: (m, T) => `${T(m[1])} بعدی`, id: (m, T) => `${T(m[1])} berikutnya` }],
+  [/^Style (\d+)$/, { zh: m => `样式 ${m[1]}`, fa: m => `سبک ${m[1]}`, id: m => `Gaya ${m[1]}` }],
+  [/^You and @(.+) are now friends\.$/, { zh: m => `你和 @${m[1]} 现在是好友了。`, fa: m => `تو و @${m[1]} اکنون دوست هستید.`, id: m => `Kamu dan @${m[1]} kini berteman.` }],
+  [/^Request sent to @(.+)\.$/, { zh: m => `已向 @${m[1]} 发送请求。`, fa: m => `درخواست برای @${m[1]} فرستاده شد.`, id: m => `Permintaan terkirim ke @${m[1]}.` }],
 ];
 
 let lang: Lang = "en";

@@ -96,7 +96,7 @@ export function InsightsTab({ profile, history, onFollowUp, onClear, onDelete }:
               <p className="text-xs text-muted-foreground">Based on only {cal.n} check-ins, so treat it as a hint until you have 30 or more.</p>
             </>
           )}
-          {hf && <p>Your last {Math.min(5, history.length)} check-ins averaged {hf.level.toFixed(2)}, {hf.drift >= 0.03 ? "and you are trending up" : hf.drift <= -0.03 ? "and you are trending down" : "and you are steady"}{hf.unstable ? ". Low and bumpy right now, so be gentle with yourself and keep tasks small." : "."}</p>}
+          {hf && <p>{`Your last ${Math.min(5, history.length)} check-ins averaged ${hf.level.toFixed(2)}, ${hf.drift >= 0.03 ? "and you are trending up" : hf.drift <= -0.03 ? "and you are trending down" : "and you are steady"}${hf.unstable ? ". Low and bumpy right now, so be gentle with yourself and keep tasks small." : "."}`}</p>}
           {rt && <p>Answering twice within 10 minutes gave results about {rt.mad.toFixed(2)} apart.</p>}
         </CardContent>
       </Card>
