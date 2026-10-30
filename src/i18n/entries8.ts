@@ -54,4 +54,7 @@ export const ROWS8: Row[] = [
 ["Take a photo", "拍照", "گرفتن عکس", "Ambil foto"],
 ["Photo", "照片", "عکس", "Foto"],
 ["Start now", "现在开始", "همین حالا شروع کن", "Mulai sekarang"],
+["Undo", "撤销", "واگرد", "Urungkan"],
+["Deleted", "已删除", "حذف شد", "Dihapus"],
+["Restored", "已恢复", "بازگردانی شد", "Dipulihkan"],
 ];

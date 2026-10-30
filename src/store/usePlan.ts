@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "@/lib/fx";
+import { tr } from "@/i18n";
 import { Block, Repeat, Series, Task, blockStartMs, seriesDays, uid } from "@/engine/plan";
 import { deleteBlockFile } from "@/lib/blockfiles";
 const KT = "lagomo.tasks.v1", KB = "lagomo.blocks.v1", KS = "lagomo.series.v1";
@@ -6,6 +8,8 @@ const load = <T,>(k: string): T[] => { try { return JSON.parse(localStorage.getI
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 export function usePlan() {
   const [tasks, setT] = useState<Task[]>(() => load<Task>(KT)); const [blocks, setB] = useState<Block[]>(() => load<Block>(KB)); const [series, setS] = useState<Series[]>(() => load<Series>(KS));
+  const blocksRef = useRef(blocks); blocksRef.current = blocks; const seriesRef = useRef(series); seriesRef.current = series;
+  const trash = useRef<{ b: Block; timer: number } | null>(null);
   useEffect(() => { localStorage.setItem(KT, JSON.stringify(tasks)); }, [tasks]);
   useEffect(() => { localStorage.setItem(KB, JSON.stringify(blocks)); }, [blocks]);
   useEffect(() => { localStorage.setItem(KS, JSON.stringify(series)); }, [series]);
@@ -31,17 +35,28 @@ export function usePlan() {
   const patchBlock = useCallback((id: string, p: Partial<Block>) => setB(a => a.map(b => b.id === id ? { ...b, ...p } : b)), []);
   // Files are shared by every day of a series, so one is only deleted when nothing else uses it.
   const dropFiles = (b: Block | undefined, rest: Block[], rs: Series[]) => b?.files?.forEach(f => { if (!rest.some(o => o.files?.some(x => x.id === f.id)) && !rs.some(o => o.files?.some(x => x.id === f.id))) deleteBlockFile(f.id); });
+  /** Deletes a block, but keeps it (and its photos) for 15 seconds so it can be brought back with Undo. */
+  const finishTrash = useCallback(() => { const t = trash.current; if (!t) return; window.clearTimeout(t.timer); trash.current = null; dropFiles(t.b, blocksRef.current, seriesRef.current); }, []);
   const removeBlock = useCallback((id: string) => {
-    const b = blocks.find(x => x.id === id); if (!b) return;
+    const b = blocksRef.current.find(x => x.id === id); if (!b) return;
+    finishTrash();
     if (b.series) setS(a => a.map(s => s.id === b.series ? { ...s, skip: [...s.skip, b.day] } : s));
-    const rest = blocks.filter(x => x.id !== id); setB(rest); dropFiles(b, rest, series);
-  }, [blocks, series]);
+    setB(blocksRef.current.filter(x => x.id !== id));
+    trash.current = { b, timer: window.setTimeout(finishTrash, 15000) };
+    toast(b.title, tr("Deleted"), { label: "Undo", url: "/?undo=1" });
+  }, [finishTrash]);
+  const undoRemove = useCallback(() => {
+    const t = trash.current; if (!t) return; window.clearTimeout(t.timer); trash.current = null;
+    const { b } = t; setB(a => (a.some(x => x.id === b.id) ? a : [...a, b]));
+    if (b.series) setS(a => a.map(s => s.id === b.series ? { ...s, skip: s.skip.filter(d => d !== b.day) } : s));
+    toast(b.title, tr("Restored"));
+  }, []);
   /** Stops a repeating plan. Days already done or already started stay. */
   const stopSeries = useCallback((sid: string) => {
     const now = Date.now(); const gone = blocks.filter(b => b.series === sid && !b.done && blockStartMs(b) > now);
     const rest = blocks.filter(b => !gone.includes(b)); const rs = series.filter(s => s.id !== sid);
     setS(rs); setB(rest.map(b => (b.series === sid ? { ...b, series: undefined } : b))); gone.forEach(b => dropFiles(b, rest, rs));
   }, [blocks, series]);
-  return { tasks, blocks, series, addTask, patchTask, removeTask, addBlock, patchBlock, removeBlock, stopSeries };
+  return { tasks, blocks, series, addTask, patchTask, removeTask, addBlock, patchBlock, removeBlock, undoRemove, stopSeries };
 }
 export type PlanApi = ReturnType<typeof usePlan>;

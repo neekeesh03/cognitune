@@ -73,7 +73,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const planRef = useRef(plan); planRef.current = plan;
   const startBlock = (b: Block) => setLive({ title: b.title, dur: Math.min(b.dur, 45), solo: true, resources: b, blockId: b.id });
   useEffect(() => {
-    const open = (raw: string) => { try { const id = new URL(raw, location.origin).searchParams.get("start"); if (!id) return; const b = planRef.current.blocks.find(x => x.id === id); if (b && !b.done) { startBlock(b); track("block_start_from_reminder"); } } catch { /* ignore a bad link */ } };
+    const open = (raw: string) => { try { const sp = new URL(raw, location.origin).searchParams; if (sp.has("undo")) { planRef.current.undoRemove(); track("block_undo"); return; } const id = sp.get("start"); if (!id) return; const b = planRef.current.blocks.find(x => x.id === id); if (b && !b.done) { startBlock(b); track("block_start_from_reminder"); } } catch { /* ignore a bad link */ } };
     if (new URLSearchParams(location.search).has("start")) { open(location.href); window.history.replaceState(null, "", location.pathname); }
     const onLink = (e: Event) => open((e as CustomEvent).detail.url);
     const onMsg = (e: MessageEvent) => { if (e.data?.type === "open" && typeof e.data.url === "string") open(e.data.url); };
