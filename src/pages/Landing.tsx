@@ -13,7 +13,7 @@ const STEPS = [
   { n: "3", t: "A friend sees you hop in", d: "They get a quiet ping, no details. You are not alone in it.", tint: "hsl(var(--accent))" },
 ];
 const FAQ = [
-  ["Is it free?", "Yes. Starting, the timer, friends and private chat are free."],
+  ["Is it free?", "Yes, completely. Every part of Lagomo is free. No paid plan, no ads, no card."],
   ["Do my friends see what I am working on?", "No. They only see that you hopped in. Task names never leave your device."],
   ["Who can read my messages?", "Only you and your friend. Chats are end-to-end encrypted and your journal stays on your device."],
   ["What if I stop after a minute?", "That still counts. Lagomo has no streak shame and missed days never count against you."],
@@ -95,9 +95,9 @@ export default function Landing() {
         <h2 className="text-center text-4xl">Built to get you started. Not to keep you scrolling.</h2>
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl border border-border p-7"><div className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Most apps</div>
-            <ul className="mt-4 space-y-2 text-muted-foreground"><li>Endless task lists</li><li>Streaks that punish you</li><li>Feeds and likes</li><li>Strangers on camera</li></ul></div>
+            <ul className="mt-4 space-y-2 text-muted-foreground"><li>Endless task lists</li><li>Streaks that punish you</li><li>Feeds and likes</li><li>Strangers on camera</li><li>Paywalls and upsells</li></ul></div>
           <div className="rounded-3xl bg-primary p-7 text-primary-foreground"><div className="text-sm uppercase tracking-[0.2em] opacity-80">Lagomo</div>
-            <ul className="mt-4 space-y-2 text-lg"><li>One tiny step</li><li>No shame, ever</li><li>Just your real friends</li><li>Private by design</li></ul></div>
+            <ul className="mt-4 space-y-2 text-lg"><li>One tiny step</li><li>No shame, ever</li><li>Just your real friends</li><li>Private by design</li><li>Free, for everyone</li></ul></div>
         </div>
       </section>
 

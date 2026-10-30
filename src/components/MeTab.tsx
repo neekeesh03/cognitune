@@ -6,7 +6,6 @@ import { Garden } from "@/components/Garden";
 import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
 import { StartsCard } from "@/components/StartsCard";
-import { PlusCard } from "@/components/PlusCard";
 import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
 import { JournalTab } from "@/components/JournalTab";
@@ -99,7 +98,6 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
 
       {view === "data" && (
         <div className="space-y-5">
-          <PlusCard />
           <div className="glass rounded-3xl p-5 text-sm">
             {admin && <div className="mt-4 border-t border-border pt-3"><div className="font-semibold">Team</div><p className="text-muted-foreground">You are an admin. The admin panel has people, reports and announcements.</p><a href="/admin" className="mt-2 inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground">Open admin panel</a></div>}
           </div>

@@ -46,7 +46,7 @@ export async function drawCard(name: string, avatar: AvatarSpec, g: GameState): 
   return new Promise(res => c.toBlob(b => res(b!), "image/png"));
 }
 
-export function StartsCard({ name, avatar, g }: { name: string; avatar: AvatarSpec; g: GameState }) {
+export function StartsCard({ name, avatar, g, compact }: { name: string; avatar: AvatarSpec; g: GameState; compact?: boolean }) {
   const wk = weekDays(g); const total = wk.reduce((a, d) => a + d.n, 0); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
   const share = async () => {
     setBusy(true); setMsg("");
@@ -59,6 +59,12 @@ export function StartsCard({ name, avatar, g }: { name: string; avatar: AvatarSp
     } catch { setMsg("Could not make the card. Try again."); }
     setBusy(false);
   };
+  if (compact) return (
+    <div className="text-center">
+      <p className="mb-2 text-sm text-muted-foreground">Share your week. Task names are never shown.</p>
+      <Button variant="outline" className="rounded-full" disabled={busy} onClick={share}><Share2 className="mr-1 h-4 w-4" />{busy ? "Making your card..." : "Share my week"}</Button>
+      {msg && <p className="mt-2 text-xs text-primary" role="status">{msg}</p>}
+    </div>);
   return (
     <div className="glass rounded-3xl p-5 text-center">
       <div className="text-sm font-semibold">Your week of small starts</div>

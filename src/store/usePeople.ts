@@ -18,7 +18,7 @@ export function usePeople(active: boolean, onNew?: (f: Friend, delta: number) =>
       const friends: Friend[] = await Promise.all(r.friends.map(async f => {
         if (!f.last) return { ...f, last: null };
         let text = f.last.text;
-        if (f.last.enc) { try { const c = await openJson<{ text?: string; file?: unknown }>(r.user.id, f.pk || "", f.last.enc); text = c.file ? "Sent a file" : c.text || "Message"; } catch { text = "Private message"; } }
+        if (f.last.enc) { try { const c = await openJson<{ text?: string; file?: unknown; react?: { e: string } }>(r.user.id, f.pk || "", f.last.enc); text = c.file ? "Sent a file" : c.react ? (c.react.e || "Message") : c.text || "Message"; } catch { text = "Private message"; } }
         return { ...f, last: { text, ts: f.last.ts, mine: f.last.mine } };
       }));
       setFriends(friends); setIncoming(r.incoming); setOutgoing(r.outgoing); setReady(true);

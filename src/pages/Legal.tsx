@@ -31,7 +31,7 @@ export function Privacy() {
         <li>Simple counts such as sign-ups and messages per day, and the time you were last active.</li>
       </ul>
       <h2>Who handles it</h2>
-      <p>Lagomo runs on Vercel and stores data in Upstash Redis. We do not sell your data and we do not show ads. We do not send your messages or journal to any AI service.</p>
+      <p>Lagomo runs on Vercel and stores data in Upstash Redis. Lagomo is free: there is no paid plan. We do not sell your data and we do not show ads. We do not send your messages or journal to any AI service.</p>
       <h2>Your choices</h2>
       <ul>
         <li>Delete your account any time in Me, then Profile. This removes your account, friends list and messages from our server.</li>
