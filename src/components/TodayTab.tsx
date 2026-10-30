@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Flame, Gift, RefreshCw, Sparkles } from "lucide-react";
+import { Check, Flame, Gift, Play, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { analyze } from "@/engine/text";
@@ -9,7 +9,7 @@ import { dayKey } from "@/store/useJournal";
 import type { GameApi } from "@/store/useGame";
 import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
-import { fmtTime, hasResources } from "@/engine/plan";
+import { fmtTime, hasResources, type Block } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
 import { StartHero } from "@/components/StartHero";
 import { HopStrip } from "@/components/HopStrip";
@@ -22,7 +22,7 @@ import type { BurrowApi } from "@/store/useBurrow";
 import type { Friend } from "@/store/usePeople";
 import type { HopsApi } from "@/store/useHops";
 
-export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, hops, burrow, username }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
+export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBlock, friends, hops, burrow, username }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; onStartBlock?: (b: Block) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
   const [calm, setCalm] = useState(() => !!localStorage.getItem("lagomo.calm")); const toggleCalm = () => { const v = !calm; setCalm(v); v ? localStorage.setItem("lagomo.calm", "1") : localStorage.removeItem("lagomo.calm"); };
   const started = !!localStorage.getItem("lagomo.firstStart") || (game.g.counts.started ?? 0) > 0;
   const planned = (() => { try { const p = JSON.parse(localStorage.getItem("lagomo.nexthop") || "null"); return p && Date.now() - p.ts < 36e5 * 30 ? String(p.w).toLowerCase() : ""; } catch { return ""; } })();
@@ -62,11 +62,12 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, ho
           <button onClick={toggleCalm} className="rounded-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground">{calm ? "Show numbers" : "Hide numbers"}</button>
         </div>
         {(nextBlock || nextStep || agenda.length > 0) && (
-          <button onClick={() => go("plan")} className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 text-left transition hover:scale-[1.01]">
-            <div className="min-w-0"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
+          <div className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 transition hover:scale-[1.01]">
+            <button onClick={() => go("plan")} className="min-w-0 flex-1 text-start"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
               <div className="truncate text-lg font-semibold">{nextBlock ? nextBlock.title : nextStep ? nextStep.s.text : agenda[0]?.title}</div>
-              <div className="truncate text-sm text-muted-foreground">{nextBlock ? `${fmtTime(nextBlock.start)} · ${nextBlock.dur} min${hasResources(nextBlock) ? " · resources attached" : ""}` : nextStep ? nextStep.t.title : agenda[0] ? (agenda[0].allDay ? "All day" : fmtClock(agenda[0].start)) : ""}{agenda.length > 1 ? ` · ${agenda.length} things today` : ""}</div></div>
-            <span className="shrink-0 text-sm text-primary">Open</span></button>)}
+              <div className="truncate text-sm text-muted-foreground">{nextBlock ? `${fmtTime(nextBlock.start)} · ${nextBlock.dur} min${hasResources(nextBlock) ? " · resources attached" : ""}` : nextStep ? nextStep.t.title : agenda[0] ? (agenda[0].allDay ? "All day" : fmtClock(agenda[0].start)) : ""}{agenda.length > 1 ? ` · ${agenda.length} things today` : ""}</div>
+            </button>
+            {nextBlock && onStartBlock ? <button onClick={() => onStartBlock(nextBlock)} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm"><Play className="h-3.5 w-3.5" />Start now</button> : <button onClick={() => go("plan")} className="shrink-0 text-sm text-primary">Open</button>}</div>)}
 
         {/* The journal prompt stays folded until you want it */}
         {!openJ && !saved ? (

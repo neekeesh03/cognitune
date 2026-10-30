@@ -71,8 +71,9 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const [live, setLive] = useState<{ title: string; dur: number; solo?: boolean; buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }; resources?: Block; blockId?: string } | null>(null);
   // A reminder (toast or phone alert) opens "/?start=BLOCK_ID": go straight to that block's timer with its resources.
   const planRef = useRef(plan); planRef.current = plan;
+  const startBlock = (b: Block) => setLive({ title: b.title, dur: Math.min(b.dur, 45), solo: true, resources: b, blockId: b.id });
   useEffect(() => {
-    const open = (raw: string) => { try { const id = new URL(raw, location.origin).searchParams.get("start"); if (!id) return; const b = planRef.current.blocks.find(x => x.id === id); if (b && !b.done) { setLive({ title: b.title, dur: Math.min(b.dur, 45), solo: true, resources: b, blockId: b.id }); track("block_start_from_reminder"); } } catch { /* ignore a bad link */ } };
+    const open = (raw: string) => { try { const id = new URL(raw, location.origin).searchParams.get("start"); if (!id) return; const b = planRef.current.blocks.find(x => x.id === id); if (b && !b.done) { startBlock(b); track("block_start_from_reminder"); } } catch { /* ignore a bad link */ } };
     if (new URLSearchParams(location.search).has("start")) { open(location.href); window.history.replaceState(null, "", location.pathname); }
     const onLink = (e: Event) => open((e as CustomEvent).detail.url);
     const onMsg = (e: MessageEvent) => { if (e.data?.type === "open" && typeof e.data.url === "string") open(e.data.url); };
@@ -130,7 +131,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl overflow-x-clip px-5 pt-8">
-        {tab === "today" && <TodayTab j={j} name={user.name} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
+        {tab === "today" && <TodayTab onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab pairs={burrow.pairs} people={people} game={game} plan={plan} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In The Corner" : `Focusing with ${name}`, dur, buddy })} />}

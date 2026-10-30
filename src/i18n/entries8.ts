@@ -51,4 +51,7 @@ export const ROWS8: Row[] = [
 ["Nothing planned yet", "还没有计划", "هنوز چیزی برنامه‌ریزی نشده", "Belum ada rencana"],
 ["This week", "本周", "این هفته", "Minggu ini"],
 ["Planned with a friend", "和朋友一起计划", "با یک دوست برنامه‌ریزی شده", "Direncanakan bersama teman"],
+["Take a photo", "拍照", "گرفتن عکس", "Ambil foto"],
+["Photo", "照片", "عکس", "Foto"],
+["Start now", "现在开始", "همین حالا شروع کن", "Mulai sekarang"],
 ];
