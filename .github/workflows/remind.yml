@@ -1,0 +1,11 @@
+name: Daily nudges
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send due nudges
+        run: curl -fsS --max-time 60 https://cognitune-nikesh.vercel.app/api/cron-remind
