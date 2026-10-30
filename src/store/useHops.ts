@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { toast } from "@/lib/fx";
+import { track } from "@/lib/track";
 
 interface HopsResp { hops: Record<string, { ts: number }>; cheers: { from: string; ts: number }[] }
 type Person = { id: string; name: string };
@@ -27,7 +28,7 @@ export function useHops(friends: Person[], active = true) {
     return () => clearInterval(t);
   }, [active, poll]);
   const hopIn = useCallback(() => { api("hop", { body: {} }).catch(() => undefined); }, []);
-  const cheer = useCallback(async (id: string) => { setCheered(c => ({ ...c, [id]: Date.now() })); try { await api("cheer", { body: { to: id } }); } catch { /* ignore */ } }, []);
+  const cheer = useCallback(async (id: string) => { setCheered(c => ({ ...c, [id]: Date.now() })); track("hop_cheer"); try { await api("cheer", { body: { to: id } }); } catch { /* ignore */ } }, []);
   return { hops, cheered, hopIn, cheer };
 }
 export type HopsApi = ReturnType<typeof useHops>;

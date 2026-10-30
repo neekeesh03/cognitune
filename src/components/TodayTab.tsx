@@ -13,6 +13,8 @@ import { fmtTime } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
 import { StartHero } from "@/components/StartHero";
 import { HopStrip } from "@/components/HopStrip";
+import { StoryCard } from "@/components/StoryCard";
+import { NameCheck } from "@/components/NameCheck";
 import type { Friend } from "@/store/usePeople";
 import type { HopsApi } from "@/store/useHops";
 
@@ -33,8 +35,10 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, friends, ho
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6">
       <div className="text-center"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">One start is enough for today.</p></div>
+      <StoryCard />
       <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
       <HopStrip friends={friends} hops={hops} />
+      <NameCheck />
 
       <>
         <div className="flex items-center justify-center gap-3 text-sm">

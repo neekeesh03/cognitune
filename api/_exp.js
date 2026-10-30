@@ -2,7 +2,7 @@
 // landing-page tracking and the waitlist. No message, journal or plan content is ever recorded here.
 import { rd, rdp, setJ, getJ, err, dayStr, lastDays } from "./_core.js";
 
-export const EVENTS = ["app_open", "checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "tab_checkin", "plus_open", "plus_price"];
+export const EVENTS = ["app_open", "checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "tab_checkin", "plus_open", "plus_price", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer"];
 const PRICES = ["3", "5", "8", "none"];
 export const weekId = (t = Date.now()) => { const d = new Date(t); const day = (d.getUTCDay() + 6) % 7; return dayStr(t - day * 864e5); }; // Monday of the week
 const cl = (v, n) => String(v == null ? "" : v).replace(/[<>]/g, "").trim().slice(0, n);
@@ -51,7 +51,7 @@ export async function experimentStats() {
   const users = (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(Boolean);
   const total = users.length;
   const [fcount] = [await rdp(users.map(u => ["SCARD", "f:" + u.id]))];
-  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan"];
+  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer"];
   const evSets = {}; for (const n of evNames) evSets[n] = new Set(await rd("SMEMBERS", "evf:" + n));
   // retention: for each user, was she active on day +1, +7, +30 (only if that day has fully passed)
   const checks = []; const meta = [];
