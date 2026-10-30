@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { Check, Clock, DoorOpen, HeartHandshake, Play, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Camera, Check, Clock, DoorOpen, HeartHandshake, Play, Sparkles } from "lucide-react";
+import { Lightbox } from "@/components/BringAlong";
+import { PinkyCamera, cameraAvailable } from "@/components/PinkyCamera";
+import { fetchFileUrl } from "@/net/blobs";
 import { Button } from "@/components/ui/button";
 import { tr } from "@/i18n";
 import { Avatar } from "@/components/Avatar";
-import { CUES, TINY, keptTogether, myState, timeLeft, windowEnd, type Pact, type PinkyEvt, type PinkyMode, type WindowChoice } from "@/engine/pinky";
+import { CUES, PHOTO_HOURS, TINY, keptTogether, myState, timeLeft, windowEnd, type Pact, type PhotoRef, type PinkyEvt, type PinkyMode, type WindowChoice } from "@/engine/pinky";
 import type { Friend } from "@/store/usePeople";
 
 const clean = (s: string) => s.trim().replace(/[.\s]+$/, "");
@@ -36,24 +39,47 @@ export function PinkyForm({ first, onSend, onClose }: { first: string; onSend: (
     </div>);
 }
 
+/** A photo receipt. Your friend's photo stays blurred until you tap it. It disappears from our server after 48 hours. */
+function Polaroid({ file, meId, pk, mine, doneAt, onReport }: { file: PhotoRef; meId: string; pk: string | null; mine: boolean; doneAt: number; onReport: (url: string) => void }) {
+  const expired = Date.now() - doneAt > PHOTO_HOURS * 3600000;
+  const [url, setUrl] = useState<string | null>(null); const [fail, setFail] = useState(false); const [shown, setShown] = useState(mine); const [big, setBig] = useState(false);
+  useEffect(() => {
+    if (expired) return; let u: string | null = null; let live = true;
+    fetchFileUrl(file, meId, pk).then(x => { if (!live) { if (x) URL.revokeObjectURL(x); return; } if (x) { u = x; setUrl(x); } else setFail(true); }).catch(() => live && setFail(true));
+    return () => { live = false; if (u) URL.revokeObjectURL(u); };
+  }, [file.id, pk]); // eslint-disable-line
+  if (expired || fail) return <div className="mt-1 text-xs opacity-70">{tr("Photo expired")}</div>;
+  return (
+    <div className="mt-1.5 inline-block">
+      <button type="button" onClick={() => (shown ? url && setBig(true) : setShown(true))} aria-label={shown ? tr("Open photo") : tr("Tap to see the photo")} className="block -rotate-2 bg-white p-1.5 pb-4 shadow-md">
+        <span className="relative block h-20 w-24 overflow-hidden bg-neutral-200">{url ? <img src={url} alt="" className={`h-full w-full object-cover transition ${shown ? "" : "scale-110 blur-xl"}`} /> : null}{!shown && url && <span className="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-neutral-900">{tr("Tap to see")}</span>}</span></button>
+      {!mine && shown && url && <button type="button" onClick={() => onReport(url)} className="mt-1 block text-[11px] underline opacity-70">{tr("Report photo")}</button>}
+      {big && url && <Lightbox url={url} onClose={() => setBig(false)} />}
+    </div>);
+}
+
 interface CardProps { pact: Pact; me: string; first: string; now: number; busy?: boolean;
-  onJoin: (text: string) => void; onStart: (text: string) => void; onDone: () => void; onKeep: () => void; onSmaller: (text: string) => void; onLetGo: () => void; onCheer: () => void; onHop?: () => void }
+  onJoin: (text: string) => void; onStart: (text: string) => void; onDone: () => void; onKeep: () => void; onSmaller: (text: string) => void; onLetGo: () => void; onCheer: () => void; onHop?: () => void; pk: string | null; onDonePhoto: (b: Blob) => void; onReportPhoto: (url: string) => void }
 const STATUS: Record<string, string> = { done: "done", open: "open", rolled: "kept for later", letgo: "let go", join: "not yet", watching: "cheering" };
+
+/** One person's line on a card. Defined outside the card so a re-render does not throw the photo away. */
+function Row({ who, text, state, photo }: { who: string; text?: string; state: string; photo?: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 py-1"><span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-primary text-primary-foreground" : "border border-current opacity-60"}`}>{state === "done" ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}</span>
+      <div className="min-w-0"><div className="text-xs opacity-80">{who} · {state}</div>{text && <div className="text-sm" translate="no" dir="auto">{text}</div>}{photo}</div></div>);
+}
 
 /** One Pinky inside the chat. Never says "failed" or "missed". */
 export function PinkyCard(p: CardProps) {
   const { pact, me, first, now } = p; const ms = myState(pact, me, now); const other = Object.keys(pact.parts).find(i => i !== me); const kept = keptTogether(pact);
-  const [mine, setMine] = useState(""); const [shrink, setShrink] = useState(false);
+  const [mine, setMine] = useState(""); const [shrink, setShrink] = useState(false); const [cam, setCam] = useState(false);
   const left0 = timeLeft(pact.end, now); const lm = /^(\d+) (min|h) left$/.exec(left0); const left = lm ? tr(lm[2] === "min" ? "{n} min left" : "{n} h left").replace("{n}", lm[1]) : left0 ? tr(left0) : ""; const mineText = pact.parts[me]?.text; const theirs = other ? pact.parts[other] : undefined;
   const theirState = !theirs ? (pact.mode === "cheer" ? "" : "not yet") : theirs.doneAt ? "done" : theirs.letGo ? "let go" : now > pact.end ? "kept for later" : "open";
-  const Row = ({ who, text, state }: { who: string; text?: string; state: string }) => (
-    <div className="flex items-start gap-2 py-1"><span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-primary text-primary-foreground" : "border border-current opacity-60"}`}>{state === "done" ? <Check className="h-3 w-3" /> : <Clock className="h-3 w-3" />}</span>
-      <div className="min-w-0"><div className="text-xs opacity-80">{who} · {state}</div>{text && <div className="text-sm" translate="no" dir="auto">{text}</div>}</div></div>);
   return (
     <div className="min-w-[15rem] max-w-full">
       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] opacity-80"><HeartHandshake className="h-3.5 w-3.5" />Pinky{pact.mode === "same" ? " · same thing" : pact.mode === "cheer" ? " · cheering" : ""}{!kept && left && (ms === "open" || ms === "join" || ms === "watching") && <span className="ms-auto normal-case tracking-normal">{left}</span>}</div>
-      <div className="mt-1"><Row who={tr("You")} text={mineText} state={mineText ? STATUS[ms] : "not yet"} />
-        {(other || pact.mode !== "cheer") && <Row who={first} text={theirs?.text} state={theirState} />}
+      <div className="mt-1"><Row who={tr("You")} text={mineText} state={mineText ? STATUS[ms] : "not yet"} photo={pact.parts[me]?.photo && pact.parts[me]?.doneAt ? <Polaroid file={pact.parts[me].photo!} meId={me} pk={p.pk} mine doneAt={pact.parts[me].doneAt!} onReport={p.onReportPhoto} /> : undefined} />
+        {(other || pact.mode !== "cheer") && <Row who={first} text={theirs?.text} state={theirState} photo={theirs?.photo && theirs.doneAt ? <Polaroid file={theirs.photo} meId={me} pk={p.pk} mine={false} doneAt={theirs.doneAt} onReport={p.onReportPhoto} /> : undefined} />}
         {pact.mode === "cheer" && me !== pact.creator && <Row who={first} text={pact.parts[pact.creator]?.text} state={pact.parts[pact.creator]?.doneAt ? "done" : "open"} />}</div>
       {kept && <div className="mt-2 flex items-center gap-1.5 text-sm font-semibold"><Sparkles className="h-4 w-4" />Kept together</div>}
       {!kept && ms === "join" && (pact.mode === "same"
@@ -62,10 +88,11 @@ export function PinkyCard(p: CardProps) {
             <div className="flex flex-wrap gap-1.5">{TINY.slice(0, 3).map(t => <button key={t} type="button" onClick={() => setMine(tr("When {cue}, I will {act}.").replace("{cue}", tr("I have a minute")).replace("{act}", tr(t)))} className="rounded-full border border-current/30 px-2.5 py-1 text-xs opacity-90">{t}</button>)}</div>
             <Button size="sm" variant="hero" className="rounded-full" disabled={!mine.trim() || p.busy} onClick={() => p.onJoin(mine.trim())}>Make mine</Button></div>)}
       {!kept && ms === "watching" && <Button size="sm" variant="hero" className="mt-2 rounded-full" disabled={p.busy} onClick={p.onCheer}>Cheer them on</Button>}
-      {!kept && ms === "open" && <div className="mt-2 flex flex-wrap gap-2"><Button size="sm" variant="hero" className="rounded-full" disabled={p.busy} onClick={() => p.onStart(mineText!)}><Play className="mr-1 h-3.5 w-3.5" />Start 2 min</Button><Button size="sm" variant="outline" className="rounded-full bg-transparent" disabled={p.busy} onClick={p.onDone}>Done</Button>{p.onHop && pact.mode !== "cheer" && <Button size="sm" variant="ghost" className="rounded-full" disabled={p.busy} onClick={p.onHop}>Hop together</Button>}</div>}
+      {!kept && ms === "open" && <div className="mt-2 flex flex-wrap gap-2"><Button size="sm" variant="hero" className="rounded-full" disabled={p.busy} onClick={() => p.onStart(mineText!)}><Play className="mr-1 h-3.5 w-3.5" />Start 2 min</Button><Button size="sm" variant="outline" className="rounded-full bg-transparent" disabled={p.busy} onClick={p.onDone}>Done</Button>{cameraAvailable() && <Button size="sm" variant="outline" className="rounded-full bg-transparent" disabled={p.busy} onClick={() => setCam(true)}><Camera className="mr-1 h-3.5 w-3.5" />Done with photo</Button>}{p.onHop && pact.mode !== "cheer" && <Button size="sm" variant="ghost" className="rounded-full" disabled={p.busy} onClick={p.onHop}>Hop together</Button>}</div>}
       {!kept && ms === "rolled" && !shrink && <div className="mt-2 space-y-1.5"><div className="text-sm opacity-90">Time ran out. No problem.</div><div className="flex flex-wrap gap-2"><Button size="sm" variant="hero" className="rounded-full" disabled={p.busy} onClick={p.onKeep}>Keep for tomorrow</Button>{pact.mode !== "same" && <Button size="sm" variant="outline" className="rounded-full bg-transparent" onClick={() => { setMine(mineText ?? ""); setShrink(true); }}>Make it smaller</Button>}<Button size="sm" variant="ghost" className="rounded-full" disabled={p.busy} onClick={p.onLetGo}>Let it go</Button></div></div>}
       {!kept && ms === "rolled" && shrink && <div className="mt-2 space-y-2"><input value={mine} onChange={e => setMine(e.target.value)} maxLength={140} aria-label="A smaller promise" translate="no" dir="auto" className="h-10 w-full rounded-2xl bg-background/80 px-3 text-sm text-foreground outline-none" /><div className="flex flex-wrap gap-2"><Button size="sm" variant="hero" className="rounded-full" disabled={!mine.trim() || p.busy} onClick={() => { p.onSmaller(mine.trim()); setShrink(false); }}>Save smaller</Button><Button size="sm" variant="ghost" className="rounded-full" onClick={() => setShrink(false)}>Back</Button></div></div>}
       {!kept && ms === "done" && <div className="mt-2 text-sm opacity-90">You kept yours.{theirState === "open" ? " " + tr("Waiting for {name}, no rush.").replace("{name}", first) : theirState === "not yet" ? " " + tr("{name} has not made theirs yet.").replace("{name}", first) : ""}</div>}
+      {cam && <PinkyCamera onClose={() => setCam(false)} onShot={b => { setCam(false); p.onDonePhoto(b); }} />}
       {!kept && ms === "letgo" && <div className="mt-2 text-sm opacity-90">You let this one go. That is okay.</div>}
     </div>);
 }

@@ -2,13 +2,17 @@
  *  Rules: a missed window never "fails". It rolls over, can be made smaller, or can be let go. Nothing is ever lost. */
 export type PinkyMode = "side" | "same" | "cheer";
 export type PinkyOp = "make" | "join" | "done" | "keep" | "smaller" | "letgo";
-export interface PinkyEvt { id: string; op: PinkyOp; mode?: PinkyMode; text?: string; end?: number; receipt?: "tap" | "timer" }
-export interface PinkyPart { text: string; doneAt?: number; receipt?: "tap" | "timer"; letGo?: boolean }
+export type Receipt = "tap" | "timer" | "photo";
+export interface PinkyEvt { id: string; op: PinkyOp; mode?: PinkyMode; text?: string; end?: number; receipt?: Receipt }
+/** A photo receipt travels as an encrypted chat file. It vanishes from our server after 48 hours. */
+export interface PhotoRef { id: string; name: string; type: string; size: number; iv?: string }
+export interface PinkyPart { text: string; doneAt?: number; receipt?: Receipt; letGo?: boolean; photo?: PhotoRef }
+export const PHOTO_HOURS = 48;
 export interface Pact { id: string; mode: PinkyMode; creator: string; parts: Record<string, PinkyPart>; end: number; madeAt: number }
 export type MyState = "join" | "open" | "done" | "rolled" | "letgo" | "watching";
 
 export const HOUR = 3600000;
-export interface Evt { from: string; ts: number; pinky?: PinkyEvt }
+export interface Evt { from: string; ts: number; pinky?: PinkyEvt; file?: PhotoRef }
 
 /** Builds every pact in a chat from its messages, oldest first. Unknown ids and impossible moves are ignored. */
 export function reducePacts(msgs: Evt[]): Pact[] {
@@ -20,7 +24,7 @@ export function reducePacts(msgs: Evt[]): Pact[] {
     const mine = p.parts[m.from];
     if (e.op === "join") { if (m.from === p.creator || mine || p.mode === "cheer") continue; p.parts[m.from] = { text: p.mode === "same" ? p.parts[p.creator].text : (e.text || p.parts[p.creator].text) }; if (e.end && e.end > p.end) p.end = e.end; }
     else if (!mine) continue;
-    else if (e.op === "done") { if (!mine.doneAt) { mine.doneAt = m.ts; mine.receipt = e.receipt ?? "tap"; } }
+    else if (e.op === "done") { if (!mine.doneAt) { mine.doneAt = m.ts; mine.receipt = e.receipt ?? "tap"; if (e.receipt === "photo" && m.file) mine.photo = m.file; } }
     else if (e.op === "keep") { if (e.end && e.end > p.end) p.end = e.end; mine.letGo = false; }
     else if (e.op === "smaller") { if (e.text && !mine.doneAt && p.mode !== "same") mine.text = e.text; if (e.end && e.end > p.end) p.end = e.end; mine.letGo = false; }
     else if (e.op === "letgo") { if (!mine.doneAt) mine.letGo = true; }
@@ -72,7 +76,7 @@ export const timeLeft = (end: number, now = Date.now()): string => {
   const m = Math.round(ms / 60000); if (m < 60) return `${m} min left`; const h = Math.round(m / 60); return h < 24 ? `${h} h left` : "about a day left";
 };
 /** Text shown in chat lists and used as the fallback line. */
-export const summary = (e: PinkyEvt): string => ({ make: "Made a Pinky", join: "Joined the Pinky", done: "Kept their Pinky", keep: "Kept the Pinky for tomorrow", smaller: "Made the Pinky smaller", letgo: "Let a Pinky go" }[e.op]);
+export const summary = (e: PinkyEvt): string => ({ make: "Made a Pinky", join: "Joined the Pinky", done: e.receipt === "photo" ? "Kept their Pinky, with a photo" : "Kept their Pinky", keep: "Kept the Pinky for tomorrow", smaller: "Made the Pinky smaller", letgo: "Let a Pinky go" }[e.op]);
 
 export const TINY = ["open it for 2 minutes", "write one sentence", "put on my shoes", "do the first tiny step", "set a 2-minute timer"];
 export const CUES = ["I get home", "I sit at my desk", "after dinner", "tomorrow morning", "I finish this"];

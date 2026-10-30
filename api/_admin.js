@@ -47,6 +47,9 @@ async function adminInner(path, method, ctx) {
     const uids = [...new Set(reps.flatMap(r => [r.from, r.against]))]; const us = (await rdp(uids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)); const nm = Object.fromEntries(uids.map((i, n) => [i, us[n] ? us[n].username : "(deleted)"]));
     return res.json({ reports: reps.map(r => ({ ...r, fromName: nm[r.from], againstName: nm[r.against], againstId: r.against, suspended: !!us[uids.indexOf(r.against)]?.suspended })) });
   }
+  if (path === "admin-report-evidence" && method === "GET") {
+    const id = String(query.id || "").replace(/[^\w-]/g, ""); const img = id ? await rd("GET", "repev:" + id) : null; if (!img) throw err(404, "No photo kept for this report."); await audit(me, "view-report-photo", id); return res.json({ img });
+  }
   if (path === "admin-reports" && method === "POST") {
     const r = await getJ("rep:" + String(body.id || "")); if (!r) throw err(404, "Not found."); r.status = body.op === "reopen" ? "open" : "resolved"; r.note = String(body.note || "").slice(0, 300); r.by = me.username; r.resolvedAt = Date.now(); await setJ("rep:" + r.id, r); await audit(me, "report-" + r.status, r.id.slice(0, 8)); return res.json({ ok: true });
   }

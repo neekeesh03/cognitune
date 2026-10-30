@@ -18,7 +18,7 @@ export async function saveSub(me, sub) {
   if (!okSub(sub)) throw err(400, "That alert setup is not valid.");
   const key = "ps:" + me.id; const cur = (await rd("SMEMBERS", key)) || [];
   const keep = cur.filter(x => { try { return JSON.parse(x).endpoint !== sub.endpoint; } catch { return false; } }).slice(-4);
-  await rdp([["DEL", key], ...[...keep, JSON.stringify({ endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } })].map(v => ["SADD", key, v]), ["EXPIRE", key, 90 * 864e3]]);
+  await rdp([["DEL", key], ...[...keep, JSON.stringify({ endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } })].map(v => ["SADD", key, v]), ["EXPIRE", key, 90 * 86400]]);
 }
 export async function dropSub(me, endpoint) {
   const cur = (await rd("SMEMBERS", "ps:" + me.id)) || [];

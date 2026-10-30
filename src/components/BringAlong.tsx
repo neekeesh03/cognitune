@@ -31,7 +31,7 @@ function Thumb({ f, onOpen, size = 64 }: { f: BlockFile; onOpen?: (url: string) 
   return <button type="button" onClick={() => onOpen?.(url)} aria-label={"Open photo " + f.name} className="shrink-0 overflow-hidden rounded-xl" style={box}><img src={url} alt="" className="h-full w-full object-cover" /></button>;
 }
 /** Full-screen photo viewer. Sits above the timer. */
-function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
+export function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === "Escape" && onClose(); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label="Photo" onClick={onClose} className="fixed inset-0 z-[90] flex items-center justify-center bg-black/85 p-4">

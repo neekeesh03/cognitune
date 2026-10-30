@@ -31,12 +31,12 @@ export function useChat(friendId: string | null, meId: string, friendPk: string 
   }, [decode]);
   useEffect(() => { if (!friendId) return; pull(); const t = setInterval(() => { if (!document.hidden) pull(); }, 3000); return () => clearInterval(t); }, [friendId, pull]);
 
-  const post = useCallback(async (kind: ChatMsg["kind"], content: Content, file?: { data: string }) => {
+  const post = useCallback(async (kind: ChatMsg["kind"], content: Content, file?: { data: string }, short = false) => {
     const id = fid.current; if (!id) return; setError("");
     try {
       if (!pkRef.current) throw new Error(NEEDS_PK);
       const enc = await sealJson(meId, pkRef.current, content);
-      const r = await api<{ message: Raw }>("messages", { body: { to: id, kind, enc, ...(file ? { file } : {}) } });
+      const r = await api<{ message: Raw }>("messages", { body: { to: id, kind, enc, ...(file ? { file } : {}), ...(short ? { short: true } : {}) } });
       const m = await decode(r.message); last.current = Math.max(last.current, m.ts); setMessages(p => (p.some(x => x.id === m.id) ? p : [...p, m])); return m;
     } catch (e) { setError((e as Error).message); throw e; }
   }, [meId, decode]);
@@ -52,7 +52,13 @@ export function useChat(friendId: string | null, meId: string, friendPk: string 
   const sendPlan = useCallback((plan: SharedPlan) => post("plan", { text: `Planned: ${plan.title}`, plan }), [post]);
   /** Pinky moves travel as encrypted chat messages. Quiet ones (roll over, let go) never send a push alert. */
   const sendPinky = useCallback((pinky: PinkyEvt, quiet = false) => post(quiet ? "pinky_quiet" : "pinky", { text: summary(pinky), pinky }), [post]);
+  /** A photo receipt: the picture is encrypted on this device and deleted from the server after 48 hours. */
+  const sendPinkyPhoto = useCallback(async (blob: Blob, pinky: PinkyEvt) => {
+    if (!pkRef.current) throw new Error(NEEDS_PK);
+    const f = await filePayload(new File([blob], "pinky.jpg", { type: "image/jpeg" })); const bytes = unb64(f.data); const sealed = await sealBytes(meId, pkRef.current, bytes);
+    return post("file", { text: summary(pinky), pinky, file: { name: "pinky.jpg", type: f.type, size: bytes.length, iv: sealed.iv } }, { data: sealed.data }, true);
+  }, [post, meId]);
   const sendTyping = useCallback(() => { if (fid.current) api("typing", { body: { to: fid.current } }).catch(() => {}); }, []);
-  return { messages, online, typing, error, sendText, react, sendFile, invite, joinSession, sendPlan, sendPinky, sendTyping, meId };
+  return { messages, online, typing, error, sendText, react, sendFile, invite, joinSession, sendPlan, sendPinky, sendPinkyPhoto, sendTyping, meId };
 }
 export type ChatApi = ReturnType<typeof useChat>;

@@ -154,7 +154,12 @@ function PeopleTab() {
 }
 
 // ---------------- Reports ----------------
-type Rep = { id: string; fromName: string; againstName: string; againstId: string; reason: string; text: string; ts: number; status: string; suspended: boolean; note?: string; by?: string };
+/** Shows the photo someone reported, only when the reviewer asks to see it. */
+function EvidenceButton({ id }: { id: string }) {
+  const [img, setImg] = useState<string | null>(null); const [err, setErr] = useState("");
+  return <div className="mt-2">{img ? <img src={img} alt="Reported photo" className="max-h-64 rounded-xl" /> : <Button size="sm" variant="outline" className="rounded-full" onClick={async () => { setErr(""); try { setImg((await api<{ img: string }>("admin-report-evidence?id=" + encodeURIComponent(id))).img); } catch (e) { setErr(errText(e)); } }}>View reported photo</Button>}{err && <span className="ms-2 text-xs text-destructive">{err}</span>}</div>;
+}
+type Rep = { hasEvidence?: boolean; id: string; fromName: string; againstName: string; againstId: string; reason: string; text: string; ts: number; status: string; suspended: boolean; note?: string; by?: string };
 function ReportsTab() {
   const [r, setR] = useState<Rep[] | null>(null); const [open, setOpen] = useState(true);
   const load = useCallback(() => api<{ reports: Rep[] }>("admin-reports").then(x => setR(x.reports)), []);
@@ -167,6 +172,7 @@ function ReportsTab() {
         <div key={x.id} className="rounded-2xl border border-border p-3 text-sm">
           <div><b>@{x.fromName}</b> reported <b>@{x.againstName}</b> <Pill>{x.reason}</Pill> <span className="text-xs text-muted-foreground">{when(x.ts)}</span></div>
           {x.text && <p className="mt-1 text-muted-foreground">"{x.text}"</p>}
+          {x.hasEvidence && <EvidenceButton id={x.id} />}
           {x.status !== "open" && <p className="mt-1 text-xs text-muted-foreground">Resolved by {x.by}{x.note ? `: ${x.note}` : ""}</p>}
           <div className="mt-2 flex gap-2">
             {x.status === "open" ? <>

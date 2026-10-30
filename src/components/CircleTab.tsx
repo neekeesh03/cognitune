@@ -129,7 +129,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   const reacts = new Map<string, Map<string, string>>();
   for (const m of chat.messages) if (m.kind === "react" && m.react) { const per = reacts.get(m.react.to) ?? new Map<string, string>(); if (m.react.e) per.set(m.from, m.react.e); else per.delete(m.from); reacts.set(m.react.to, per); }
   const shownMsgs = chat.messages.filter(m => m.kind !== "react" && !(m.kind === "pinky" && m.pinky?.op !== "make"));
-  const pacts = useMemo(() => reducePacts(chat.messages.map(m => ({ from: m.from, ts: m.ts, pinky: m.pinky }))), [chat.messages]);
+  const pacts = useMemo(() => reducePacts(chat.messages.map(m => ({ from: m.from, ts: m.ts, pinky: m.pinky, file: m.file }))), [chat.messages]);
   const activeP = activePact(pacts); const keptN = keptCount(pacts);
   const prevKept = useRef<number | null>(null);
   useEffect(() => { // celebrate only a Pinky that finished just now, not old history that is loading
@@ -146,8 +146,10 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   const myText = (p: Pact) => p.parts[me.id]?.text ?? "";
   const pinkyMake = async (e: PinkyEvt, remind: boolean) => { await chat.sendPinky(e); if (remind) pinkyBlock(e.id, e.text!, e.end!); game.earn("chat"); track("pinky_make"); };
   const pinkyDone = (p: Pact, receipt: "tap" | "timer") => pinkyRun(async () => { await chat.sendPinky({ id: p.id, op: "done", receipt }); plan.blocks.filter(b => b.sharedId === "pinky:" + p.id).forEach(b => plan.patchBlock(b.id, { done: true })); if (receipt === "tap") game.earn("pinky"); track("pinky_done"); });
+  const pinkyPhoto = (p: Pact, blob: Blob) => pinkyRun(async () => { await chat.sendPinkyPhoto(blob, { id: p.id, op: "done", receipt: "photo" }); plan.blocks.filter(b => b.sharedId === "pinky:" + p.id).forEach(b => plan.patchBlock(b.id, { done: true })); game.earn("pinky"); track("pinky_done"); track("pinky_photo"); });
+  const reportPhoto = (url: string) => { if (!confirm(`Report this photo from ${first}? The photo is shared with the Lagomo team so they can review it.`)) return; run(async () => { const blob = await (await fetch(url)).blob(); const ev = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error); r.readAsDataURL(blob); }); await api("report", { body: { id: f.id, reason: "Photo", text: "Pinky photo receipt", evidence: ev } }); toast("Report sent", "Thank you"); track("pinky_photo_report"); }); };
   const pinkyCard = (p: Pact) => (
-    <PinkyCard pact={p} me={me.id} first={first} now={now} busy={pbusy}
+    <PinkyCard pact={p} me={me.id} first={first} now={now} busy={pbusy} pk={f.pk ?? null} onDonePhoto={b => pinkyPhoto(p, b)} onReportPhoto={reportPhoto}
       onJoin={t => pinkyRun(async () => { const late = p.end < Date.now() + HOUR; const end = late ? windowEnd("day") : undefined; await chat.sendPinky({ id: p.id, op: "join", text: t, end }); pinkyBlock(p.id, t || p.parts[p.creator].text, end ?? p.end); track("pinky_join"); })}
       onStart={() => startPinky ? startPinky(myText(p), () => { pinkyDone(p, "timer"); }) : pinkyDone(p, "tap")}
       onDone={() => pinkyDone(p, "tap")}

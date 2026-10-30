@@ -14,6 +14,14 @@ const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
 const MAX_FILE_B64 = 1_100_000; // about 750 KB of file data
 export { eventsFromIcs };
 
+/** Files were once saved with an expiry ten times too long. Walks the stored files a little at a time and shortens any that are over 60 days. Stops for good when done. */
+async function capFileTtl() {
+  if (await rd("GET", "ttlfix:done")) return;
+  const cur = (await rd("GET", "ttlfix:cur")) || "0"; const r = await rd("SCAN", cur, "MATCH", "file:*", "COUNT", 150); const next = String(r[0]); const keys = r[1] || [];
+  if (keys.length) { const ttls = await rdp(keys.map(k => ["TTL", k])); const fix = keys.filter((k, i) => +ttls[i] > 5184000); if (fix.length) await rdp(fix.map(k => ["EXPIRE", k, 5184000])); }
+  if (next === "0") await rd("SET", "ttlfix:done", "1"); else await rd("SET", "ttlfix:cur", next);
+}
+
 /** Sends due block reminders. Only an id and a time are stored, never what the block is. */
 async function sendBlockReminders() {
   const now = Date.now(); const due = (await rd("ZRANGEBYSCORE", "brz", "-inf", String(now + 300000), "LIMIT", 0, 200)) || []; let sent = 0, skipped = 0;
@@ -87,6 +95,7 @@ export default async function handler(req, res) {
     // Daily nudge sender. Called every 10 minutes by a free GitHub Actions schedule. Safe to call by anyone: it only
     // sends what is due, at most one per person per day, and does nothing for people who already started or are in the app.
     if (path === "cron-remind") {
+      await capFileTtl().catch(() => {}); // one-time clean-up: older files were saved with a 600-day expiry instead of 60
       const blocks = await sendBlockReminders().catch(() => ({ error: true }));
       const nowMin = new Date().getUTCHours() * 60 + new Date().getUTCMinutes(); const cur = Math.floor(nowMin / 10); const day = dayStr();
       const buckets = [cur, (cur + 143) % 144, (cur + 142) % 144]; const lists = await rdp(buckets.map(b => ["SMEMBERS", "remb:" + b]));
@@ -108,7 +117,7 @@ export default async function handler(req, res) {
     if (!claims) throw err(401, "Please sign in.");
     const me = await getJ("user:" + claims.sub); if (!me || (claims.v || 0) !== (me.pwv || 0)) throw err(401, "Please sign in.");
     if (me.suspended) throw err(403, "This account is paused. Please contact the Lagomo team.");
-    const nowTs = String(Date.now()); await rdp([["SET", "seen:" + me.id, nowTs, "EX", 120], ["SET", "ls:" + me.id, nowTs, "EX", 7 * 864e3]]); touchActive(me.id).catch(() => {});
+    const nowTs = String(Date.now()); await rdp([["SET", "seen:" + me.id, nowTs, "EX", 120], ["SET", "ls:" + me.id, nowTs, "EX", 7 * 86400]]); touchActive(me.id).catch(() => {});
     const isOn = v => !!v && (v === "1" || Date.now() - (+v || 0) < 50000);
 
     if (path === "block-remind" && method === "POST") {
@@ -117,7 +126,7 @@ export default async function handler(req, res) {
       for (const k of old) await rd("ZREM", "brz", k);
       await rd("DEL", "br:" + me.id);
       for (const x of items) { const k = me.id + ":" + x.id; await rd("ZADD", "brz", String(Math.round(+x.at)), k); await rd("HSET", "br:" + me.id, k, String(Math.round(+x.at))); }
-      if (items.length) await rd("EXPIRE", "br:" + me.id, 370 * 864e3);
+      if (items.length) await rd("EXPIRE", "br:" + me.id, 370 * 86400);
       return res.json({ ok: true, count: items.length });
     }
 
@@ -267,7 +276,9 @@ export default async function handler(req, res) {
       const msg = { id: crypto.randomUUID(), ts: Date.now(), from: me.id, kind, enc: body.enc };
       if (kind === "file") {
         const f = body.file; if (!f || typeof f.data !== "string" || f.data.length > MAX_FILE_B64 || !/^[\w+/=]+$/.test(f.data)) throw err(413, "That file is too big. Photos are shrunk automatically; other files can be up to about 700 KB.");
-        const fid = crypto.randomUUID(); await setJ("file:" + fid, { data: f.data, to, from: me.id }, "EX", 60 * 864e3); msg.fileId = fid;
+        const fid = crypto.randomUUID(); const short = body.short === true; // Pinky photo receipts vanish from our server after 48 hours
+        if (short) { const n = await rd("INCR", `rl:pphoto:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:pphoto:${me.id}:${dayStr()}`, 172800); if (n > 30) throw err(429, "That is a lot of photos for one day. Try again tomorrow."); }
+        await setJ("file:" + fid, { data: f.data, to, from: me.id }, "EX", short ? 48 * 3600 : 60 * 86400); msg.fileId = fid;
       }
       const ck = convoKey(me.id, to); await rdp([["RPUSH", ck, JSON.stringify(msg)], ["LTRIM", ck, -300, -1]]);
       bump("msgs");
@@ -299,7 +310,8 @@ export default async function handler(req, res) {
       const rl = await rd("INCR", `rl:rep:${me.id}:${Math.floor(Date.now() / 36e5)}`); if (rl > 10) throw err(429, "Slow down a little.");
       const against = String(body.id || ""); if (against === me.id || !(await getJ("user:" + against))) throw err(404, "No such person.");
       const c = (v, n) => String(v == null ? "" : v).replace(/[<>]/g, "").slice(0, n); const id = randomId();
-      await setJ("rep:" + id, { id, from: me.id, against, reason: c(body.reason, 40) || "Other", text: c(body.text, 500), ts: Date.now(), status: "open" }); await rd("RPUSH", "reps", id); return res.json({ ok: true });
+      const ev = typeof body.evidence === "string" && body.evidence.length < 900000 && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(body.evidence) ? body.evidence : null; // the photo being reported, so the team can review it
+      await setJ("rep:" + id, { id, from: me.id, against, reason: c(body.reason, 40) || "Other", text: c(body.text, 500), ts: Date.now(), status: "open", hasEvidence: !!ev }); if (ev) await rd("SET", "repev:" + id, ev, "EX", 30 * 86400); await rd("RPUSH", "reps", id); return res.json({ ok: true });
     }
     if (path === "password" && method === "POST") {
       if (!me.pw) throw err(400, "This account signs in with Google. It has no password.");
