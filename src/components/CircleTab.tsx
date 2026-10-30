@@ -171,17 +171,19 @@ function Conversation({ f, me, people, game, startSession, back, openProfile }: 
         {chat.typing && <div className="flex items-end gap-2"><Avatar spec={f.avatar} size={28} /><div className="rounded-2xl rounded-bl-sm bg-foreground/[.07] px-4 py-3"><span className="inline-flex gap-1">{[0, 1, 2].map(i => <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" style={{ animationDelay: `${i * 0.15}s` }} />)}</span></div></div>}
         <div ref={end} />
       </div>
-      <div className="sticky bottom-24 z-20 space-y-2 rounded-3xl bg-background/95 pb-1 backdrop-blur-xl">
+      <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
         </div>
         {(err || chat.error) && <p className="text-xs text-destructive" role="alert">{err || chat.error}</p>}
+        <div className="sticky bottom-24 z-20 rounded-3xl bg-background shadow-md">
         <div className="glass flex items-end gap-2 rounded-3xl p-2">
           <button aria-label="Attach a file" onClick={() => fileRef.current?.click()} className="rounded-full p-2.5 text-muted-foreground hover:text-foreground"><Paperclip className="h-5 w-5" /></button>
           <input ref={fileRef} type="file" hidden onChange={e => { const file = e.target.files?.[0]; if (file) run(async () => { await chat.sendFile(file, text.trim()); setText(""); game.earn("nudge"); }); e.target.value = ""; }} />
           <EmojiPicker onPick={insertEmoji} />
           <textarea ref={ta} value={text} onChange={e => onType(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} rows={1} placeholder={`Message ${first}...`} className="max-h-32 flex-1 resize-none bg-transparent px-2 py-2.5 outline-none" />
           <button aria-label="Send" onClick={send} disabled={!text.trim()} className="rounded-full bg-primary p-2.5 text-primary-foreground disabled:opacity-40"><Send className="h-4 w-4" /></button>
+        </div>
         </div>
         <p className="text-center text-[11px] text-muted-foreground">Photos are shrunk to fit. Other files can be up to about 700 KB.</p>
       </div>
