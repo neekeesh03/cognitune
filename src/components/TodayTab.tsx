@@ -45,8 +45,9 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
   };
   const hour = new Date().getHours(); const hello = `${hour < 12 ? "Good morning" : hour < 18 ? "Hi" : "Good evening"}, ${name.split(" ")[0]}.`;
   return (
-    <div className="animate-rise mx-auto max-w-2xl space-y-6">
-      <div className="text-center"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">{planned ? `You planned to hop in ${planned}.` : "One start is enough for today."}</p></div>
+    <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-2 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
+      <div className="text-center lg:col-span-2"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">{planned ? `You planned to hop in ${planned}.` : "One start is enough for today."}</p></div>
+      <div className="space-y-6">
       <StoryCard />
       <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
       <GetStarted username={username} friends={friends.length} started={started} />
@@ -56,8 +57,9 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
       {burrow.starters >= 5 && <p className="text-center text-xs text-muted-foreground">{`${burrow.starters} people started today`}</p>}
       <InstallNudge started={started} />
       <NameCheck />
+      </div>
 
-      <>
+      <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:gap-3">
           {!calm && <>
           <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Flame className="h-4 w-4" style={{ color: "hsl(var(--f-primode))" }} /><b>{game.g.streak.current}</b> showing-up days</span>
@@ -107,7 +109,7 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
               <div key={l.text + l.ts} className="flex items-center justify-between gap-3 rounded-2xl bg-foreground/[.05] p-3 text-sm"><span>{l.text}</span><button className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => j.resolve(l.text)}>Done</button></div>))}</div>
           </div>
         )}
-      </>
+      </div>
     </div>
   );
 }

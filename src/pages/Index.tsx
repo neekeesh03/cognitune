@@ -112,12 +112,12 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const lastTask = history[history.length - 1]?.task && history[history.length - 1].task !== "Untitled" ? history[history.length - 1].task : plan.tasks.find(t => !t.doneAt)?.title ?? "";
   void lastTask;
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-28 lg:pb-12 lg:pl-56">
       <FxHost />
       <AnnounceBanner />
       <PulseCard />
       {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} resources={live.resources} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); if (live.blockId) plan.patchBlock(live.blockId, { done: true }); live.onDoneExtra?.(); }} onClose={() => setLive(null)} />}
-      <header className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 pt-6 sm:px-5">
+      <header className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 pt-6 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <Mascot size={32} />
           <Wordmark className="text-xl font-semibold tracking-tight max-[340px]:hidden sm:text-2xl" />
@@ -130,14 +130,20 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
           <button aria-label="Your profile" onClick={() => setTab("me")}><Avatar spec={user.avatar} size={36} ring /></button>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl overflow-x-clip px-5 pt-8">
+      <main className="mx-auto max-w-6xl overflow-x-clip px-5 pt-8">
         {tab === "today" && <TodayTab onPinky={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab startPinky={(title, onDoneExtra) => setLive({ title, dur: 2, solo: true, onDoneExtra })} pairs={burrow.pairs} people={people} game={game} plan={plan} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In The Corner" : `Focusing with ${name}`, dur, buddy })} />}
         {tab === "me" && <MeTab j={j} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>
-      <nav className="glass fixed bottom-5 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
+      <nav className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col gap-1 border-r border-border bg-background/70 px-3 pb-6 pt-24 backdrop-blur lg:flex" aria-label="Main">
+        {TABS.map(t => { const I = t.icon, on = tab === t.id; return (
+          <button key={t.id} onClick={() => setTab(t.id)} aria-current={on ? "page" : undefined} className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-start text-[15px] transition ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"}`}>
+            <span className="relative"><I className="h-5 w-5" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span>{t.label}
+          </button>); })}
+      </nav>
+      <nav className="glass fixed bottom-5 lg:hidden left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
         {TABS.map(t => { const I = t.icon, on = tab === t.id; return (
           <button key={t.id} onClick={() => setTab(t.id)} aria-label={t.label} aria-current={on ? "page" : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-2.5 text-sm transition ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <span className="relative"><I className="h-4 w-4" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span><span className={on ? "" : "hidden lg:inline"}>{t.label}</span>

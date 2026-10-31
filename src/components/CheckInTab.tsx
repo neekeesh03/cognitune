@@ -100,7 +100,7 @@ export function CheckInTab({ history, profile, onSave, onStarted, onDone }: Prop
   }
 
   return (
-    <div className="animate-rise mx-auto max-w-3xl space-y-6">
+    <div className="animate-rise mx-auto max-w-3xl space-y-6 lg:max-w-5xl">
       {timer && <FocusTimer color={vs.color} task={task} onStarted={() => savedId && onStarted(savedId)} onDone={onDone} onClose={() => setTimer(false)} />}
       <div className="text-center">
         <Orb drive={core.drive} color={vs.color} size={300} thresholds={thr} label={core.drive.toFixed(2)} sub="Start power" />

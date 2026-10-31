@@ -13,7 +13,7 @@ export function JournalTab({ j, earn }: { j: JournalApi; earn?: () => void }) {
   const list = j.entries.filter(e => e.kind === "journal" && e.role === "user").slice().reverse();
   const save = () => { if (!text.trim()) return; j.addUser(text, "journal", { prompt: prompt.text, mood: mood / 4 }); earn?.(); setText(""); };
   return (
-    <div className="animate-rise mx-auto max-w-2xl space-y-6">
+    <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:max-w-4xl">
       <div className="glass rounded-3xl p-5">
         <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">New entry</div>
         <h2 className="mt-1 text-3xl leading-snug">{prompt.text}</h2>

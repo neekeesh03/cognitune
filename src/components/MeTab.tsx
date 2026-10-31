@@ -32,7 +32,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
   const exportAll = () => { const o: Record<string, string | null> = {}; KEYS.forEach(k => (o[k] = localStorage.getItem(k))); const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: "application/json" })); a.download = `lagomo-backup-${dkey()}.json`; a.click(); };
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
   return (
-    <div className="animate-rise mx-auto max-w-3xl">
+    <div className="animate-rise mx-auto max-w-3xl lg:max-w-5xl">
       <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["rewards", "Rewards"], ["journal", "Journal"], ["insights", "About me"], ["profile", "Profile"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
 
       {view === "progress" && (

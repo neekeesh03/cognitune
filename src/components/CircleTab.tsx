@@ -42,7 +42,7 @@ export function CircleTab(props: Props) {
   if (profile) return <ProfileView username={profile} people={people} onBack={() => setProfile(null)} onMessage={id => { setProfile(null); setOpenId(id); }} onSaved={() => people.refresh()} />;
   if (f) return <Conversation {...props} f={f} back={() => setOpenId(null)} openProfile={openProfile} />;
   return (
-    <div className="animate-rise mx-auto max-w-2xl space-y-5">
+    <div className="animate-rise mx-auto max-w-2xl space-y-5 lg:max-w-4xl">
       <div className="text-center"><h1 className="text-4xl">Your circle</h1></div>
       <div className="glass mx-auto flex w-fit gap-1 rounded-full p-1" role="tablist" aria-label="Circle">
         {(["feed", "friends"] as const).map(v => <button key={v} role="tab" aria-selected={view === v} onClick={() => pick(v)} className={`rounded-full px-5 py-2 text-sm ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{v === "feed" ? "Feed" : "Friends and chats"}</button>)}
@@ -96,7 +96,7 @@ function Home({ people, game, me, setOpenId, startSession, pairs, openProfile }:
       <AlertsCard />
       <Corner people={people} me={me} startSession={startSession} />
       {people.friends.length === 0 ? <p className="py-4 text-center text-sm text-muted-foreground">No friends here yet. Invite someone, or search for a username above.</p> : (
-        <div className="grid gap-3 sm:grid-cols-2">{people.friends.map(x => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{people.friends.map(x => (
           <button key={x.id} aria-label={`Chat with ${x.name}`} onClick={() => setOpenId(x.id)} className="glass flex items-center gap-3 rounded-3xl p-4 text-left transition hover:scale-[1.01]">
             <div className="relative"><span role="button" tabIndex={0} aria-label={`Open ${x.name}'s profile`} onClick={e => { e.stopPropagation(); openProfile(x.username); }} onKeyDown={e => { if (e.key === "Enter") { e.stopPropagation(); openProfile(x.username); } }}><Avatar spec={x.avatar} size={52} /></span><span className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background ${x.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
             <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate font-semibold">{x.name}</span>{x.unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{x.unread}</span>}</div>
@@ -166,7 +166,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   const joined = (sid: string) => chat.messages.some(m => m.kind === "session_join" && m.session?.id === sid);
   const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "The Corner" : f.name, dur, { sid, friendId: f.id, name: room ? "The Corner" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
   return (
-    <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4" style={{ minHeight: "calc(100vh - 11rem)" }}>
+    <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4 lg:max-w-4xl" style={{ minHeight: "calc(100vh - 11rem)" }}>
       <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/95 px-5 pb-2 pt-2 shadow-sm backdrop-blur-xl">
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
