@@ -1,4 +1,8 @@
 export const DICT: Record<string, string> = {
+ "min": "मिनेट",
+ "open my notes for 2 minutes": "२ मिनेटका लागि मेरो नोट खोल्छु",
+ "Know when a friend starts": "साथीले कहिले सुरु गर्छ थाहा पाउनुहोस्",
+ "A Pinky with": "सानो वाचा, साथी:",
  "Quick links": "छिटो लिङ्कहरू",
  "Start together": "सँगै सुरु गरौँ",
  "Plan my day": "मेरो दिन योजना गर्नुहोस्",

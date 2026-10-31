@@ -121,6 +121,8 @@ const EXTRA: [RegExp, Ex][] = [
   [/^· (\d+) things? today$/, { zh: m => `· 今天有 ${m[1]} 件事`, fa: m => `· ${m[1]} کار برای امروز`, id: m => `· ${m[1]} hal hari ini`, ne: m => `· आज ${m[1]} वटा कुरा` }],
   [/^· (Low|Down|Okay|Good|Great)$/, { zh: m => "· " + MOODS[m[1]][0], fa: m => "· " + MOODS[m[1]][1], id: m => "· " + MOODS[m[1]][2], ne: m => "· " + MOODS[m[1]][3] }],
   [/^Evening wrap-up: (Low|Down|Okay|Good|Great)$/, { zh: m => "晚间总结：" + MOODS[m[1]][0], fa: m => "جمع‌بندی شب: " + MOODS[m[1]][1], id: m => "Rangkuman malam: " + MOODS[m[1]][2], ne: m => "साँझको सारांश: " + MOODS[m[1]][3] }],
+  [/^(\d+) min$/, { zh: m => `${m[1]} 分钟`, fa: m => `${m[1]} دقیقه`, id: m => `${m[1]} mnt`, ne: m => `${m[1]} मिनेट` }],
+  [/^(.+) has not turned on private messaging yet\. They need to sign in once\.$/, { zh: m => `${m[1]} 还没有开启私信。对方需要登录一次。`, fa: m => `${m[1]} هنوز پیام خصوصی را روشن نکرده است. باید یک بار وارد شود.`, id: m => `${m[1]} belum mengaktifkan pesan pribadi. Mereka perlu masuk sekali.`, ne: m => `${m[1]} ले अहिलेसम्म निजी सन्देश खोलेका छैनन्। उनीहरूले एक पटक साइन इन गर्नुपर्छ।` }],
   [/^Open chat with (.+)$/, { zh: m => `与 ${m[1]} 打开聊天`, fa: m => `باز کردن گفتگو با ${m[1]}`, id: m => `Buka obrolan dengan ${m[1]}`, ne: m => `${m[1]} सँग च्याट खोल्नुहोस्` }],
 ];
 

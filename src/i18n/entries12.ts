@@ -102,4 +102,8 @@ export const ROWS12: Row[] = [
 ["Start together", "一起开始", "با هم شروع کنیم", "Mulai bersama"],
 ["Plan my day", "安排我的一天", "برنامه‌ریزی روزم", "Atur hariku"],
 ["Write a line", "写一句话", "یک خط بنویس", "Tulis satu baris"],
+["min", "分钟", "دقیقه", "mnt"],
+["open my notes for 2 minutes", "打开我的笔记 2 分钟", "دو دقیقه یادداشت‌هایم را باز می‌کنم", "buka catatanku selama 2 menit"],
+["Know when a friend starts", "朋友开始时第一时间知道", "بدان کی دوستی شروع می‌کند", "Tahu saat teman mulai"],
+["A Pinky with", "小约定，对象：", "قول کوچک با", "Janji kelingking dengan"],
 ];
