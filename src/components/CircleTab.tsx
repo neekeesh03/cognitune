@@ -12,7 +12,8 @@ import { useFeed } from "@/store/useFeed";
 import { track } from "@/lib/track";
 import type { Pair } from "@/store/useBurrow";
 import AlertsCard from "@/components/AlertsCard";
-import { ArrowLeft, CalendarPlus, Check, HeartHandshake, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, ArrowLeft, CalendarPlus, Check, HeartHandshake, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/Avatar";
@@ -31,8 +32,15 @@ import { PlanCard, PlanTogetherForm } from "@/components/SharePlan";
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
 interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi; plan: PlanApi; startPinky?: (title: string, onDone: () => void) => void; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
 
+function useWide() {
+  const q = "(min-width: 1024px)"; const [w, setW] = useState(() => window.matchMedia(q).matches);
+  useEffect(() => { const m = window.matchMedia(q); const h = () => setW(m.matches); m.addEventListener("change", h); return () => m.removeEventListener("change", h); }, []);
+  return w;
+}
+
 export function CircleTab(props: Props) {
   const { people, me, openId, setOpenId } = props;
+  const wide = useWide();
   const [profile, setProfile] = useState<string | null>(null);
   const [view, setView] = useState<"feed" | "friends">(() => (localStorage.getItem("lagomo.circleView") === "friends" ? "friends" : "feed"));
   const feed = useFeed(view === "feed" && !openId && !profile);
@@ -40,6 +48,21 @@ export function CircleTab(props: Props) {
   const openProfile = (u: string) => { setProfile(u); track("profile_view"); window.scrollTo({ top: 0 }); };
   const f = people.friends.find(x => x.id === openId);
   if (profile) return <ProfileView username={profile} people={people} onBack={() => setProfile(null)} onMessage={id => { setProfile(null); setOpenId(id); }} onSaved={() => people.refresh()} />;
+  if (f && wide) return (
+    <div className="mx-auto grid max-w-6xl grid-cols-[300px_minmax(0,1fr)] items-start gap-6">
+      <aside className="sticky top-4 space-y-2">
+        <button onClick={() => setOpenId(null)} className="flex items-center gap-1 px-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
+        <div className="max-h-[calc(100vh-7rem)] space-y-1.5 overflow-y-auto pe-1">
+          {people.friends.map(x => (
+            <button key={x.id} aria-label={`Chat with ${x.name}`} aria-current={x.id === f.id ? "true" : undefined} onClick={() => setOpenId(x.id)} className={`flex w-full items-center gap-3 rounded-2xl p-3 text-start transition ${x.id === f.id ? "bg-primary/15" : "hover:bg-secondary/60"}`}>
+              <div className="relative"><Avatar spec={x.avatar} size={40} /><span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${x.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
+              <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate font-medium" translate="no">{x.name}</span>{x.unread > 0 && <span className="rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">{x.unread}</span>}</div>
+                <div className="truncate text-xs text-muted-foreground">{x.last ? (x.last.mine ? "You: " : "") + x.last.text : x.online ? "Online now" : "Say hi"}</div></div>
+            </button>))}
+        </div>
+      </aside>
+      <Conversation key={f.id} {...props} f={f} back={() => setOpenId(null)} openProfile={openProfile} />
+    </div>);
   if (f) return <Conversation {...props} f={f} back={() => setOpenId(null)} openProfile={openProfile} />;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-5 lg:max-w-4xl">
@@ -120,7 +143,7 @@ function FileBubble({ m, meId, pk }: { m: ChatMsg; meId: string; pk: string | nu
 function Conversation({ f, me, people, game, plan, startSession, startPinky, back, openProfile }: Props & { f: Friend; back: () => void; openProfile: (u: string) => void }) {
   const chat = useChat(f.id, me.id, f.pk ?? null);
   const [code, setCode] = useState(""); useEffect(() => { setCode(""); (async () => { const k = await loadKey(me.id); if (k && f.pk) setCode(await safetyCode(k.pk, f.pk)); })().catch(() => {}); }, [me.id, f.pk]);
-  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [planOpen, setPlanOpen] = useState(false); const [burrowOpen, setBurrowOpen] = useState(false);
+  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [planOpen, setPlanOpen] = useState(false); const [burrowOpen, setBurrowOpen] = useState(false); const [showCode, setShowCode] = useState(false);
   const [pinkyOpen, setPinkyOpen] = useState(() => sessionStorage.getItem("lagomo.pinky.open") === f.id); const [pbusy, setPbusy] = useState(false); const [now, setNow] = useState(Date.now());
   useEffect(() => { if (sessionStorage.getItem("lagomo.pinky.open") === f.id) sessionStorage.removeItem("lagomo.pinky.open"); }, [f.id]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
@@ -169,13 +192,21 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   return (
     <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4 lg:max-w-4xl" style={{ minHeight: "calc(100vh - 11rem)" }}>
       <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/95 px-5 pb-2 pt-2 lg:mx-0 lg:rounded-b-2xl lg:px-4 shadow-sm backdrop-blur-xl">
-      <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
+      <button onClick={back} className="flex w-fit items-center gap-1 lg:hidden text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><button aria-label={`Open ${f.name}'s profile`} onClick={() => openProfile(f.username)}><Avatar spec={f.avatar} size={40} /></button><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
           <div><button onClick={() => openProfile(f.username)} className="text-start"><h1 className="text-xl font-semibold hover:underline">{f.name}</h1></button><div className="text-sm text-muted-foreground">{chat.online ? "Online now" : lastSeenText(f.lastSeen)}</div>{!f.pk && <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
-        <button aria-label={`Report ${f.name}`} className="p-2 text-xs text-muted-foreground hover:text-foreground" onClick={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Lagomo team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</button>
-        <button aria-label={`Remove ${f.name}`} className="p-2 text-muted-foreground hover:text-foreground" onClick={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}><UserMinus className="h-4 w-4" /></button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><button aria-label="More" className="rounded-full p-2 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => openProfile(f.username)}>View profile</DropdownMenuItem>
+            {f.pk && <DropdownMenuItem onSelect={() => setShowCode(v => !v)}>Privacy and safety code</DropdownMenuItem>}
+            <DropdownMenuItem onSelect={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Lagomo team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onSelect={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}>Remove from circle</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+      {showCode && f.pk && <p className="mt-2 rounded-2xl bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">Private chat. Only you and {first} can read it. Safety code <b className="text-foreground">{code || "..."}</b>. Compare it with your friend in person or on a call. If it matches, nobody is listening in.</p>}
       </div>
       <div className="glass flex-1 space-y-2 rounded-3xl p-4" style={{ minHeight: 240 }}>
         {shownMsgs.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No messages yet. Say hi.</p>}
