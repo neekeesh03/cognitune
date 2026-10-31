@@ -108,6 +108,7 @@ const PATTERNS: Pattern[] = [
 
 /** Sentences with numbers or names in them, for zh, fa, id and ne. Written by AI, not yet checked by native speakers. */
 type Ex = Partial<Record<Lang, (m: RegExpExecArray) => string>>;
+const MOODS: Record<string, string[]> = { Low: ["低落","کم‌حال","Rendah","कमजोर"], Down: ["沮丧","گرفته","Murung","उदास"], Okay: ["还行","معمولی","Biasa","ठीकै"], Good: ["不错","خوب","Baik","राम्रो"], Great: ["很棒","عالی","Hebat","धेरै राम्रो"] };
 const EXTRA: [RegExp, Ex][] = [
   [/^Started (\d+) h ago$/, { zh: m => `${m[1]} 小时前开始`, fa: m => `${m[1]} ساعت پیش شروع کرد`, id: m => `Mulai ${m[1]} jam lalu`, ne: m => `${m[1]} घण्टा अघि सुरु गर्नुभयो` }],
   [/^Started (\d+) min ago$/, { zh: m => `${m[1]} 分钟前开始`, fa: m => `${m[1]} دقیقه پیش شروع کرد`, id: m => `Mulai ${m[1]} menit lalu`, ne: m => `${m[1]} मिनेट अघि सुरु गर्नुभयो` }],
@@ -116,6 +117,10 @@ const EXTRA: [RegExp, Ex][] = [
   [/^(\d+) sparks to the next stage$/, { zh: m => `距离下一阶段还差 ${m[1]} 火花`, fa: m => `${m[1]} جرقه تا مرحله بعد`, id: m => `${m[1]} percikan lagi ke tahap berikutnya`, ne: m => `अर्को चरणसम्म ${m[1]} स्पार्क` }],
   [/^(\d+) days? showing up$/, { zh: m => `已出现 ${m[1]} 天`, fa: m => `${m[1]} روز حضور`, id: m => `Hadir ${m[1]} hari`, ne: m => `${m[1]} दिन उपस्थित` }],
   [/^(\d+) days? started this week$/, { zh: m => `本周开始了 ${m[1]} 天`, fa: m => `${m[1]} روز شروع در این هفته`, id: m => `${m[1]} hari mulai minggu ini`, ne: m => `यो हप्ता ${m[1]} दिन सुरु गरियो` }],
+  [/^(\d{1,2}(?::\d{2})?\s?(?:am|pm)?) · (\d+) min$/, { zh: m => `${m[1]} · ${m[2]} 分钟`, fa: m => `${m[1]} · ${m[2]} دقیقه`, id: m => `${m[1]} · ${m[2]} mnt`, ne: m => `${m[1]} · ${m[2]} मिनेट` }],
+  [/^· (\d+) things? today$/, { zh: m => `· 今天有 ${m[1]} 件事`, fa: m => `· ${m[1]} کار برای امروز`, id: m => `· ${m[1]} hal hari ini`, ne: m => `· आज ${m[1]} वटा कुरा` }],
+  [/^· (Low|Down|Okay|Good|Great)$/, { zh: m => "· " + MOODS[m[1]][0], fa: m => "· " + MOODS[m[1]][1], id: m => "· " + MOODS[m[1]][2], ne: m => "· " + MOODS[m[1]][3] }],
+  [/^Evening wrap-up: (Low|Down|Okay|Good|Great)$/, { zh: m => "晚间总结：" + MOODS[m[1]][0], fa: m => "جمع‌بندی شب: " + MOODS[m[1]][1], id: m => "Rangkuman malam: " + MOODS[m[1]][2], ne: m => "साँझको सारांश: " + MOODS[m[1]][3] }],
   [/^Open chat with (.+)$/, { zh: m => `与 ${m[1]} 打开聊天`, fa: m => `باز کردن گفتگو با ${m[1]}`, id: m => `Buka obrolan dengan ${m[1]}`, ne: m => `${m[1]} सँग च्याट खोल्नुहोस्` }],
 ];
 
