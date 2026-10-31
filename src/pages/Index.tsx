@@ -110,6 +110,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const hops = useHops(people.friends, true);
   const friendsStarted = people.friends.filter(f => hops.hops[f.id] && new Date(hops.hops[f.id]).toDateString() === new Date().toDateString()).length;
   const hasStarted = !!localStorage.getItem("lagomo.firstStart") || (game.g.counts.started ?? 0) > 0;
+  const deepUser = hasStarted && (game.g.counts.started ?? 0) >= 3;
   usePresence({ name: user.name, started: game.g.todayActive && game.g.today === dkey(), streak: game.g.streak.current, friendsStarted, wear: wornNow(), starts: game.g.counts.started ?? 0, face: "calm" });
   useEffect(() => { if (!new URLSearchParams(location.search).has("start")) return; const t = window.setTimeout(() => (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(), 700); return () => window.clearTimeout(t); }, []);
   useEffect(() => { track("app_open", undefined, true); }, []);
@@ -129,9 +130,9 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
           <Wordmark className="text-xl font-semibold tracking-tight max-[340px]:hidden sm:text-2xl" />
         </div>
         <div className="flex shrink-0 items-center gap-1.5 max-[340px]:gap-1 sm:gap-2">
-          {hasStarted && <LofiButton />}
+          {deepUser && <LofiButton />}
           <LangPicker />
-          {hasStarted && <button aria-label="Switch between light and dark" onClick={() => setDark(!dark)} className="glass rounded-full p-2 text-muted-foreground hover:text-foreground sm:p-2.5">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>}
+          {deepUser && <button aria-label="Switch between light and dark" onClick={() => setDark(!dark)} className="glass rounded-full p-2 text-muted-foreground hover:text-foreground sm:p-2.5">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>}
           <button aria-label="Log out" title="Log out" onClick={() => { if (confirm("Log out of Lagomo on this device?")) auth.logout(); }} className="glass hidden items-center gap-1.5 rounded-full px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground sm:flex"><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Log out</span></button>
           <button aria-label="Your profile" onClick={() => setTab("me")}><Avatar spec={user.avatar} size={36} ring /></button>
         </div>
@@ -144,13 +145,13 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         {tab === "me" && <MeTab j={j} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>
       <nav className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col gap-1 border-r border-border bg-background/70 px-3 pb-6 pt-24 backdrop-blur lg:flex" aria-label="Main">
-        {TABS.filter(t => t.id !== "checkin" && (hasStarted || t.id === "today" || t.id === "circle" || t.id === tab)).map(t => { const I = t.icon, on = tab === t.id; return (
+        {TABS.filter(t => t.id !== "checkin" && (deepUser || t.id === "today" || t.id === "circle" || t.id === tab || (hasStarted && t.id === "plan"))).map(t => { const I = t.icon, on = tab === t.id; return (
           <button key={t.id} onClick={() => setTab(t.id)} aria-current={on ? "page" : undefined} className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-start text-[15px] transition ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"}`}>
             <span className="relative"><I className="h-5 w-5" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span>{t.label}
           </button>); })}
       </nav>
       <nav className="glass fixed bottom-5 lg:hidden left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
-        {TABS.filter(t => t.id !== "checkin" && (hasStarted || t.id === "today" || t.id === "circle" || t.id === tab)).map(t => { const I = t.icon, on = tab === t.id; return (
+        {TABS.filter(t => t.id !== "checkin" && (deepUser || t.id === "today" || t.id === "circle" || t.id === tab || (hasStarted && t.id === "plan"))).map(t => { const I = t.icon, on = tab === t.id; return (
           <button key={t.id} onClick={() => setTab(t.id)} aria-label={t.label} aria-current={on ? "page" : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-2.5 text-sm transition ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <span className="relative"><I className="h-4 w-4" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span><span className="text-xs sm:text-sm">{t.label}</span>
           </button>); })}
