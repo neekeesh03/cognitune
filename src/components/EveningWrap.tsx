@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { tr } from "@/i18n";
 import { Moon } from "lucide-react";
 import { RabbitFace, type Face } from "@/components/RabbitFace";
 import { wornNow } from "@/components/Rabbit";
@@ -24,20 +25,20 @@ export function EveningWrap({ j, game, plan, name, alwaysOpen }: { j: JournalApi
       <div className="glass rounded-3xl p-5 text-center">
         <div className="mx-auto w-fit"><RabbitFace crop face={starts || steps || tasks ? "proud" : "cosy"} wear={wornNow()} size={72} /></div>
         <div className="mt-1 font-semibold">That is today, {name.split(" ")[0]}.</div>
-        <p className="mt-1 text-sm text-muted-foreground">{bits.length ? `You did ${bits.join(", ")}.` : "A quiet day. That counts too."} Rest well. Tomorrow is a fresh page.</p>
-        {!alwaysOpen && <button onClick={() => { localStorage.removeItem(key()); setDone(false); setOpen(true); }} className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline">Add another line</button>}
+        <p className="mt-1 text-sm text-muted-foreground">{bits.length ? `You did ${bits.join(", ")}.` : tr("A quiet day. That counts too.")} {tr("Rest well. Tomorrow is a fresh page.")}</p>
+        {!alwaysOpen && <button onClick={() => { localStorage.removeItem(key()); setDone(false); setOpen(true); }} className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline">{tr("Add another line")}</button>}
       </div>);
   }
   return (
     <div className="glass rounded-3xl p-5">
-      <div className="mb-1 flex items-center gap-2 text-sm font-semibold"><Moon className="h-4 w-4 text-primary" />Close the day <span className="font-normal text-muted-foreground">· 20 seconds</span></div>
-      <p className="text-sm text-muted-foreground">How was today, in one tap?</p>
+      <div className="mb-1 flex items-center gap-2 text-sm font-semibold"><Moon className="h-4 w-4 text-primary" />{tr("Close the day")} <span className="font-normal text-muted-foreground">· {tr("20 seconds")}</span></div>
+      <p className="text-sm text-muted-foreground">{tr("How was today, in one tap?")}</p>
       <div className="mt-3 grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="How was today">
-        {MOODS.map((m, i) => <button key={m.label} role="radio" aria-checked={mood === i} onClick={() => setMood(i)} className={`flex flex-col items-center rounded-2xl border px-1 py-1.5 text-xs transition ${mood === i ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}><RabbitFace crop face={m.face} size={34} title={m.label} />{m.label}</button>)}
+        {MOODS.map((m, i) => <button key={m.label} role="radio" aria-checked={mood === i} onClick={() => setMood(i)} className={`flex flex-col items-center rounded-2xl border px-1 py-1.5 text-xs transition ${mood === i ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}><RabbitFace crop face={m.face} size={34} title={m.label} />{tr(m.label)}</button>)}
       </div>
-      <textarea value={text} onChange={e => setText(e.target.value)} rows={2} placeholder="One line about today. Optional." aria-label="One line about today" className="mt-3 w-full resize-none rounded-2xl border border-border bg-secondary/40 p-3 text-base outline-none focus:border-primary/60" />
+      <textarea value={text} onChange={e => setText(e.target.value)} rows={2} placeholder={tr("One line about today. Optional.")} aria-label="One line about today" className="mt-3 w-full resize-none rounded-2xl border border-border bg-secondary/40 p-3 text-base outline-none focus:border-primary/60" />
       <div className="mt-2"><VoiceButton value={text} onChange={setText} /></div>
-      <button onClick={save} className="mt-3 h-11 w-full rounded-2xl bg-primary text-primary-foreground">Close the day</button>
+      <button onClick={save} className="mt-3 h-11 w-full rounded-2xl bg-primary text-primary-foreground">{tr("Close the day")}</button>
     </div>);
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { tr } from "@/i18n";
 import { RabbitFace, type Face, type Wear } from "@/components/RabbitFace";
 
 interface Snap { name: string; day: string; active: boolean; streak: number; friends: number; wear: Wear; starts: number }
@@ -11,13 +12,13 @@ export default function Widget() {
   useEffect(() => { document.title = "Lagomo"; const l = document.querySelector('link[rel="manifest"]'); if (l) l.setAttribute("href", "/widget.webmanifest"); return () => { l?.setAttribute("href", "/manifest.webmanifest"); }; }, []);
   const today = !!snap && snap.day === dk() && snap.active; const h = new Date().getHours(); void tick;
   const face: Face = !snap ? "calm" : today ? "proud" : h >= 22 || h < 5 ? "sleepy" : "gentle";
-  const line = !snap ? "Open Lagomo once to wake me up." : today ? "You started today." : h >= 22 || h < 5 ? "Rest is allowed. Tomorrow is a fresh page." : "Ready when you are. Two minutes.";
+  const line = !snap ? tr("Open Lagomo once to wake me up.") : today ? tr("You started today.") : h >= 22 || h < 5 ? tr("Rest is allowed. Tomorrow is a fresh page.") : tr("Ready when you are. Two minutes.");
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-4 px-6 py-8 text-center">
       <RabbitFace face={face} wear={snap?.wear ?? "none"} size={180} />
-      <h1 className="text-3xl">{today ? "Started" : "Not yet"}</h1>
+      <h1 className="text-3xl">{today ? tr("Started") : tr("Not yet")}</h1>
       <p className="text-muted-foreground" role="status">{line}</p>
       {snap && <p className="text-sm text-muted-foreground">{snap.streak > 0 ? `${snap.streak} day${snap.streak === 1 ? "" : "s"} showing up` : "A fresh page"}{snap.friends > 0 ? ` · ${snap.friends} friend${snap.friends === 1 ? "" : "s"} started today` : ""}</p>}
-      <a href="/?start=1" className="mt-2 inline-flex h-12 items-center rounded-full bg-primary px-8 text-primary-foreground shadow-lg">{today ? "Open Lagomo" : "Start something"}</a>
+      <a href="/?start=1" className="mt-2 inline-flex h-12 items-center rounded-full bg-primary px-8 text-primary-foreground shadow-lg">{today ? tr("Open Lagomo") : tr("Start something")}</a>
     </main>);
 }
