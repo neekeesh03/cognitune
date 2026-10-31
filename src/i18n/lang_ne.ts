@@ -1,4 +1,5 @@
 export const DICT: Record<string, string> = {
+ "Friends see only the word, and only for Did it or Got going.": "साथीहरूले यो शब्द मात्र देख्छन्, र ‘गरेँ’ वा ‘सुरु गरेँ’ का लागि मात्र।",
  "Due soon": "चाँडै म्याद",
  "Open it and look at it for two minutes.": "यसलाई खोलेर दुई मिनेट हेर्नुहोस्।",
  "Paste your deadlines": "आफ्ना म्यादहरू पेस्ट गर्नुहोस्",

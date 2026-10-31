@@ -145,21 +145,28 @@ export default async function handler(req, res) {
     if (path === "me" && method === "GET") {
       const [friendIds, inIds, outIds, blocked] = await rdp([["SMEMBERS", "f:" + me.id], ["SMEMBERS", "fin:" + me.id], ["SMEMBERS", "fout:" + me.id], ["SMEMBERS", "blk:" + me.id]]);
       const ids = [...new Set([...friendIds, ...inIds, ...outIds])];
-      const [uRaw, seen, lasts2, reads] = ids.length ? await rdp([["MGET", ...ids.map(i => "user:" + i)], ["MGET", ...ids.map(i => "seen:" + i)], ["MGET", ...ids.map(i => "ls:" + i)], ["MGET", ...ids.map(i => "rd:" + me.id + ":" + i)]]) : [[], [], [], []]; // one command per list, not one per friend
+      const [uRaw, seen, lasts2, reads, outs] = ids.length ? await rdp([["MGET", ...ids.map(i => "user:" + i)], ["MGET", ...ids.map(i => "seen:" + i)], ["MGET", ...ids.map(i => "ls:" + i)], ["MGET", ...ids.map(i => "rd:" + me.id + ":" + i)], ["MGET", ...ids.map(i => "out:" + i)]]) : [[], [], [], [], []]; // one command per list, not one per friend
       const users = uRaw.map(v => v && JSON.parse(v)).filter(Boolean);
       const online = Object.fromEntries(ids.map((i, n) => [i, isOn(seen[n])]));
       const lastSeen = Object.fromEntries(ids.map((i, n) => [i, +(lasts2[n] || 0) || null]));
       const byId = Object.fromEntries(users.map(u => [u.id, u]));
       const rdOf = Object.fromEntries(ids.map((i, n) => [i, reads[n]]));
+      const outOf = Object.fromEntries(ids.map((i, n) => { let v = null; try { v = outs[n] ? JSON.parse(outs[n]) : null; } catch { /* ignore */ } return [i, v && Date.now() - v.ts < 12 * 36e5 ? v : null]; }));
       const lasts = friendIds.length ? await rdp(friendIds.map(f => ["LRANGE", convoKey(me.id, f), -40, -1])) : [];
       const friends = friendIds.filter(i => byId[i]).map((i, n) => {
         const msgs = (lasts[n] || []).map(m => JSON.parse(m)); const lr = +(rdOf[i] || 0);
         const shown = msgs.filter(m => m.kind !== "react" && m.kind !== "pinky_quiet"); const last = shown[shown.length - 1];
-        return { ...pub(byId[i]), online: online[i], lastSeen: lastSeen[i], unread: shown.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
+        return { ...pub(byId[i]), online: online[i], lastSeen: lastSeen[i], out: outOf[i], unread: shown.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
       });
       const feedTok = await rd("GET", "calu:" + me.id); return res.json({ rt: rtInfo(me.id), user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
     }
     if (path === "ev" && method === "POST") { const rl = await rd("INCR", `rl:ev:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 120) return res.json({ ok: true }); await track(me, String(body.name || ""), body.props || {}); return res.json({ ok: true }); }
+    // One kind word about how a start went, shown to friends for 12 hours. "Not today" is never shared.
+    if (path === "outcome" && method === "POST") {
+      const o = body.o === "did" || body.o === "got" ? body.o : null; if (!o) return res.json({ ok: true });
+      const rl = await rd("INCR", `rl:out:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 20) return res.json({ ok: true });
+      await rd("SET", "out:" + me.id, JSON.stringify({ o, ts: Date.now() }), "EX", 12 * 3600); return res.json({ ok: true });
+    }
     if (path === "session-ping" && method === "POST") {
       const sid = String(body.sid || "").slice(0, 60), w = String(body.w || ""), st = ["waiting", "working", "done", "left"].includes(body.state) ? body.state : "waiting";
       if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");

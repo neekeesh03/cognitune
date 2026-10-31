@@ -113,4 +113,5 @@ export const ROWS12: Row[] = [
 ["I did not find any dates. Try lines like: Essay due Nov 12.", "我没有找到日期。试试这样的行：Essay due Nov 12。", "هیچ تاریخی پیدا نکردم. خط‌هایی مثل این را امتحان کن: Essay due Nov 12.", "Aku tidak menemukan tanggal. Coba baris seperti: Essay due Nov 12."],
 ["Add these", "添加这些", "اضافه کردن این‌ها", "Tambahkan ini"],
 ["Find the dates", "找出日期", "پیدا کردن تاریخ‌ها", "Cari tanggalnya"],
+["Friends see only the word, and only for Did it or Got going.", "朋友只会看到这个词，而且只有“做到了”或“动起来了”才会显示。", "دوستان فقط همین کلمه را می‌بینند، آن هم فقط برای «انجامش دادم» یا «شروع کردم».", "Teman hanya melihat kata itu, dan hanya untuk Berhasil atau Sudah jalan."],
 ];

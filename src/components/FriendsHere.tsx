@@ -1,3 +1,4 @@
+import { tr } from "@/i18n";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { shareInvite } from "@/lib/invite";
@@ -44,7 +45,7 @@ export function FriendsHere({ friends, hops, burrow, username, onOpen, onQuestDo
             <div key={f.id} className="-mx-2 flex items-center gap-3 rounded-2xl px-2 py-2 hover:bg-secondary/50">
               <button onClick={() => onOpen(f.id)} className="flex min-w-0 flex-1 items-center gap-3 text-start" aria-label={`Open chat with ${f.name}`}>
                 <span className="relative"><Avatar spec={f.avatar} size={38} />{(hopped || f.online) && <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-success" />}</span>
-                <span className="min-w-0"><span className="block truncate font-medium" translate="no">{f.name}</span>{sub && <span className="block truncate text-xs text-muted-foreground">{sub}</span>}</span>
+                <span className="min-w-0"><span className="block truncate font-medium" translate="no">{f.name}</span>{sub && <span className="block truncate text-xs text-muted-foreground">{sub}</span>}{f.out && <span className="block truncate text-xs text-primary">{f.out.o === "did" ? tr("Did it") : tr("Got going")}</span>}</span>
                 {days > 0 && <span className="ms-auto flex shrink-0 gap-1" aria-hidden="true">{Array.from({ length: QUEST }, (_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < days ? "bg-primary" : "bg-foreground/15"}`} />)}</span>}
               </button>
               {hopped && <CheerBtn done={!!hops.cheered[f.id]} sent={sent[f.id]} open={pick === f.id} onToggle={() => setPick(p => (p === f.id ? null : f.id))} onPick={e => { setSent(s => ({ ...s, [f.id]: e })); setPick(null); hops.cheer(f.id, e); }} />}

@@ -6,7 +6,7 @@ import { openJson } from "@/lib/e2ee";
 import { track } from "@/lib/track";
 import { rtLive, startRealtime, WAKE_EVENT } from "@/lib/realtime";
 export interface Pub { id: string; username: string; name: string; avatar: AvatarSpec; pk?: string | null; bio?: string }
-export interface Friend extends Pub { online: boolean; lastSeen?: number | null; unread: number; last: { text: string; ts: number; mine: boolean } | null }
+export interface Friend extends Pub { out?: { o: "did" | "got"; ts: number } | null; online: boolean; lastSeen?: number | null; unread: number; last: { text: string; ts: number; mine: boolean } | null }
 interface RawFriend extends Omit<Friend, "last"> { last: { enc: string | null; text: string; ts: number; mine: boolean } | null }
 interface MeResp { rt?: { url: string; key: string; ch: string } | null; user: Pub; friends: RawFriend[]; incoming: Pub[]; outgoing: Pub[] }
 

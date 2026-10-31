@@ -12,6 +12,7 @@ import { hasResources, type Block } from "@/engine/plan";
 import { Avatar } from "@/components/Avatar";
 import { api } from "@/lib/api";
 import { feel } from "@/lib/feel";
+import { tr } from "@/i18n";
 import { useBuddy, useRoom, roomCheer, type Buddy } from "@/net/useBuddy";
 import { CHEER_EMOJI } from "@/store/useHops";
 import type { AvatarSpec } from "@/engine/avatar";
@@ -87,7 +88,7 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
       {!minutes && !run && !done && left === total && (
         <div className="mt-8 flex gap-2">{PRESETS.map(p => <button key={p.m} onClick={() => { setTotal(p.m * 60); setLeft(p.m * 60); }} className={`rounded-full border px-4 py-1.5 text-sm transition ${total === p.m * 60 ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{p.label}</button>)}</div>
       )}
-      {done && !how && !guest && <div className="mt-6 text-center"><p className="mb-2 text-sm text-muted-foreground">How did it go?</p><div className="flex flex-wrap justify-center gap-2">{[["Did it", "Nice. That counts."], ["Got going", "Starting was the hard part. You did it."], ["Not today", "That is okay. You showed up, and tomorrow is a fresh start."]].map(([k, v]) => <button key={k} onClick={() => setHow(v)} className="rounded-full border border-border px-4 py-1.5 text-sm hover:border-primary hover:text-primary">{k}</button>)}</div></div>}
+      {done && !how && !guest && <div className="mt-6 text-center"><p className="mb-2 text-sm text-muted-foreground">{tr("How did it go?")}</p><div className="flex flex-wrap justify-center gap-2">{[["Did it", "Nice. That counts."], ["Got going", "Starting was the hard part. You did it."], ["Not today", "That is okay. You showed up, and tomorrow is a fresh start."]].map(([k, v]) => <button key={k} onClick={() => { setHow(v); if (!guest && (k === "Did it" || k === "Got going")) api("outcome", { body: { o: k === "Did it" ? "did" : "got" } }).catch(() => undefined); }} className="rounded-full border border-border px-4 py-1.5 text-sm hover:border-primary hover:text-primary">{tr(k)}</button>)}</div><p className="mt-2 text-xs text-muted-foreground">{tr("Friends see only the word, and only for Did it or Got going.")}</p></div>}
       {done && how && <p className="mt-6 max-w-xs text-center text-sm" role="status">{how}</p>}
       {done && guest && <GuestSave onSave={guest.onSave} onLater={onClose} />}
       {done && !guest && extra && how && <div className="mt-4">{extra}</div>}
