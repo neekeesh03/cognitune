@@ -110,6 +110,12 @@ export default async function handler(req, res) {
         if (!(await rd("SETNX", `remd:${id}:${day}`, "1"))) { skipped++; continue; } await rd("EXPIRE", `remd:${id}:${day}`, 172800);
         if (await rd("SISMEMBER", "sd:" + id, day)) { skipped++; continue; }
         const u = await getJ("user:" + id); if (!u || u.suspended) { skipped++; continue; }
+        // Gone for a week or more: one gentle welcome-back note, then silence until they return.
+        if (!(await rd("GET", "ls:" + id))) {
+          if (await rd("SETNX", "cb:" + id, "1")) { await rd("EXPIRE", "cb:" + id, 60 * 86400); const n0 = await pushTo(id, l => ({ title: "Lagomo", body: TT(l, "comeback"), tag: "comeback", url: "/" }), {}); if (n0) sent++; else skipped++; } else skipped++;
+          continue;
+        }
+        await rd("DEL", "cb:" + id);
         const fids = ((await rd("SMEMBERS", "f:" + id)) || []).slice(0, 8); let who = "";
         for (const f of fids) { if (await rd("SISMEMBER", "sd:" + f, day)) { const fu = await getJ("user:" + f); if (fu) { who = fu.name.split(" ")[0]; break; } } }
         const dk = "daily" + (new Date().getUTCDate() % 3);

@@ -20,6 +20,7 @@ const D = {
   friendHop: { en: n => `${n} already hopped in. Your turn? Two minutes is enough.`, zh: n => `${n} 已经开始了。轮到你了？两分钟就够。`, fa: n => `${n} شروع کرده است. نوبت توست؟ دو دقیقه کافی است.`, id: n => `${n} sudah mulai. Giliranmu? Dua menit sudah cukup.` },
   blockSoon: { en: () => "Your planned block is starting. Everything you attached is ready.", zh: () => "你计划的时间段要开始了。你附上的资料都准备好了。", fa: () => "بازه‌ی برنامه‌ریزی‌شده‌ات در شرف شروع است. هر چه پیوست کردی آماده است.", id: () => "Blok yang kamu rencanakan akan dimulai. Semua lampiranmu sudah siap." },
   daily0: { en: () => "One small start? Two minutes is enough.", zh: () => "来一个小小的开始？两分钟就够。", fa: () => "یک شروع کوچک؟ دو دقیقه کافی است.", id: () => "Satu langkah kecil? Dua menit sudah cukup." },
+  comeback: { en: () => "No pressure. Whenever you are ready, one small start is enough.", zh: () => "没有压力。准备好了，一个小小的开始就够了。", fa: () => "بدون فشار. هر وقت آماده بودی، یک شروع کوچک کافی است.", id: () => "Tanpa tekanan. Kapan pun siap, satu langkah kecil sudah cukup." },
   daily1: { en: () => "Pick the smallest thing and hop in.", zh: () => "挑最小的一件事，开始吧。", fa: () => "کوچک‌ترین کار را انتخاب کن و شروع کن.", id: () => "Pilih hal terkecil dan mulai." },
   daily2: { en: () => "Just open it. That counts as a start.", zh: () => "先打开它。这就算开始。", fa: () => "فقط بازش کن. همین هم شروع حساب می‌شود.", id: () => "Cukup buka saja. Itu sudah dihitung sebagai awal." },
 };
