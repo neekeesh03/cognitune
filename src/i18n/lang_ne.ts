@@ -1,4 +1,5 @@
 export const DICT: Record<string, string> = {
+ "Start what you are putting off. Two minutes, and a friend sees you begin.": "आफूले पछि सारेको काम सुरु गर्नुहोस्। दुई मिनेट, र एक साथीले तपाईंले सुरु गर्नुभएको देख्छन्।",
  "Evening wrap-up": "साँझको सारांश",
  "What-if": "के भए",
  "unknown": "अज्ञात",

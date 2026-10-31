@@ -67,13 +67,13 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first) && !freshGone ? "fresh" : "";
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
-  const firstRun = !started && friends.length === 0; const [more, setMore] = useState(false); const streak = game.g.streak.current;
+  const firstRun = !started; const [more, setMore] = useState(false); const streak = game.g.streak.current;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-5 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
       <div className="text-center lg:col-span-5"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground"><span>{cue ? `Your plan: ${cue.label.toLowerCase()}.` : planned ? `You planned to start ${planned}.` : "One start is enough for today."}</span>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground"><span>{firstRun ? "Start what you are putting off. Two minutes, and a friend sees you begin." : cue ? `Your plan: ${cue.label.toLowerCase()}.` : planned ? `You planned to start ${planned}.` : "One start is enough for today."}</span>
           {!calm && streak > 0 && <button onClick={() => go("me")} className="rounded-full bg-secondary/70 px-3 py-1 text-foreground hover:bg-secondary" aria-label={`${streak} days showing up`}>{streak} {streak === 1 ? "day" : "days"} in a row</button>}
-          {boxReady && <button onClick={game.openBox} className="flex animate-breathe items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-primary"><Gift className="h-3.5 w-3.5" />Open spark box</button>}</div></div>
+          {!firstRun && boxReady && <button onClick={game.openBox} className="flex animate-breathe items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-primary"><Gift className="h-3.5 w-3.5" />Open spark box</button>}</div></div>
       <div className="space-y-5 lg:col-span-3">
         {banner && <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-4 text-sm" role="status"><div className="min-w-0 flex-1">{banner === "back" ? <><b>Welcome back, {name.split(" ")[0]}.</b> <span className="text-muted-foreground">Nothing is lost and nothing withered. One tiny start?</span></> : <><b>{first ? "New month." : "New week."}</b> <span className="text-muted-foreground">A fresh page. What will you start first?</span></>}</div><div className="flex shrink-0 items-center gap-2"><button onClick={focusStart} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Pick one</button><button onClick={dismissBanner} className="text-xs text-muted-foreground hover:text-foreground">Not now</button></div></div>}
         {waiting && <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3 text-sm lg:hidden" role="status"><Avatar spec={waiting.avatar} size={36} /><div className="min-w-0 flex-1"><b translate="no">{waiting.name}</b> started {agoMin(hops.hops[waiting.id])}. <span className="text-muted-foreground">Start something small too?</span></div></div>}
@@ -82,8 +82,8 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
       </div>
       <div className="space-y-5 lg:col-span-2">
         {firstRun && <HowItWorks />}
-        <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} onQuestDone={f => { game.earn("buddy"); burst(); toast(`Quest done with ${f.name.split(" ")[0]}`, "You both started on 3 days this week. +12 sparks."); }} />
-        {(nextBlock || nextStep || agenda.length > 0) && (
+        {!firstRun && <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} onQuestDone={f => { game.earn("buddy"); burst(); toast(`Quest done with ${f.name.split(" ")[0]}`, "You both started on 3 days this week. +12 sparks."); }} />}
+        {!firstRun && (nextBlock || nextStep || agenda.length > 0) && (
           <div className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 transition hover:scale-[1.01]">
             <button onClick={() => go("plan")} className="min-w-0 flex-1 text-start"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
               <div className="truncate text-lg font-semibold">{nextBlock ? nextBlock.title : nextStep ? nextStep.s.text : agenda[0]?.title}</div>

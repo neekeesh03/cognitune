@@ -67,4 +67,5 @@ export const ROWS12: Row[] = [
 ["You must be 16 or older, or the minimum age where you live if that is higher.", "你必须年满 16 岁，或达到你所在地的最低年龄（如果更高）。", "باید ۱۶ سال یا بیشتر باشی، یا حداقل سنی که در محل زندگی‌ات لازم است (اگر بالاتر باشد).", "Kamu harus berusia 16 tahun atau lebih, atau usia minimum di tempatmu jika lebih tinggi."],
 ["Here we go.", "出发。", "بزن بریم.", "Ayo mulai."],
 ["How Lagomo works", "Lagomo 如何运作", "Lagomo چطور کار می‌کند", "Cara kerja Lagomo"],
+["Start what you are putting off. Two minutes, and a friend sees you begin.", "开始你一直拖着的事。两分钟，朋友会看到你开始了。", "کاری را که به تعویق انداخته‌ای شروع کن. دو دقیقه، و یک دوست می‌بیند که شروع کرده‌ای.", "Mulai hal yang kamu tunda. Dua menit, dan seorang teman melihat kamu mulai."],
 ];
