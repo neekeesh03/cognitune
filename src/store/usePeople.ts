@@ -22,6 +22,7 @@ export function usePeople(active: boolean, onNew?: (f: Friend, delta: number) =>
         if (f.last.enc) { try { const c = await openJson<{ text?: string; file?: unknown; react?: { e: string } }>(r.user.id, f.pk || "", f.last.enc); text = c.file ? "Sent a file" : c.react ? (c.react.e || "Message") : c.text || "Message"; } catch { text = "Private message"; } }
         return { ...f, last: { text, ts: f.last.ts, mine: f.last.mine } };
       }));
+      friends.sort((a, b) => (b.last?.ts ?? 0) - (a.last?.ts ?? 0) || a.name.localeCompare(b.name) || a.id.localeCompare(b.id)); // newest conversation first, then by name, so the list never shuffles
       setFriends(friends); setIncoming(r.incoming); setOutgoing(r.outgoing); setReady(true);
       friends.forEach(f => { const before = prev.current[f.id] ?? f.unread; if (f.unread > before) cb.current?.(f, f.unread - before); prev.current[f.id] = f.unread; });
     } catch { /* offline or signed out: keep what we have */ }
