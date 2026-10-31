@@ -40,21 +40,23 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
   const ok = username.trim().length >= 3 && password.length >= (step === "signup" ? 8 : 1);
 
   if (step === "welcome") return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-10 text-center">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-10 text-center lg:grid lg:max-w-6xl lg:grid-cols-2 lg:content-center lg:gap-x-20 lg:gap-y-6 lg:px-10 lg:text-start">
       <div className="fixed end-4 top-4 z-10"><LangPicker /></div>
-      <Brand />
-      <div className="relative mt-10 h-44 w-full" aria-hidden="true">
+      <div className="lg:col-start-1 lg:row-start-1 lg:self-end [&>div]:lg:justify-start"><Brand /></div>
+      <div className="relative mt-10 h-44 w-full lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:h-[420px] lg:scale-110" aria-hidden="true">
         {[{ l: "6%", t: "38%", s: 64, r: -8 }, { l: "24%", t: "4%", s: 72, r: 6 }, { l: "42%", t: "30%", s: 92, r: 0 }, { l: "64%", t: "2%", s: 72, r: -6 }, { l: "78%", t: "40%", s: 62, r: 9 }].map((p, i) => (
           <div key={i} className="absolute" style={{ left: p.l, top: p.t, transform: `rotate(${p.r}deg)` }}><div className="animate-float" style={{ animationDelay: `${i * 0.6}s` }}><Avatar spec={crowd[i]} size={p.s} /></div></div>))}
       </div>
+      <div className="flex w-full flex-col items-center lg:col-start-1 lg:row-start-2 lg:items-start lg:self-start">
       {invitedBy() && <p className="mt-6 rounded-full bg-primary/10 px-4 py-2 text-sm text-primary" role="status">{`@${invitedBy()} invited you. Sign up and you will be friends.`}</p>}
-      <h1 className="mt-8 text-4xl leading-tight">Start something small. Together.</h1>
-      <p className="mt-3 max-w-xs text-muted-foreground">Press Start. Get a two-minute first step. A friend sees you begin.</p><p className="mt-2 text-xs text-muted-foreground">Lagomo is lagom (just the right amount) + go. One small start is enough.</p>
-      <div className="mt-8 w-full space-y-3">
+      <h1 className="mt-8 text-4xl leading-tight lg:text-6xl lg:leading-[1.05]">Start something small. Together.</h1>
+      <p className="mt-3 max-w-xs text-muted-foreground lg:max-w-md lg:text-lg">Press Start. Get a two-minute first step. A friend sees you begin.</p><p className="mt-2 text-xs text-muted-foreground">Lagomo is lagom (just the right amount) + go. One small start is enough.</p>
+      <div className="mt-8 w-full space-y-3 lg:max-w-md">
         <GuestStart onSave={() => to("signup")} />
         <div className="flex gap-2 pt-2"><Button variant="outline" className="h-11 flex-1 rounded-2xl" onClick={() => to("signup")}>Create account</Button><Button variant="ghost" className="h-11 flex-1 rounded-2xl" onClick={() => to("login")}>I already have an account</Button></div>
       </div>
       <p className="mt-6 text-xs text-muted-foreground">You must be 16 or older. By continuing you agree to the <a href="/terms" className="underline">Terms</a> and <a href="/privacy" className="underline">Privacy</a> notes.</p>
+      </div>
     </div>);
 
   return (
