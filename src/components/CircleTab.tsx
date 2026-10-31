@@ -120,7 +120,8 @@ function FileBubble({ m, meId, pk }: { m: ChatMsg; meId: string; pk: string | nu
 function Conversation({ f, me, people, game, plan, startSession, startPinky, back, openProfile }: Props & { f: Friend; back: () => void; openProfile: (u: string) => void }) {
   const chat = useChat(f.id, me.id, f.pk ?? null);
   const [code, setCode] = useState(""); useEffect(() => { setCode(""); (async () => { const k = await loadKey(me.id); if (k && f.pk) setCode(await safetyCode(k.pk, f.pk)); })().catch(() => {}); }, [me.id, f.pk]);
-  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [planOpen, setPlanOpen] = useState(false); const [pinkyOpen, setPinkyOpen] = useState(() => sessionStorage.getItem("lagomo.pinky.open") === f.id); const [pbusy, setPbusy] = useState(false); const [now, setNow] = useState(Date.now());
+  const [text, setText] = useState(""); const [pickDur, setPickDur] = useState(false); const [planOpen, setPlanOpen] = useState(false); const [burrowOpen, setBurrowOpen] = useState(false);
+  const [pinkyOpen, setPinkyOpen] = useState(() => sessionStorage.getItem("lagomo.pinky.open") === f.id); const [pbusy, setPbusy] = useState(false); const [now, setNow] = useState(Date.now());
   useEffect(() => { if (sessionStorage.getItem("lagomo.pinky.open") === f.id) sessionStorage.removeItem("lagomo.pinky.open"); }, [f.id]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null); const end = useRef<HTMLDivElement>(null); const tt = useRef(0); const ta = useRef<HTMLTextAreaElement>(null);
@@ -171,7 +172,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><button aria-label={`Open ${f.name}'s profile`} onClick={() => openProfile(f.username)}><Avatar spec={f.avatar} size={40} /></button><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
-          <div><button onClick={() => openProfile(f.username)} className="text-start"><h1 className="text-xl font-semibold hover:underline">{f.name}</h1></button><div className="text-sm text-muted-foreground">@{f.username} · {chat.online ? "Online now" : lastSeenText(f.lastSeen) + ". Your messages will be waiting."}</div>{f.pk ? <div className="mt-0.5 text-xs text-muted-foreground" title="Compare this code with your friend, in person or on a call. If it matches, nobody is listening in.">Private chat. Safety code {code || "..."}</div> : <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
+          <div><button onClick={() => openProfile(f.username)} className="text-start"><h1 className="text-xl font-semibold hover:underline">{f.name}</h1></button><div className="text-sm text-muted-foreground">{chat.online ? "Online now" : lastSeenText(f.lastSeen)}</div>{!f.pk && <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
         <button aria-label={`Report ${f.name}`} className="p-2 text-xs text-muted-foreground hover:text-foreground" onClick={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Lagomo team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</button>
         <button aria-label={`Remove ${f.name}`} className="p-2 text-muted-foreground hover:text-foreground" onClick={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}><UserMinus className="h-4 w-4" /></button>
       </div>
@@ -209,12 +210,13 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
           {!pickDur && <Button size="sm" variant="outline" className="rounded-full" disabled={!!activeP && !pinkyOpen} title={activeP ? "A Pinky is already open with this friend" : undefined} onClick={() => setPinkyOpen(o => !o)}><HeartHandshake className="mr-1 h-3.5 w-3.5" />Pinky</Button>}
           {!pickDur && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPlanOpen(o => !o)}><CalendarPlus className="mr-1 h-3.5 w-3.5" />Plan together</Button>}
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
+          {pacts.length > 0 && !pickDur && <Button size="sm" variant="ghost" className="rounded-full text-muted-foreground" onClick={() => setBurrowOpen(o => !o)}>Burrow {rhythm(pacts, now).thisWeek}/{rhythm(pacts, now).goal}</Button>}
         </div>
-        {pacts.length > 0 && <Burrow first={first} kept={keptN} r={rhythm(pacts, now)} />}
+        {pacts.length > 0 && burrowOpen && <Burrow first={first} kept={keptN} r={rhythm(pacts, now)} />}
         {pinkyOpen && !activeP && <PinkyForm first={first} onClose={() => setPinkyOpen(false)} onSend={pinkyMake} />}
         {planOpen && <PlanTogetherForm first={first} onClose={() => setPlanOpen(false)} onSend={async (p, addMine) => { await chat.sendPlan(p); if (addMine) plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id }); game.earn("chat"); track("plan_send"); }} />}
         {(err || chat.error) && <p className="text-xs text-destructive" role="alert">{err || chat.error}</p>}
-        <div className="sticky bottom-24 z-20 rounded-3xl bg-background shadow-md">
+        <div className="sticky bottom-24 z-20 lg:bottom-4 rounded-3xl bg-background shadow-md">
         <div className="glass flex items-end gap-2 rounded-3xl p-2">
           <button aria-label="Attach a file" onClick={() => fileRef.current?.click()} className="rounded-full p-2.5 text-muted-foreground hover:text-foreground"><Paperclip className="h-5 w-5" /></button>
           <input ref={fileRef} type="file" hidden onChange={e => { const file = e.target.files?.[0]; if (file) run(async () => { await chat.sendFile(file, text.trim()); setText(""); game.earn("nudge"); }); e.target.value = ""; }} />
@@ -223,7 +225,6 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
           <button aria-label="Send" onClick={send} disabled={!text.trim()} className="rounded-full bg-primary p-2.5 text-primary-foreground disabled:opacity-40"><Send className="h-4 w-4" /></button>
         </div>
         </div>
-        <p className="text-center text-[11px] text-muted-foreground">Photos are shrunk to fit. Other files can be up to about 700 KB.</p>
       </>
     </div>);
 }
