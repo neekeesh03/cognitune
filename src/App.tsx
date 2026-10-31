@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AdminPage from "./pages/AdminPage";
 import { Privacy, Safety, Terms } from "./pages/Legal";
+import Widget from "./pages/Widget";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/safety" element={<Safety />} />
+          <Route path="/widget" element={<Widget />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

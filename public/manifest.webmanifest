@@ -6,6 +6,10 @@
  "display": "standalone",
  "background_color": "#F2F7F3",
  "theme_color": "#447D58",
+ "shortcuts": [
+  { "name": "Start something", "short_name": "Start", "url": "/?start=1", "icons": [{ "src": "/icon.svg", "sizes": "any" }] },
+  { "name": "Today widget", "short_name": "Widget", "url": "/widget", "icons": [{ "src": "/icon.svg", "sizes": "any" }] }
+ ],
  "icons": [
   {
    "src": "/icon.svg",

@@ -1,0 +1,11 @@
+{
+ "name": "Lagomo Today",
+ "short_name": "Lagomo",
+ "description": "Your rabbit and today's start",
+ "start_url": "/widget",
+ "scope": "/",
+ "display": "standalone",
+ "background_color": "#F2F7F3",
+ "theme_color": "#447D58",
+ "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
