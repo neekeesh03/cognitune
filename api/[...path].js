@@ -170,6 +170,15 @@ export default async function handler(req, res) {
       if (!sid || !(await rd("SISMEMBER", "f:" + me.id, w))) throw err(403, "Not friends yet.");
       const v = await getJ(`sp:${sid}:${w}`); return res.json({ state: v && Date.now() - v.ts < 30000 ? v.state : "none" });
     }
+    // One shared clock per quiet room / buddy session: the first person to start sets the end time, everyone else adopts it.
+    if (path === "session-clock" && method === "POST") {
+      const sid = String(body.sid || "").slice(0, 60), w = String(body.w || ""); const dur = Math.min(180 * 60, Math.max(60, Math.round(+body.dur) || 120));
+      const inRoom = sid && (await rd("SISMEMBER", "rm:" + sid, me.id));
+      if (!sid || !(inRoom || (w && (await rd("SISMEMBER", "f:" + me.id, w))))) throw err(403, "Not in this session.");
+      const now = Date.now(); let c = await getJ("sc:" + sid);
+      if (!c || c.end <= now) { c = { end: now + dur * 1000 }; await rd("SET", "sc:" + sid, JSON.stringify(c), "EX", dur + 900); }
+      return res.json({ end: c.end, now });
+    }
     if (path === "reminder" && method === "GET") return res.json({ reminder: (await getJ("rem:" + me.id)) || null });
     if (path === "reminder" && method === "POST") {
       const m = /^(\d{2}):(\d{2})$/.exec(String(body.time || "")); const tz = Math.round(+body.tz);

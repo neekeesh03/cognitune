@@ -10,6 +10,7 @@ import { Celebration } from "@/components/Celebration";
 import { ResourceList } from "@/components/BringAlong";
 import { hasResources, type Block } from "@/engine/plan";
 import { Avatar } from "@/components/Avatar";
+import { api } from "@/lib/api";
 import { useBuddy, useRoom, roomCheer, type Buddy } from "@/net/useBuddy";
 import { CHEER_EMOJI } from "@/store/useHops";
 import type { AvatarSpec } from "@/engine/avatar";
@@ -38,11 +39,22 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
   const roomLine = (m: { name: string; state: string }) => m.state === "working" ? "working" : m.state === "done" ? "finished" : m.state === "left" ? "stepped away" : m.state === "waiting" ? "here" : "not here yet";
   const first = buddy?.name.split(" ")[0] ?? "";
   const buddyLine = !buddy || isRoom ? "" : buddyState === "working" ? `${first} is working too` : buddyState === "done" ? `${first} finished` : buddyState === "left" ? `${first} stepped away` : buddyState === "waiting" ? `${first} is here` : `Waiting for ${first}...`;
+  // Wall-clock timer: the time left comes from an end time, so a background tab or a busy phone can never fall behind.
+  const endAt = useRef<number | null>(null);
   useEffect(() => {
     if (!run) return;
-    const id = setInterval(() => setLeft(l => { if (l <= 1) { clearInterval(id); setRun(false); setDone(true); setTimeout(() => { if (!doneFired.current) { doneFired.current = true; onDone?.(); } }, 0); return 0; } return l - 1; }), 1000);
-    return () => clearInterval(id);
-  }, [run]);
+    if (endAt.current == null) endAt.current = Date.now() + left * 1000;
+    const tick = () => { if (endAt.current == null) return; const l = Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000)); setLeft(l); if (l <= 0) { endAt.current = null; setRun(false); setDone(true); if (!doneFired.current) { doneFired.current = true; setTimeout(() => onDone?.(), 0); } } };
+    tick(); const id = setInterval(tick, 400); document.addEventListener("visibilitychange", tick); window.addEventListener("focus", tick);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", tick); window.removeEventListener("focus", tick); endAt.current = null; };
+  }, [run]); // eslint-disable-line
+  // Shared sessions: everyone in the same quiet room or buddy session counts down to the same end time.
+  useEffect(() => {
+    if (!buddy) return; let live = true;
+    (async () => { try { const t0 = Date.now(); const r = await api<{ end: number; now: number }>("session-clock", { body: { sid: buddy.sid, w: buddy.friendId, dur: start } }); const t1 = Date.now(); if (!live) return;
+      const localEnd = r.end - (r.now - (t0 + t1) / 2); const l = Math.round((localEnd - Date.now()) / 1000); if (l > 0) { endAt.current = localEnd; setLeft(Math.min(l, start)); } } catch { /* offline: keep my own clock */ } })();
+    return () => { live = false; };
+  }, [buddy?.sid]); // eslint-disable-line
   useEffect(() => { if (run && !fired.current) { fired.current = true; onStarted(); } }, [run, onStarted]);
   const size = 260, r = 112, c = 2 * Math.PI * r, frac = left / total;
   const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
@@ -80,7 +92,7 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
       {done && !guest && extra && how && <div className="mt-4">{extra}</div>}
       {done && !isRoom && !guest && <AfterStart onMore={more} hasFriends={!!hasFriends} username={username ?? ""} />}
       <div className="order-1 mt-8 flex gap-3 lg:order-none">
-        {!done && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={() => setRun(r => !r)}>{run ? <><Pause className="mr-2 h-4 w-4" />Pause</> : <><Play className="mr-2 h-4 w-4" />{left === total ? "Start" : "Resume"}</>}</Button>}
+        {!done && !(buddy && run) && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={() => setRun(r => !r)}>{run ? <><Pause className="mr-2 h-4 w-4" />Pause</> : <><Play className="mr-2 h-4 w-4" />{left === total ? "Start" : "Resume"}</>}</Button>}
         {done && !guest && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={onClose}>Back</Button>}
       </div>
       </div>
