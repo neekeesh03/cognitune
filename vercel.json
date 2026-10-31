@@ -4,6 +4,7 @@
     { "source": "/hello", "destination": "/index.html" },
     { "source": "/privacy", "destination": "/index.html" },
     { "source": "/terms", "destination": "/index.html" },
-    { "source": "/safety", "destination": "/index.html" }
+    { "source": "/safety", "destination": "/index.html" },
+    { "source": "/widget", "destination": "/index.html" }
   ]
 }
