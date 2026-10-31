@@ -78,3 +78,4 @@ export async function recoverAuthed(path, method, { me, body, res }) {
   }
   return false;
 }
+// mail is on when RESEND_API_KEY is set
