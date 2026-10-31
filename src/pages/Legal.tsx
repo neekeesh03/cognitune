@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 
 const CONTACT = "thecelestialteens@gmail.com";
-const UPDATED = "29 October 2026";
+const UPDATED = "31 October 2026";
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -65,5 +65,45 @@ export function Terms() {
       <p>Lagomo is offered as it is, without guarantees, and may change or stop. We do our best to keep your data safe, but cannot promise it will never be lost, so keep a backup of your journal.</p>
       <h2>Contact</h2>
       <p><a href={`mailto:${CONTACT}`}>{CONTACT}</a>. See also the <a href="/privacy">Privacy page</a>.</p>
+    </Shell>);
+}
+
+export function Safety() {
+  return (
+    <Shell title="Safety">
+      <p>Lagomo is for friends who start things together. This page says, in plain words, how we keep it safe, what we cannot do, and what to do if something goes wrong.</p>
+      <h2>Who it is for</h2>
+      <ul>
+        <li>You must be 16 or older. In India you must be 18 or older.</li>
+        <li>There is no stranger matching and no public feed of strangers. You only talk to people you add by username or invite link.</li>
+        <li>We do not check ages. If we learn someone is under the limit, we close the account.</li>
+      </ul>
+      <h2>If someone is bothering you</h2>
+      <ul>
+        <li>In a chat, open the three dots menu, then Remove from circle. You can also block them so they cannot message you.</li>
+        <li>Use Report in the same menu. A report is read by a person.</li>
+        <li><b>We aim to look at every report within 3 days.</b> This is a small team, so it is a goal and not a guarantee. We can pause or close an account.</li>
+        <li>For a photo from a Pinky promise, the Report photo button attaches that photo to the report so we can see what you saw.</li>
+      </ul>
+      <h2>What we cannot do</h2>
+      <ul>
+        <li>Chat messages and files are end-to-end encrypted. We cannot read them, and we cannot scan them for harmful content. That also means we only know about a problem if someone reports it.</li>
+        <li>Pinky photos are blurred until the other person taps, and disappear from our server after 48 hours.</li>
+        <li>We cannot give emergency help. If you or someone else is in danger, contact your local emergency services. findahelpline.com lists free lines by country.</li>
+      </ul>
+      <h2>Risks we thought about</h2>
+      <ul>
+        <li><b>Harassment between friends:</b> block, remove, report. Blocking stops them messaging you.</li>
+        <li><b>Unwanted contact from strangers:</b> there is no search by name, only by exact username, and you choose whether to accept a request.</li>
+        <li><b>Unwanted or harmful photos:</b> blurred by default, an in-app camera only (no library uploads), 48 hour life, a Report photo button.</li>
+        <li><b>Pressure and shame:</b> no public streaks, no leaderboards, and breaking a promise costs nothing. We do not show who is idle.</li>
+        <li><b>Someone under the age limit:</b> we do not verify age. We rely on the age rule and on reports.</li>
+      </ul>
+      <h2>Known gaps</h2>
+      <ul>
+        <li>No automatic age checks and no automatic content filter.</li>
+        <li>Reports are handled by one small team and may take longer than 3 days in busy weeks.</li>
+      </ul>
+      <p>Questions or a safety concern: <a href={`mailto:${CONTACT}`}>{CONTACT}</a>. See also the <a href="/privacy">Privacy page</a> and the <a href="/terms">Terms</a>.</p>
     </Shell>);
 }

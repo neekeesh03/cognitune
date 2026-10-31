@@ -101,6 +101,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
           <RecoveryCode />
           <RecoveryEmail />
           <div className="glass space-y-3 rounded-3xl p-5 text-sm"><Button variant="outline" className="rounded-full" onClick={auth.logout}>Log out</Button>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs"><a href="/safety" className="text-primary underline">Safety and reporting</a><a href="/privacy" className="text-primary underline">Privacy</a><a href="/terms" className="text-primary underline">Terms</a></div>
             <div className="border-t border-border pt-3"><div className="font-semibold">Delete account</div><p className="mb-2 text-muted-foreground">Removes your account, friends list and messages from our server. Your journal and plans on this device are not touched.</p><div className="flex gap-2"><Input type={user.g ? "text" : "password"} className="h-10 rounded-2xl bg-secondary/60" placeholder={user.g ? "Type your username to confirm" : "Your password"} value={delPw} onChange={e => setDelPw(e.target.value)} /><Button variant="outline" className="rounded-full" disabled={!delPw} onClick={deleteAccount}>Delete</Button></div></div></div>
         </div>)}
 

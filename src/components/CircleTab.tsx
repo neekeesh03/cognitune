@@ -201,7 +201,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => openProfile(f.username)}>View profile</DropdownMenuItem>
             {f.pk && <DropdownMenuItem onSelect={() => setShowCode(v => !v)}>Privacy and safety code</DropdownMenuItem>}
-            <DropdownMenuItem onSelect={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. The Lagomo team will take a look."); } catch (e) { alert((e as Error).message); } }}>Report</DropdownMenuItem>
+            <DropdownMenuItem onSelect={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. We aim to look at every report within 3 days."); } catch (e) { alert((e as Error).message); } }}>Report</DropdownMenuItem>
             <DropdownMenuItem className="text-destructive" onSelect={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}>Remove from circle</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

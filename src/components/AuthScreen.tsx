@@ -13,6 +13,7 @@ import { GuestStart } from "@/components/GuestStart";
 import { hasGuestStart } from "@/lib/guest";
 import { resetEnabled } from "@/lib/config";
 import { api } from "@/lib/api";
+import { tr } from "@/i18n";
 
 type Step = "welcome" | "signup" | "login" | "forgot" | "reset";
 const resetToken = () => new URLSearchParams(window.location.search).get("reset") || "";
@@ -93,6 +94,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         <div className="flex gap-2 pt-2"><Button variant="outline" className="h-11 flex-1 rounded-2xl" onClick={() => to("signup")}>Create account</Button><Button variant="ghost" className="h-11 flex-1 rounded-2xl" onClick={() => to("login")}>I already have an account</Button></div>
       </div>
       <p className="mt-6 text-xs text-muted-foreground">You must be 16 or older. By continuing you agree to the <a href="/terms" className="underline">Terms</a> and <a href="/privacy" className="underline">Privacy</a> notes.</p>
+      <p className="mt-2 text-xs text-muted-foreground">{tr("In India you must be 18 or older.")} <a href="/safety" className="underline">{tr("Safety and reporting")}</a></p>
       </div>
     </div>);
 

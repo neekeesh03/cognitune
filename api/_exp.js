@@ -52,7 +52,7 @@ export async function experimentStats() {
   const users = (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(Boolean);
   const total = users.length;
   const [fcount] = [await rdp(users.map(u => ["SCARD", "f:" + u.id]))];
-  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer"];
+  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "cue_set", "reminder_set", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer"];
   const evSets = {}; for (const n of evNames) evSets[n] = new Set(await rd("SMEMBERS", "evf:" + n));
   // retention: for each user, was she active on day +1, +7, +30 (only if that day has fully passed)
   const checks = []; const meta = [];

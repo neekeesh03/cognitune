@@ -38,7 +38,7 @@ export function Composer({ feed, me }: { feed: FeedApi; me: { avatar: AvatarSpec
 export function PostCard({ p, feed, onProfile, onReply }: { p: Post; feed: Pick<FeedApi, "react" | "remove">; onProfile?: (username: string) => void; onReply?: (id: string) => void }) {
   const [picking, setPicking] = useState(false); const [menu, setMenu] = useState(false); const [note, setNote] = useState("");
   const name = p.team ? "Lagomo team" : p.author?.name ?? "Someone";
-  const report = async () => { setMenu(false); const reason = prompt("What is the problem with this post? (for example: spam, rude, unsafe)"); if (!reason || !p.author) return; try { await api("report", { body: { id: p.author.id, reason: "post: " + reason.slice(0, 30), text: p.text } }); setNote("Thanks. The Lagomo team will take a look."); } catch (e) { setNote((e as Error).message); } };
+  const report = async () => { setMenu(false); const reason = prompt("What is the problem with this post? (for example: spam, rude, unsafe)"); if (!reason || !p.author) return; try { await api("report", { body: { id: p.author.id, reason: "post: " + reason.slice(0, 30), text: p.text } }); setNote("Thanks. We aim to look at every report within 3 days."); } catch (e) { setNote((e as Error).message); } };
   return (
     <article className={`rounded-3xl p-4 ${p.team ? "border border-primary/30" : "glass"}`} style={p.team ? { background: "linear-gradient(160deg, hsl(var(--f-grain) / .18), hsl(var(--primary) / .08))" } : undefined}>
       <header className="flex items-center gap-3">
