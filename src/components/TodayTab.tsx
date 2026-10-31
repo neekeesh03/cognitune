@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { VoiceButton } from "@/components/VoiceButton";
 import { Check, ChevronDown, Gift, Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PinkyDoor } from "@/components/Pinky";
@@ -112,6 +113,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
               <div className="flex gap-2 pt-2"><Button variant="ghost" className="rounded-full" onClick={() => { setSaved(false); setCrisis(false); setOpenJ(false); }}>Done</Button></div></div>
           ) : (<>
             <textarea value={text} onChange={e => setText(e.target.value)} rows={4} autoFocus placeholder="Write freely. Nobody else sees this." className="mt-4 w-full resize-none rounded-2xl border border-border bg-secondary/40 p-4 text-base outline-none focus:border-primary/60" />
+            <div className="mt-3"><VoiceButton value={text} onChange={setText} /></div>
             <Button variant="hero" size="lg" className="mt-3 h-12 w-full rounded-2xl" disabled={!text.trim()} onClick={save}><Check className="mr-2 h-4 w-4" />Save to journal</Button>
           </>)}
         </div>)}

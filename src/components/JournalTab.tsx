@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VoiceButton } from "@/components/VoiceButton";
 import { promptFor } from "@/engine/prompts";
 import { FORCE, fc } from "@/engine/forces";
 import { VAR_KEYS } from "@/engine/model";
@@ -20,6 +21,7 @@ export function JournalTab({ j, earn }: { j: JournalApi; earn?: () => void }) {
         <button onClick={j.reshuffle} className="mt-1 text-xs text-muted-foreground underline-offset-2 hover:underline">Different prompt</button>
         <div className="my-4 flex gap-1.5">{MOODS.map((m, i) => <button key={m} onClick={() => setMood(i)} className={`flex-1 rounded-full border px-2 py-1.5 text-xs transition ${mood === i ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{m}</button>)}</div>
         <textarea value={text} onChange={e => setText(e.target.value)} rows={6} placeholder="Write freely..." className="w-full resize-none rounded-2xl border border-border bg-secondary/40 p-4 outline-none focus:border-primary/60" />
+        <div className="mt-3"><VoiceButton value={text} onChange={setText} /></div>
         <Button variant="hero" size="lg" className="mt-3 h-12 w-full rounded-2xl" disabled={!text.trim()} onClick={save}>Save entry</Button>
       </div>
       <div className="space-y-3">
