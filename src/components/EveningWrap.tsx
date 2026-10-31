@@ -40,3 +40,5 @@ export function EveningWrap({ j, game, plan, name, alwaysOpen }: { j: JournalApi
       <button onClick={save} className="mt-3 h-11 w-full rounded-2xl bg-primary text-primary-foreground">Close the day</button>
     </div>);
 }
+
+// v2
