@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { RabbitFace, type Face, type Wear } from "@/components/RabbitFace";
 import { tr } from "@/i18n";
+import { feel } from "@/lib/feel";
 
 export type Mood = "ready" | "curious" | "sleepy" | "cheering" | "proud" | "cosy";
 /** Same rabbit, different face: eyes and mouth change with how your day is going. It never judges. */
@@ -20,7 +21,7 @@ const LINES: Record<Mood, string[]> = {
 export function Rabbit({ size = 52, mood, line, quiet }: { size?: number; mood: Mood; line?: string; quiet?: boolean }) {
   const [i, setI] = useState(0); const [show, setShow] = useState(true); const [hop, setHop] = useState(false); const [play, setPlay] = useState<Face | null>(null); const t = useRef(0);
   const lines = LINES[mood]; const text = line ?? tr(lines[i % lines.length]);
-  const poke = () => { setHop(true); setPlay(PLAY[Math.floor(Math.random() * PLAY.length)]); window.setTimeout(() => { setHop(false); setPlay(null); }, 1600); setI(n => n + 1); setShow(true); };
+  const poke = () => { feel("tap"); setHop(true); setPlay(PLAY[Math.floor(Math.random() * PLAY.length)]); window.setTimeout(() => { setHop(false); setPlay(null); }, 1600); setI(n => n + 1); setShow(true); };
   useEffect(() => { setShow(true); window.clearTimeout(t.current); t.current = window.setTimeout(() => setShow(false), 6000); return () => window.clearTimeout(t.current); }, [mood, i, line]);
   return (
     <div className="flex flex-col items-center">

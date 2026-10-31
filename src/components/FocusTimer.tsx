@@ -11,6 +11,7 @@ import { ResourceList } from "@/components/BringAlong";
 import { hasResources, type Block } from "@/engine/plan";
 import { Avatar } from "@/components/Avatar";
 import { api } from "@/lib/api";
+import { feel } from "@/lib/feel";
 import { useBuddy, useRoom, roomCheer, type Buddy } from "@/net/useBuddy";
 import { CHEER_EMOJI } from "@/store/useHops";
 import type { AvatarSpec } from "@/engine/avatar";
@@ -33,7 +34,7 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
   const buddyState = useBuddy(isRoom ? undefined : buddy, mineState);
   const members = useRoom(isRoom ? buddy!.sid : undefined, mineState);
   const seenCheer = useRef<Record<string, number>>({}); const [floats, setFloats] = useState<Record<string, string>>({}); const [mineFloat, setMineFloat] = useState("");
-  useEffect(() => { members.forEach(m => { if (m.e && m.et && m.et > (seenCheer.current[m.id] || 0)) { seenCheer.current[m.id] = m.et; setFloats(f => ({ ...f, [m.id]: m.e! })); window.setTimeout(() => setFloats(f => { const n = { ...f }; delete n[m.id]; return n; }), 2600); } }); }, [members]);
+  useEffect(() => { members.forEach(m => { if (m.e && m.et && m.et > (seenCheer.current[m.id] || 0)) { seenCheer.current[m.id] = m.et; feel("cheer"); setFloats(f => ({ ...f, [m.id]: m.e! })); window.setTimeout(() => setFloats(f => { const n = { ...f }; delete n[m.id]; return n; }), 2600); } }); }, [members]);
   const cheerRoom = (e: string) => { if (!isRoom) return; setMineFloat(e); window.setTimeout(() => setMineFloat(""), 2600); roomCheer(buddy!.sid, mineState, e); };
   const roomDone = isRoom && members.length > 0 && members.every(m => m.state === "done");
   const roomLine = (m: { name: string; state: string }) => m.state === "working" ? "working" : m.state === "done" ? "finished" : m.state === "left" ? "stepped away" : m.state === "waiting" ? "here" : "not here yet";
@@ -44,7 +45,7 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
   useEffect(() => {
     if (!run) return;
     if (endAt.current == null) endAt.current = Date.now() + left * 1000;
-    const tick = () => { if (endAt.current == null) return; const l = Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000)); setLeft(l); if (l <= 0) { endAt.current = null; setRun(false); setDone(true); if (!doneFired.current) { doneFired.current = true; setTimeout(() => onDone?.(), 0); } } };
+    const tick = () => { if (endAt.current == null) return; const l = Math.max(0, Math.ceil((endAt.current - Date.now()) / 1000)); setLeft(l); if (l <= 0) { endAt.current = null; setRun(false); setDone(true); if (!doneFired.current) { doneFired.current = true; feel("done"); setTimeout(() => onDone?.(), 0); } } };
     tick(); const id = setInterval(tick, 400); document.addEventListener("visibilitychange", tick); window.addEventListener("focus", tick);
     return () => { clearInterval(id); document.removeEventListener("visibilitychange", tick); window.removeEventListener("focus", tick); endAt.current = null; };
   }, [run]); // eslint-disable-line
@@ -55,7 +56,7 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
       const localEnd = r.end - (r.now - (t0 + t1) / 2); const l = Math.round((localEnd - Date.now()) / 1000); if (l > 0) { endAt.current = localEnd; setLeft(Math.min(l, start)); } } catch { /* offline: keep my own clock */ } })();
     return () => { live = false; };
   }, [buddy?.sid]); // eslint-disable-line
-  useEffect(() => { if (run && !fired.current) { fired.current = true; onStarted(); } }, [run, onStarted]);
+  useEffect(() => { if (run && !fired.current) { fired.current = true; feel("start"); onStarted(); } }, [run, onStarted]);
   const size = 260, r = 112, c = 2 * Math.PI * r, frac = left / total;
   const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
   if (done && !celeSeen) return (

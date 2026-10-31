@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { tr } from "@/i18n";
+import { feel } from "@/lib/feel";
 import { Moon } from "lucide-react";
 import { RabbitFace, type Face } from "@/components/RabbitFace";
 import { wornNow } from "@/components/Rabbit";
@@ -18,7 +19,7 @@ export function EveningWrap({ j, game, plan, name, alwaysOpen }: { j: JournalApi
   const day = dkey(); const starts = game.g.counts["s_" + day] ?? 0;
   const tasks = plan.tasks.filter(t => t.doneAt && dkey(new Date(t.doneAt)) === day).length; const blocks = plan.blocks.filter(b => b.day === day && b.done).length;
   const steps = plan.tasks.reduce((n, t) => n + t.steps.filter(s => s.doneAt && dkey(new Date(s.doneAt)) === day).length, 0);
-  const save = () => { j.addUser(text.trim() || `Evening wrap-up: ${MOODS[mood].label}`, "journal", { prompt: "Evening wrap-up", mood: mood / 4 }); game.earn("journal"); localStorage.setItem(key(), "1"); setDone(true); };
+  const save = () => { j.addUser(text.trim() || `Evening wrap-up: ${MOODS[mood].label}`, "journal", { prompt: "Evening wrap-up", mood: mood / 4 }); game.earn("journal"); localStorage.setItem(key(), "1"); feel("close"); setDone(true); };
   if (done) {
     const bits = [starts && `${starts} start${starts === 1 ? "" : "s"}`, steps && `${steps} tiny step${steps === 1 ? "" : "s"}`, tasks && `${tasks} task${tasks === 1 ? "" : "s"} finished`, blocks && `${blocks} planned block${blocks === 1 ? "" : "s"}`].filter(Boolean) as string[];
     return (

@@ -6,6 +6,7 @@ import { Garden } from "@/components/Garden";
 import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
 import { Wardrobe } from "@/components/Wardrobe";
+import { FeelToggles } from "@/components/FeelToggles";
 import { StartsCard } from "@/components/StartsCard";
 import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
@@ -94,6 +95,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
       {view === "data" && (
         <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
         <div className="space-y-5">
+          <FeelToggles />
           <div className="glass space-y-4 rounded-3xl p-5">
             <div className="flex items-center gap-3"><Avatar spec={user.avatar} size={48} /><div><div className="text-lg font-semibold">{user.name}</div><div className="text-sm text-muted-foreground">@{user.username}</div></div></div>
             <AvatarEditor value={pav} onChange={setPav} />
