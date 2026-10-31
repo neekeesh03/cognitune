@@ -13,7 +13,7 @@ const key = () => "lagomo.wrap." + dkey();
 /** Twenty seconds to close the day: one face, one line (typed or spoken), and a kind little summary. Optional, always. */
 export function EveningWrap({ j, game, plan, name, alwaysOpen }: { j: JournalApi; game: GameApi; plan: PlanApi; name: string; alwaysOpen?: boolean }) {
   const [done, setDone] = useState(() => !!localStorage.getItem(key())); const [open, setOpen] = useState(!!alwaysOpen); const [mood, setMood] = useState(2); const [text, setText] = useState("");
-  const hour = new Date().getHours(); if (!alwaysOpen && (hour < 17 || (done && !open))) return null;
+  const hour = new Date().getHours(); if (!alwaysOpen && hour < 17) return null;
   const day = dkey(); const starts = game.g.counts["s_" + day] ?? 0;
   const tasks = plan.tasks.filter(t => t.doneAt && dkey(new Date(t.doneAt)) === day).length; const blocks = plan.blocks.filter(b => b.day === day && b.done).length;
   const steps = plan.tasks.reduce((n, t) => n + t.steps.filter(s => s.doneAt && dkey(new Date(s.doneAt)) === day).length, 0);
