@@ -26,7 +26,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
   const copy = async () => { await navigator.clipboard?.writeText(feedUrl).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   const title_ = parseDay(sel).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
       <div className="glass rounded-3xl p-4">
         <div className="mb-3 flex items-center justify-between"><button aria-label="Previous month" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => nav(-1)}><ChevronLeft /></button>
           <div className="text-center"><div className="text-xl font-semibold">{new Date(month.y, month.m, 1).toLocaleDateString([], { month: "long", year: "numeric" })}</div><button className="-my-1 px-2 py-2 text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={() => { const d = new Date(); setMonth({ y: d.getFullYear(), m: d.getMonth() }); setSel(today); }}>Jump to today</button></div>
@@ -66,7 +66,7 @@ export function CalendarView({ plan, cal, game }: { plan: PlanApi; cal: Calendar
         </div>
       </div>
 
-      <div className="glass rounded-3xl p-4">
+      <div className="glass rounded-3xl p-4 lg:col-span-2">
         <button className="flex w-full items-center justify-between text-left" onClick={() => setOpen(!open)}><span className="flex items-center gap-2 text-lg font-semibold"><Link2 className="h-5 w-5" />Connect Google Calendar</span><span className="text-xs text-muted-foreground">{cal.url ? "Connected" : cal.feed ? "Sending" : "Not connected"}{open ? " ▲" : " ▼"}</span></button>
         {open && (
           <div className="mt-4 space-y-5 text-sm">

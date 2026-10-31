@@ -36,7 +36,8 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
       <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["rewards", "Rewards"], ["journal", "Journal"], ["insights", "About me"], ["profile", "Profile"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
 
       {view === "progress" && (
-        <div className="space-y-5">
+        <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
+          <div className="space-y-5">
           <div className="glass rounded-3xl p-6 text-center">
             <Garden lifetime={g.lifetime} />
             <div className="mt-2 text-3xl font-semibold">{lv.name}</div>
@@ -44,6 +45,12 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
             <div className="mx-auto mt-3 h-2.5 max-w-xs rounded-full bg-foreground/10"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${lv.pct * 100}%` }} /></div>
             <div className="mt-1 text-xs text-muted-foreground">{lv.level >= 8 ? "Fully grown" : `${lv.need - lv.into} sparks to the next stage`}</div>
           </div>
+          <div className="glass flex items-center justify-between gap-3 rounded-3xl p-5">
+            <div><div className="font-semibold">Daily spark box</div><div className="text-sm text-muted-foreground">{boxReady ? "You showed up today. Open it!" : g.boxDay === dkey() ? "Opened today. Come back tomorrow." : "Do one thing today to unlock it."}</div></div>
+            <Button variant="hero" className="rounded-full" disabled={!boxReady} onClick={game.openBox}><Gift className="mr-2 h-4 w-4" />Open</Button>
+          </div>
+          </div>
+          <div className="space-y-5">
           <StartsCard name={user.name} avatar={user.avatar} g={g} />
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="glass rounded-3xl p-4"><Flame className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-primode))" }} /><div className="text-3xl font-semibold">{g.streak.current}</div><div className="text-xs text-muted-foreground">showing-up days</div></div>
@@ -51,11 +58,8 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
             <div className="glass rounded-3xl p-4"><Snowflake className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-anchory))" }} /><div className="text-3xl font-semibold">{g.streak.freezes}</div><div className="text-xs text-muted-foreground">rest days saved</div></div>
           </div>
           <p className="text-center text-xs text-muted-foreground">Best streak: {g.streak.best} {g.streak.best === 1 ? "day" : "days"}. A freeze covers a missed day so your streak stays safe. You earn one every 7 days.</p>
-          <div className="glass flex items-center justify-between gap-3 rounded-3xl p-5">
-            <div><div className="font-semibold">Daily spark box</div><div className="text-sm text-muted-foreground">{boxReady ? "You showed up today. Open it!" : g.boxDay === dkey() ? "Opened today. Come back tomorrow." : "Do one thing today to unlock it."}</div></div>
-            <Button variant="hero" className="rounded-full" disabled={!boxReady} onClick={game.openBox}><Gift className="mr-2 h-4 w-4" />Open</Button>
           </div>
-          <div className="glass rounded-3xl p-5">
+          <div className="glass rounded-3xl p-5 lg:col-span-2">
             <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Badges</div>
             <div className="grid gap-2 sm:grid-cols-2">{BADGES.map(b => { const on = g.badges.includes(b.id); return (
               <div key={b.id} className={`flex items-center gap-3 rounded-2xl p-3 ${on ? "bg-primary/10" : "bg-foreground/[.04] opacity-70"}`}>
