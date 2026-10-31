@@ -87,7 +87,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   useEffect(() => {
     if (!takeGuestStart()) return;
     game.earn("started"); localStorage.setItem("lagomo.firstStart", "1"); track("timer_start");
-    notify({ id: "guest-saved", tag: "guest", title: "Your first start is saved", body: "That counts. Next time, a friend can see you hop in." });
+    notify({ id: "guest-saved", tag: "guest", title: "Your first start is saved", body: "That counts. Next time, a friend can see you started." });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {

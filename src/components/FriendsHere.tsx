@@ -20,7 +20,7 @@ export function FriendsHere({ friends, hops, burrow, username, onOpen, onQuestDo
   if (!friends.length) return (
     <div className="glass rounded-3xl p-5 text-center">
       <div className="font-semibold">Starting is easier with someone</div>
-      <p className="mt-1 text-sm text-muted-foreground">Send a friend your link. They will see you hop in. Nothing else.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Send a friend your link. They will see you started. Nothing else.</p>
       <button onClick={async () => { const r = await shareInvite(username); track("invite_share"); setMsg(r === "copied" ? "Link copied. Paste it to a friend." : r === "failed" ? "Could not share." : "Sent."); }} className="mt-3 rounded-full bg-primary px-5 py-2 text-sm text-primary-foreground">Send my link</button>
       {msg && <p role="status" className="mt-2 text-xs text-muted-foreground">{msg}</p>}
     </div>);

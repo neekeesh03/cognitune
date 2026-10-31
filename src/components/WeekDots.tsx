@@ -12,7 +12,7 @@ export function WeekDots({ g, name, avatar }: { g: GameState; name: string; avat
   const line = total === 0 ? "A fresh page. One start is enough." : days >= 5 ? "Showing up most days. Lovely." : `${days} ${days === 1 ? "day" : "days"} this week. Every one counts.`;
   return (
     <div className="glass flex flex-col gap-3 rounded-3xl px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <div className="min-w-0"><div className="text-sm font-semibold">This week</div><div className="text-xs text-muted-foreground">{line}{total > 0 && <> <button disabled={busy} onClick={share} className="text-primary underline-offset-2 hover:underline">{busy ? "Making card..." : "Share"}</button></>}{msg && <span role="status"> {msg}</span>}</div></div>
+      <div className="min-w-0"><div className="text-sm font-semibold">{new Date().getDay() === 0 ? "Your week" : "This week"}</div><div className="text-xs text-muted-foreground">{line}{total > 0 && <> <button disabled={busy} onClick={share} className={new Date().getDay() === 0 ? "rounded-full bg-primary px-3 py-0.5 text-primary-foreground" : "text-primary underline-offset-2 hover:underline"}>{busy ? "Making card..." : new Date().getDay() === 0 ? "Share my week" : "Share"}</button></>}{msg && <span role="status"> {msg}</span>}</div></div>
       <div className="flex shrink-0 gap-1.5" role="img" aria-label={`${days} days started this week`}>{wk.map((d, i) => <span key={d.k} title={d.k} className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] ${d.n > 0 ? "bg-primary text-primary-foreground" : i === 6 ? "border border-primary/50 text-muted-foreground" : "bg-secondary text-muted-foreground"}`}>{d.dow}</span>)}</div>
     </div>);
 }

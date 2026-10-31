@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, Gift, Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PinkyDoor } from "@/components/Pinky";
@@ -10,7 +10,7 @@ import { dayKey } from "@/store/useJournal";
 import type { GameApi } from "@/store/useGame";
 import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
-import { fmtTime, hasResources, type Block } from "@/engine/plan";
+import { dueDays, dueText, fmtTime, hasResources, type Block } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
 import { StartHero } from "@/components/StartHero";
 import { FriendsHere } from "@/components/FriendsHere";
@@ -33,7 +33,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const planned = (() => { try { const p = JSON.parse(localStorage.getItem("lagomo.nexthop") || "null"); return p && Date.now() - p.ts < 36e5 * 30 ? String(p.w).toLowerCase() : ""; } catch { return ""; } })();
   const together = friends.filter(f => (burrow.pairs[f.id]?.both ?? 0) > 0).sort((a, b) => burrow.pairs[b.id].both - burrow.pairs[a.id].both).slice(0, 2);
   const nextBlock = plan.blocks.filter(b => b.day === dkey() && !b.done).sort((a, b) => a.start - b.start)[0];
-  const nextStep = plan.tasks.filter(t => !t.doneAt).flatMap(t => t.steps.filter(s => !s.done).map(s => ({ s, t })))[0];
+  const nextStep = plan.tasks.filter(t => !t.doneAt).sort((a, b) => dueDays(a.due) - dueDays(b.due)).flatMap(t => t.steps.filter(s => !s.done).map(s => ({ s, t })))[0];
   const [doorWhen, setDoorWhen] = useState<"morning" | "evening" | "any">(() => (localStorage.getItem("lagomo.pinky.when") as "morning" | "evening" | "any") || "any"); const [doorHidden, setDoorHidden] = useState(() => localStorage.getItem("lagomo.pinky.hide") === dkey());
   const hr0 = new Date().getHours(); const inDoorWindow = doorWhen === "any" || (doorWhen === "morning" ? hr0 >= 5 && hr0 < 12 : hr0 >= 17);
   const showDoor = !!onPinky && friends.length > 0 && game.g.todayActive && inDoorWindow && !doorHidden;
@@ -50,14 +50,23 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const hour = new Date().getHours(); const hello = `${hour < 12 ? "Good morning" : hour < 18 ? "Hi" : "Good evening"}, ${name.split(" ")[0]}.`;
   const hopRecent = friends.filter(f => hops.hops[f.id] && Date.now() - hops.hops[f.id] < 3 * 36e5).sort((a, b) => hops.hops[b.id] - hops.hops[a.id])[0];
   const waiting = hopRecent && !game.g.todayActive ? hopRecent : null; const agoMin = (ts: number) => { const m = Math.max(1, Math.round((Date.now() - ts) / 60000)); return m < 60 ? m + " min ago" : Math.round(m / 60) + " h ago"; };
+  const cue = (() => { try { return JSON.parse(localStorage.getItem("lagomo.cue") || "null") as { label: string } | null; } catch { return null; } })();
+  const [idle] = useState(() => { const t = +(localStorage.getItem("lagomo.lastVisit") || 0); return t ? Math.floor((Date.now() - t) / 864e5) : 0; });
+  useEffect(() => { localStorage.setItem("lagomo.lastVisit", String(Date.now())); }, []);
+  const nowD = new Date(); const monday = nowD.getDay() === 1, first = nowD.getDate() === 1; const freshKey = "lagomo.fresh." + nowD.toISOString().slice(0, 10);
+  const [freshGone, setFreshGone] = useState(() => !!localStorage.getItem(freshKey)); const [backGone, setBackGone] = useState(false);
+  const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first) && !freshGone ? "fresh" : "";
+  const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
+  const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
   const firstRun = !started && friends.length === 0; const [more, setMore] = useState(false); const streak = game.g.streak.current;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-5 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
       <div className="text-center lg:col-span-5"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground"><span>{planned ? `You planned to hop in ${planned}.` : "One start is enough for today."}</span>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground"><span>{cue ? `Your plan: ${cue.label.toLowerCase()}.` : planned ? `You planned to start ${planned}.` : "One start is enough for today."}</span>
           {!calm && streak > 0 && <button onClick={() => go("me")} className="rounded-full bg-secondary/70 px-3 py-1 text-foreground hover:bg-secondary" aria-label={`${streak} days showing up`}>{streak} {streak === 1 ? "day" : "days"} in a row</button>}
           {boxReady && <button onClick={game.openBox} className="flex animate-breathe items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-primary"><Gift className="h-3.5 w-3.5" />Open spark box</button>}</div></div>
       <div className="space-y-5 lg:col-span-3">
+        {banner && <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-4 text-sm" role="status"><div className="min-w-0 flex-1">{banner === "back" ? <><b>Welcome back, {name.split(" ")[0]}.</b> <span className="text-muted-foreground">Nothing is lost and nothing withered. One tiny start?</span></> : <><b>{first ? "New month." : "New week."}</b> <span className="text-muted-foreground">A fresh page. What will you start first?</span></>}</div><div className="flex shrink-0 items-center gap-2"><button onClick={focusStart} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Pick one</button><button onClick={dismissBanner} className="text-xs text-muted-foreground hover:text-foreground">Not now</button></div></div>}
         {waiting && <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3 text-sm lg:hidden" role="status"><Avatar spec={waiting.avatar} size={36} /><div className="min-w-0 flex-1"><b translate="no">{waiting.name}</b> started {agoMin(hops.hops[waiting.id])}. <span className="text-muted-foreground">Start something small too?</span></div></div>}
         <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
         <NameCheck />
@@ -69,11 +78,12 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
           <div className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 transition hover:scale-[1.01]">
             <button onClick={() => go("plan")} className="min-w-0 flex-1 text-start"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
               <div className="truncate text-lg font-semibold">{nextBlock ? nextBlock.title : nextStep ? nextStep.s.text : agenda[0]?.title}</div>
-              <div className="truncate text-sm text-muted-foreground">{nextBlock ? `${fmtTime(nextBlock.start)} · ${nextBlock.dur} min${hasResources(nextBlock) ? " · resources attached" : ""}` : nextStep ? nextStep.t.title : agenda[0] ? (agenda[0].allDay ? "All day" : fmtClock(agenda[0].start)) : ""}{agenda.length > 1 ? ` · ${agenda.length} things today` : ""}</div>
+              <div className="truncate text-sm text-muted-foreground">{nextBlock ? `${fmtTime(nextBlock.start)} · ${nextBlock.dur} min${hasResources(nextBlock) ? " · resources attached" : ""}` : nextStep ? nextStep.t.title + (nextStep.t.due ? " · " + dueText(nextStep.t.due) : "") : agenda[0] ? (agenda[0].allDay ? "All day" : fmtClock(agenda[0].start)) : ""}{agenda.length > 1 ? ` · ${agenda.length} things today` : ""}</div>
             </button>
             {nextBlock && onStartBlock ? <button onClick={() => onStartBlock(nextBlock)} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm"><Play className="h-3.5 w-3.5" />Start now</button> : <button onClick={() => go("plan")} className="shrink-0 text-sm text-primary">Open</button>}</div>)}
 
         {!firstRun && <>
+        <InstallNudge started={started} />
         <WeekDots g={game.g} name={name} avatar={avatar} />
         <button onClick={() => setMore(m => !m)} aria-expanded={more} className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">{more ? "Less" : "More for today"}<ChevronDown className={`h-4 w-4 transition ${more ? "rotate-180" : ""}`} /></button>
         {more && <div className="space-y-5">
@@ -112,7 +122,6 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
               <div key={l.text + l.ts} className="flex items-center justify-between gap-3 rounded-2xl bg-foreground/[.05] p-3 text-sm"><span>{l.text}</span><button className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => j.resolve(l.text)}>Done</button></div>))}</div>
           </div>
         )}
-          <InstallNudge started={started} />
         </div>}
         </>}
         {!firstRun && <StoryCard />}

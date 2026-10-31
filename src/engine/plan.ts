@@ -1,5 +1,11 @@
 export interface Step { id: string; text: string; done: boolean; doneAt?: number }
-export interface Task { id: string; title: string; steps: Step[]; createdAt: number; doneAt?: number }
+export interface Task { id: string; title: string; steps: Step[]; createdAt: number; doneAt?: number; due?: string }
+/** Kind wording for a due date (YYYY-MM-DD). Never scolds. */
+export function dueText(due?: string): string {
+  if (!due) return ""; const d = Math.round((new Date(due + "T12:00").getTime() - new Date(new Date().toDateString() + " 12:00").getTime()) / 864e5);
+  return d < 0 ? "Past its date. A tiny start still counts." : d === 0 ? "Due today" : d === 1 ? "Due tomorrow" : "Due in " + d + " days";
+}
+export const dueDays = (due?: string) => (due ? Math.round((new Date(due + "T12:00").getTime() - new Date(new Date().toDateString() + " 12:00").getTime()) / 864e5) : 9999);
 export interface BlockFile { id: string; name: string; type: string; size: number }
 /** A planned block. note, links and files are the things you will need ("bring along"); remind is minutes before the start (0 = at the start). All of it stays on this device. */
 export interface Block { id: string; title: string; day: string; start: number; dur: number; done?: boolean; taskId?: string; note?: string; links?: string[]; files?: BlockFile[]; remind?: number; notified?: boolean; series?: string; sharedId?: string }

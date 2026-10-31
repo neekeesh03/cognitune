@@ -33,7 +33,7 @@ export function GuestSave({ onSave, onLater }: { onSave: () => void; onLater: ()
     <div className="mt-5 w-full max-w-sm rounded-3xl bg-secondary/60 p-5 text-center">
       <div className="mx-auto mb-2 w-fit"><Mascot size={44} /></div>
       <div className="text-lg font-semibold">You started. Keep it.</div>
-      <p className="mt-1 text-sm text-muted-foreground">Make a free account to save this start and let a friend see you hop in next time.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Make a free account to save this start and let a friend see you started next time.</p>
       <Button variant="hero" className="mt-4 h-11 w-full rounded-2xl" onClick={onSave}>Save my start</Button>
       <button onClick={onLater} className="mt-2 text-sm text-muted-foreground hover:text-foreground">Not now</button>
     </div>);

@@ -10,7 +10,7 @@ type V = "tiny" | "together" | "calm";
 const STEPS = [
   { n: "1", t: "Say what you are dodging", d: "One line. \"Start my essay.\" Lagomo finds the first tiny step.", tint: "hsl(var(--f-grain) / .22)" },
   { n: "2", t: "Press Start", d: "A gentle two-minute timer begins. That is the whole job.", tint: "hsl(var(--secondary))" },
-  { n: "3", t: "A friend sees you hop in", d: "They get a quiet ping, no details. You are not alone in it.", tint: "hsl(var(--accent))" },
+  { n: "3", t: "A friend sees you started", d: "They get a quiet ping, no details. You are not alone in it.", tint: "hsl(var(--accent))" },
 ];
 const FAQ = [
   ["Is it free?", "Yes, completely. Every part of Lagomo is free. No paid plan, no ads, no card."],

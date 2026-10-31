@@ -8,7 +8,7 @@ import { alertState } from "@/lib/push";
 import { deleteBlockFile } from "@/lib/blockfiles";
 import { WeekView } from "@/components/WeekView";
 import { FocusTimer } from "@/components/FocusTimer";
-import { Block, download, fmtTime, googleLink, icsFor, suggestSteps, uid , hasResources, repeatLabel } from "@/engine/plan";
+import { Block, download, fmtTime, googleLink, icsFor, suggestSteps, uid , hasResources, repeatLabel, dueDays, dueText } from "@/engine/plan";
 import { dkey } from "@/engine/game";
 import { timeOfDay, CheckIn } from "@/engine/analytics";
 import type { PlanApi } from "@/store/usePlan";
@@ -31,9 +31,9 @@ export function PlanTab({ plan, game, history, cal }: { plan: PlanApi; game: Gam
 }
 
 function Todos({ plan, game }: { plan: PlanApi; game: GameApi }) {
-  const [title, setTitle] = useState(""); const [open, setOpen] = useState<string | null>(null); const [stepText, setStepText] = useState("");
-  const active = plan.tasks.filter(t => !t.doneAt), done = plan.tasks.filter(t => t.doneAt);
-  const create = (auto: boolean) => { const t = title.trim(); if (!t) return; const x = plan.addTask({ title: t, steps: auto ? suggestSteps(t) : [] }); setTitle(""); setOpen(x.id); };
+  const [title, setTitle] = useState(""); const [due, setDue] = useState(""); const [open, setOpen] = useState<string | null>(null); const [stepText, setStepText] = useState("");
+  const active = plan.tasks.filter(t => !t.doneAt).sort((a, b) => dueDays(a.due) - dueDays(b.due)), done = plan.tasks.filter(t => t.doneAt);
+  const create = (auto: boolean) => { const t = title.trim(); if (!t) return; const x = plan.addTask({ title: t, steps: auto ? suggestSteps(t) : [], ...(due ? { due } : {}) }); setTitle(""); setDue(""); setOpen(x.id); };
   const tick = (taskId: string, stepId: string) => {
     const t = plan.tasks.find(x => x.id === taskId)!; const s = t.steps.find(x => x.id === stepId)!; const nowDone = !s.done;
     const steps = t.steps.map(x => x.id === stepId ? { ...x, done: nowDone, doneAt: nowDone ? Date.now() : undefined } : x);
@@ -46,6 +46,7 @@ function Todos({ plan, game }: { plan: PlanApi; game: GameApi }) {
       <div className="glass rounded-3xl p-4">
         <p className="mb-2 text-sm text-muted-foreground">What's something you want to get done? Big is fine. We will make it tiny.</p>
         <Input className="h-12 rounded-2xl bg-secondary/60" placeholder="e.g. Write the methods section" value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && create(true)} />
+        <label className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">Something due? <input type="date" value={due} min={new Date().toISOString().slice(0, 10)} onChange={e => setDue(e.target.value)} aria-label="Due date (optional)" className="rounded-xl border border-border bg-secondary/40 px-3 py-1.5 text-foreground" />{due && <button onClick={() => setDue("")} className="text-xs underline">Clear</button>}</label>
         <div className="mt-3 flex flex-wrap gap-2"><Button variant="hero" className="h-11 min-w-0 flex-1 rounded-2xl" disabled={!title.trim()} onClick={() => create(true)}><Wand2 className="mr-2 h-4 w-4" />Add and make it tiny</Button><Button variant="outline" className="h-11 rounded-2xl" disabled={!title.trim()} onClick={() => create(false)}><Plus className="mr-1 h-4 w-4" />Just add</Button></div>
       </div>
       {active.length === 0 && <p className="py-6 text-center text-muted-foreground">Nothing here yet. Add one thing and I will help you start it.</p>}
@@ -54,7 +55,7 @@ function Todos({ plan, game }: { plan: PlanApi; game: GameApi }) {
         return (
           <div key={t.id} className="glass rounded-3xl p-4">
             <button className="flex w-full items-center justify-between gap-3 text-left" onClick={() => setOpen(open === t.id ? null : t.id)}>
-              <div className="min-w-0"><div className="truncate text-lg font-semibold">{t.title}</div><div className="text-xs text-muted-foreground">{t.steps.length ? `${d} of ${t.steps.length} tiny steps` : "No steps yet"}</div></div>
+              <div className="min-w-0"><div className="truncate text-lg font-semibold">{t.title}</div><div className="text-xs text-muted-foreground">{t.steps.length ? `${d} of ${t.steps.length} tiny steps` : "No steps yet"}{t.due ? " · " + dueText(t.due) : ""}</div></div>
               <div className="h-2 w-20 shrink-0 rounded-full bg-foreground/10"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct * 100}%` }} /></div>
             </button>
             {open === t.id && (
