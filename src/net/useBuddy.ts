@@ -1,5 +1,6 @@
 // Live "someone is starting with me" presence for a shared focus session. Sends only a tiny state word, never what you are working on.
 import { useEffect, useRef, useState } from "react";
+import { WAKE_EVENT } from "@/lib/realtime";
 import { api } from "@/lib/api";
 import type { AvatarSpec } from "@/engine/avatar";
 export type BuddyState = "none" | "waiting" | "working" | "done" | "left";
@@ -25,7 +26,8 @@ export function useRoom(sid: string | null | undefined, mine: "waiting" | "worki
     if (!sid) return; let live = true;
     const tick = async () => { try { const r = await api<{ members: RoomMember[] }>("room-ping", { body: { sid, state: me.current } }); if (live) setMembers(r.members); } catch { /* offline: keep last */ } };
     tick(); const t = setInterval(tick, 8000);
-    return () => { live = false; clearInterval(t); api("room-ping", { body: { sid, state: "left" } }).catch(() => {}); };
+    const onWake = (ev: Event) => { if ((ev as CustomEvent).detail === "r") tick(); }; window.addEventListener(WAKE_EVENT, onWake);
+    return () => { live = false; clearInterval(t); window.removeEventListener(WAKE_EVENT, onWake); api("room-ping", { body: { sid, state: "left" } }).catch(() => {}); };
   }, [sid]);
   return members;
 }

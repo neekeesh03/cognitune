@@ -223,6 +223,7 @@ export default async function handler(req, res) {
       await rd("SET", `sp:${sid}:${me.id}`, JSON.stringify({ state: st, ts: Date.now() }), "EX", 40);
       const em = okEmoji(body.e); if (em) await rd("SET", `spe:${sid}:${me.id}`, JSON.stringify({ e: em, ts: Date.now() }), "EX", 15);
       const ids = ((await rd("SMEMBERS", "rm:" + sid)) || []).filter(i => i !== me.id);
+      if (em) await Promise.all(ids.map(i => wake(i, "r")));
       const us = ids.length ? (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)) : [];
       const sts = ids.length ? await rdp(ids.map(i => ["GET", `sp:${sid}:${i}`])) : [];
       const ems = ids.length ? await rd("MGET", ...ids.map(i => `spe:${sid}:${i}`)) : [];
