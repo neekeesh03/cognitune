@@ -67,6 +67,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first) && !freshGone ? "fresh" : "";
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
+  const dueSoon = plan.tasks.filter(t => !t.doneAt && t.due && dueDays(t.due) <= 7).sort((x, y) => dueDays(x.due) - dueDays(y.due)).slice(0, 3);
   const firstRun = !started; const deep = started; const [more, setMore] = useState(false); const streak = game.g.streak.current;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-5 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
@@ -82,6 +83,13 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
           {([["circle", "Start together", Users], ["plan", "Plan my day", CalendarCheck], ["me", "Write a line", PenLine]] as const).map(([id, label, I]) => (
             <button key={id} onClick={() => go(id)} className="glass flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-xs text-foreground transition hover:scale-[1.03]"><I className="h-5 w-5 text-primary" />{tr(label)}</button>))}
         </div>
+        {dueSoon.length > 0 && (
+          <div className="glass rounded-3xl p-4">
+            <div className="mb-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">{tr("Due soon")}</div>
+            <ul className="space-y-2">{dueSoon.map(t => (
+              <li key={t.id} className="flex items-center gap-3"><div className="min-w-0 flex-1"><div className="truncate font-medium">{t.title}</div><div className="text-xs text-muted-foreground">{dueText(t.due)}</div></div>
+                <button onClick={() => onStart(t.title, t.steps.find(x => !x.done)?.text ?? "Open it and look at it for two minutes.")} className="shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground">{tr("Start 2 min")}</button></li>))}</ul>
+          </div>)}
         <NameCheck />
       </div>
       <div className="space-y-5 lg:col-span-2">

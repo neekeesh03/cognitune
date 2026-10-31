@@ -1,4 +1,11 @@
 export const DICT: Record<string, string> = {
+ "Due soon": "चाँडै म्याद",
+ "Open it and look at it for two minutes.": "यसलाई खोलेर दुई मिनेट हेर्नुहोस्।",
+ "Paste your deadlines": "आफ्ना म्यादहरू पेस्ट गर्नुहोस्",
+ "Paste a syllabus or a list, one item per line, with dates like Nov 12 or 12 November. I will pick out the dates. Nothing leaves your device.": "पाठ्यक्रम वा सूची पेस्ट गर्नुहोस्, प्रत्येक लाइनमा एउटा, Nov 12 वा 12 November जस्ता मितिसहित। म मितिहरू छान्छु। केही पनि तपाईंको उपकरणबाट बाहिर जाँदैन।",
+ "I did not find any dates. Try lines like: Essay due Nov 12.": "मैले कुनै मिति भेटिनँ। यस्तो लाइन प्रयास गर्नुहोस्: Essay due Nov 12।",
+ "Add these": "यी थप्नुहोस्",
+ "Find the dates": "मितिहरू खोज्नुहोस्",
  "min": "मिनेट",
  "open my notes for 2 minutes": "२ मिनेटका लागि मेरो नोट खोल्छु",
  "Know when a friend starts": "साथीले कहिले सुरु गर्छ थाहा पाउनुहोस्",

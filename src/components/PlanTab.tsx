@@ -1,5 +1,7 @@
 import { track } from "@/lib/track";
 import { useMemo, useState, useEffect } from "react";
+import { findDeadlines, type Found } from "@/engine/deadlines";
+import { tr } from "@/i18n";
 import { CalendarPlus, Check, ChevronLeft, ChevronRight, Download, Play, Plus, Sparkles, Trash2, Wand2, Bell, Paperclip, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +51,7 @@ function Todos({ plan, game }: { plan: PlanApi; game: GameApi }) {
         <label className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">Something due? <input type="date" value={due} min={new Date().toISOString().slice(0, 10)} onChange={e => setDue(e.target.value)} aria-label="Due date (optional)" className="rounded-xl border border-border bg-secondary/40 px-3 py-1.5 text-foreground" />{due && <button onClick={() => setDue("")} className="text-xs underline">Clear</button>}</label>
         <div className="mt-3 flex flex-wrap gap-2"><Button variant="hero" className="h-11 min-w-0 flex-1 rounded-2xl" disabled={!title.trim()} onClick={() => create(true)}><Wand2 className="mr-2 h-4 w-4" />Add and make it tiny</Button><Button variant="outline" className="h-11 rounded-2xl" disabled={!title.trim()} onClick={() => create(false)}><Plus className="mr-1 h-4 w-4" />Just add</Button></div>
       </div>
+      <PasteDeadlines onAdd={items => items.forEach(it => plan.addTask({ title: it.title, steps: suggestSteps(it.title), due: it.due }))} />
       {active.length === 0 && <p className="py-6 text-center text-muted-foreground">Nothing here yet. Add one thing and I will help you start it.</p>}
       {active.map(t => {
         const d = t.steps.filter(s => s.done).length, pct = t.steps.length ? d / t.steps.length : 0;
@@ -130,4 +133,24 @@ function Day({ plan, game, history, initialDay }: { plan: PlanApi; game: GameApi
       </div>
     </div>
   );
+}
+
+/** Paste a syllabus or a list of assignments. Lagomo finds the dates and adds each one with a due date. Nothing leaves your device. */
+function PasteDeadlines({ onAdd }: { onAdd: (items: Found[]) => void }) {
+  const [open, setOpen] = useState(false); const [text, setText] = useState(""); const [found, setFound] = useState<Found[] | null>(null); const [pick, setPick] = useState<Record<number, boolean>>({});
+  const scan = () => { const f = findDeadlines(text); setFound(f); setPick(Object.fromEntries(f.map((_, i) => [i, true]))); };
+  const add = () => { const items = (found ?? []).filter((_, i) => pick[i]); onAdd(items); setText(""); setFound(null); setOpen(false); };
+  if (!open) return <button onClick={() => setOpen(true)} className="mx-auto flex items-center gap-1.5 text-sm text-primary hover:underline">{tr("Paste your deadlines")}</button>;
+  return (
+    <div className="glass space-y-3 rounded-3xl p-4">
+      <div className="text-sm font-semibold">{tr("Paste your deadlines")}</div>
+      <p className="text-sm text-muted-foreground">{tr("Paste a syllabus or a list, one item per line, with dates like Nov 12 or 12 November. I will pick out the dates. Nothing leaves your device.")}</p>
+      <textarea value={text} onChange={e => { setText(e.target.value); setFound(null); }} rows={5} aria-label={tr("Paste your deadlines")} placeholder={"Essay 1 - due Nov 12\nLab report 15 November\nMidterm 2026-11-20"} className="w-full resize-y rounded-2xl border border-border bg-secondary/40 p-3 text-base outline-none focus:border-primary/60" />
+      {found && (found.length === 0 ? <p className="text-sm text-muted-foreground">{tr("I did not find any dates. Try lines like: Essay due Nov 12.")}</p> :
+        <ul className="space-y-1.5">{found.map((f, i) => <li key={i}><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!pick[i]} onChange={e => setPick(p => ({ ...p, [i]: e.target.checked }))} /><span className="min-w-0 flex-1 truncate">{f.title}</span><span className="shrink-0 text-xs text-muted-foreground">{f.due}</span></label></li>)}</ul>)}
+      <div className="flex gap-2">
+        {found && found.length > 0 ? <button onClick={add} className="h-10 flex-1 rounded-2xl bg-primary text-primary-foreground">{tr("Add these")}</button> : <button onClick={scan} disabled={!text.trim()} className="h-10 flex-1 rounded-2xl bg-primary text-primary-foreground disabled:opacity-50">{tr("Find the dates")}</button>}
+        <button onClick={() => { setOpen(false); setFound(null); }} className="h-10 rounded-2xl border border-border px-4 text-sm">{tr("Cancel")}</button>
+      </div>
+    </div>);
 }

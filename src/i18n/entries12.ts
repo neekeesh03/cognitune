@@ -106,4 +106,11 @@ export const ROWS12: Row[] = [
 ["open my notes for 2 minutes", "打开我的笔记 2 分钟", "دو دقیقه یادداشت‌هایم را باز می‌کنم", "buka catatanku selama 2 menit"],
 ["Know when a friend starts", "朋友开始时第一时间知道", "بدان کی دوستی شروع می‌کند", "Tahu saat teman mulai"],
 ["A Pinky with", "小约定，对象：", "قول کوچک با", "Janji kelingking dengan"],
+["Due soon", "即将到期", "به‌زودی سررسید", "Segera jatuh tempo"],
+["Open it and look at it for two minutes.", "打开它，看两分钟。", "بازش کن و دو دقیقه نگاهش کن.", "Buka dan lihat selama dua menit."],
+["Paste your deadlines", "粘贴你的截止日期", "ددلاین‌هایت را بچسبان", "Tempel tenggatmu"],
+["Paste a syllabus or a list, one item per line, with dates like Nov 12 or 12 November. I will pick out the dates. Nothing leaves your device.", "粘贴课程大纲或清单，每行一项，日期如 Nov 12 或 12 November。我会找出日期。内容不会离开你的设备。", "یک سرفصل یا فهرست بچسبان، هر مورد در یک خط، با تاریخ‌هایی مثل Nov 12 یا 12 November. من تاریخ‌ها را پیدا می‌کنم. هیچ‌چیز از دستگاهت خارج نمی‌شود.", "Tempel silabus atau daftar, satu item per baris, dengan tanggal seperti Nov 12 atau 12 November. Aku akan mencari tanggalnya. Tidak ada yang keluar dari perangkatmu."],
+["I did not find any dates. Try lines like: Essay due Nov 12.", "我没有找到日期。试试这样的行：Essay due Nov 12。", "هیچ تاریخی پیدا نکردم. خط‌هایی مثل این را امتحان کن: Essay due Nov 12.", "Aku tidak menemukan tanggal. Coba baris seperti: Essay due Nov 12."],
+["Add these", "添加这些", "اضافه کردن این‌ها", "Tambahkan ini"],
+["Find the dates", "找出日期", "پیدا کردن تاریخ‌ها", "Cari tanggalnya"],
 ];
