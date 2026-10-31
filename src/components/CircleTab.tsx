@@ -65,7 +65,7 @@ export function CircleTab(props: Props) {
     </div>);
   if (f) return <Conversation {...props} f={f} back={() => setOpenId(null)} openProfile={openProfile} />;
   return (
-    <div className="animate-rise mx-auto max-w-2xl space-y-5 lg:max-w-4xl">
+    <div className="animate-rise mx-auto max-w-2xl space-y-5 lg:max-w-5xl">
       <div className="text-center"><h1 className="text-4xl">Friends</h1></div>
       <div className="glass mx-auto flex w-fit gap-1 rounded-full p-1" role="tablist" aria-label="Circle">
         {(["feed", "friends"] as const).map(v => <button key={v} role="tab" aria-selected={view === v} onClick={() => pick(v)} className={`rounded-full px-5 py-2 text-sm ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{v === "feed" ? "Feed" : "Friends and chats"}</button>)}

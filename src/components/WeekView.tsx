@@ -22,7 +22,7 @@ export function WeekView({ plan, cal, onOpenDay }: { plan: PlanApi; cal: Calenda
           <div className="text-xs text-muted-foreground">{total === 0 ? "Nothing planned yet" : `${total} planned${withFriends ? `, ${withFriends} with friends` : ""}`}{offset !== 0 && <> · <button className="underline-offset-2 hover:underline" onClick={() => setOffset(0)}>This week</button></>}</div></div>
         <button aria-label="Next week" className="rounded-full p-2 text-muted-foreground hover:text-foreground" onClick={() => setOffset(o => o + 1)}><ChevronRight /></button>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-3 lg:space-y-0">
         {days.map((d, n) => { const k = dayKey(d); const items = all[n]; const isToday = k === today; const past = k < today;
           return (
             <div key={k} className={`glass rounded-3xl p-3 ${isToday ? "ring-2 ring-primary/50" : ""} ${past ? "opacity-70" : ""}`}>

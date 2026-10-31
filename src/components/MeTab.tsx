@@ -35,7 +35,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
   return (
     <div className="animate-rise mx-auto max-w-3xl lg:max-w-5xl">
-      <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["journal", "Journal"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      <div className="mx-auto mb-6 flex w-fit flex-wrap justify-center gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["journal", "Journal"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
 
       {view === "progress" && (
         <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
@@ -90,6 +90,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
       {view === "journal" && <InsightsTab profile={profile} history={history} onFollowUp={onFollowUp} onClear={onClear} onDelete={onDelete} />}
 
       {view === "data" && (
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
         <div className="space-y-5">
           <div className="glass space-y-4 rounded-3xl p-5">
             <div className="flex items-center gap-3"><Avatar spec={user.avatar} size={48} /><div><div className="text-lg font-semibold">{user.name}</div><div className="text-sm text-muted-foreground">@{user.username}</div></div></div>
@@ -103,10 +104,8 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
           <div className="glass space-y-3 rounded-3xl p-5 text-sm"><Button variant="outline" className="rounded-full" onClick={auth.logout}>Log out</Button>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs"><a href="/safety" className="text-primary underline">Safety and reporting</a><a href="/privacy" className="text-primary underline">Privacy</a><a href="/terms" className="text-primary underline">Terms</a></div>
             <div className="border-t border-border pt-3"><div className="font-semibold">Delete account</div><p className="mb-2 text-muted-foreground">Removes your account, friends list and messages from our server. Your journal and plans on this device are not touched.</p><div className="flex gap-2"><Input type={user.g ? "text" : "password"} className="h-10 rounded-2xl bg-secondary/60" placeholder={user.g ? "Type your username to confirm" : "Your password"} value={delPw} onChange={e => setDelPw(e.target.value)} /><Button variant="outline" className="rounded-full" disabled={!delPw} onClick={deleteAccount}>Delete</Button></div></div></div>
-        </div>)}
-
-      {view === "data" && (
-        <div className="space-y-5">
+        </div>
+        <div className="mt-5 space-y-5 lg:mt-0">
           <div className="glass rounded-3xl p-5 text-sm">
             {admin && <div className="mt-4 border-t border-border pt-3"><div className="font-semibold">Team</div><p className="text-muted-foreground">You are an admin. The admin panel has people, reports and announcements.</p><a href="/admin" className="mt-2 inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground">Open admin panel</a></div>}
           </div>
@@ -116,6 +115,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
             <div className="mt-4 flex flex-wrap gap-2"><Button variant="hero" className="rounded-full" onClick={exportAll}><Download className="mr-2 h-4 w-4" />Save backup</Button><Button variant="outline" className="rounded-full" onClick={() => file.current?.click()}><Upload className="mr-2 h-4 w-4" />Load backup</Button><input ref={file} type="file" accept="application/json" hidden onChange={e => e.target.files?.[0] && importAll(e.target.files[0])} /></div>
           </div>
           <div className="glass rounded-3xl p-5 text-sm"><div className="mb-1 text-lg font-semibold">Need support?</div><p className="text-muted-foreground">Lagomo is a helper for building habits. It is not therapy or medical advice. If you are struggling or in crisis, please reach out to someone you trust or a local helpline. <a className="underline" href="https://findahelpline.com" target="_blank" rel="noreferrer">findahelpline.com</a> lists free lines by country.</p></div>
+        </div>
         </div>)}
     </div>
   );

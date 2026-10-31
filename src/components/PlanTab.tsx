@@ -23,8 +23,8 @@ const shift = (day: string, n: number) => { const d = new Date(day + "T12:00"); 
 export function PlanTab({ plan, game, history, cal }: { plan: PlanApi; game: GameApi; history: CheckIn[]; cal: CalendarApi }) {
   const [view, setView] = useState<"todo" | "day" | "week" | "cal">("todo"); const [jump, setJump] = useState<string | undefined>(undefined);
   return (
-    <div className={`animate-rise mx-auto ${view === "cal" ? "max-w-3xl lg:max-w-5xl" : "max-w-2xl lg:max-w-4xl"}`}>
-      <div className="mb-6 flex w-fit max-w-full flex-wrap gap-1 rounded-3xl bg-foreground/[.05] p-1 sm:rounded-full">{([["todo", "Tiny to-dos"], ["day", "Day planner"], ["week", "Week"], ["cal", "Calendar"]] as const).map(([id, l]) => <button key={id} onClick={() => { if (id === "day") setJump(undefined); if (id === "week") track("week_open"); setView(id); }} className={`whitespace-nowrap rounded-full px-3 py-2 text-[13px] sm:px-4 sm:text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+    <div className={`animate-rise mx-auto ${view === "cal" ? "max-w-3xl lg:max-w-5xl" : "max-w-2xl lg:max-w-5xl"}`}>
+      <div className="mx-auto mb-6 flex w-fit max-w-full flex-wrap justify-center gap-1 rounded-3xl bg-foreground/[.05] p-1 sm:rounded-full">{([["todo", "Tiny to-dos"], ["day", "Day planner"], ["week", "Week"], ["cal", "Calendar"]] as const).map(([id, l]) => <button key={id} onClick={() => { if (id === "day") setJump(undefined); if (id === "week") track("week_open"); setView(id); }} className={`whitespace-nowrap rounded-full px-3 py-2 text-[13px] sm:px-4 sm:text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
       {view === "todo" ? <Todos plan={plan} game={game} /> : view === "day" ? <Day key={jump ?? "today"} initialDay={jump} plan={plan} game={game} history={history} /> : view === "week" ? <WeekView plan={plan} cal={cal} onOpenDay={d => { setJump(d); setView("day"); }} /> : <CalendarView plan={plan} cal={cal} game={game} />}
     </div>
   );
