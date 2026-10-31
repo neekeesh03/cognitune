@@ -168,7 +168,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "The Corner" : f.name, dur, { sid, friendId: f.id, name: room ? "The Corner" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
   return (
     <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4 lg:max-w-4xl" style={{ minHeight: "calc(100vh - 11rem)" }}>
-      <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/95 px-5 pb-2 pt-2 shadow-sm backdrop-blur-xl">
+      <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/95 px-5 pb-2 pt-2 lg:mx-0 lg:rounded-b-2xl lg:px-4 shadow-sm backdrop-blur-xl">
       <button onClick={back} className="flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><button aria-label={`Open ${f.name}'s profile`} onClick={() => openProfile(f.username)}><Avatar spec={f.avatar} size={40} /></button><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
