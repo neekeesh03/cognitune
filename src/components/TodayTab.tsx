@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { VoiceButton } from "@/components/VoiceButton";
-import { Check, ChevronDown, Gift, Play, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, Gift, Play, RefreshCw, Users, CalendarCheck, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PinkyDoor } from "@/components/Pinky";
 import { Input } from "@/components/ui/input";
@@ -67,7 +67,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first) && !freshGone ? "fresh" : "";
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
-  const firstRun = !started; const deep = started && (game.g.counts.started ?? 0) >= 3; const [more, setMore] = useState(false); const streak = game.g.streak.current;
+  const firstRun = !started; const deep = started; const [more, setMore] = useState(false); const streak = game.g.streak.current;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-5 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
       <div className="text-center lg:col-span-5"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p>
@@ -78,12 +78,16 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
         {banner && <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-4 text-sm" role="status"><div className="min-w-0 flex-1">{banner === "back" ? <><b>Welcome back, {name.split(" ")[0]}.</b> <span className="text-muted-foreground">Nothing is lost and nothing withered. One tiny start?</span></> : <><b>{first ? "New month." : "New week."}</b> <span className="text-muted-foreground">A fresh page. What will you start first?</span></>}</div><div className="flex shrink-0 items-center gap-2"><button onClick={focusStart} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Pick one</button><button onClick={dismissBanner} className="text-xs text-muted-foreground hover:text-foreground">Not now</button></div></div>}
         {waiting && <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3 text-sm lg:hidden" role="status"><Avatar spec={waiting.avatar} size={36} /><div className="min-w-0 flex-1"><b translate="no">{waiting.name}</b> started {agoMin(hops.hops[waiting.id])}. <span className="text-muted-foreground">Start something small too?</span></div></div>}
         <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} mood={mood} rabbitLine={rabbitLine} quiet={quietRabbit} />
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label={tr("Quick links")}>
+          {([["circle", "Start together", Users], ["plan", "Plan my day", CalendarCheck], ["me", "Write a line", PenLine]] as const).map(([id, label, I]) => (
+            <button key={id} onClick={() => go(id)} className="glass flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-xs text-foreground transition hover:scale-[1.03]"><I className="h-5 w-5 text-primary" />{tr(label)}</button>))}
+        </div>
         <NameCheck />
       </div>
       <div className="space-y-5 lg:col-span-2">
         {firstRun && <HowItWorks />}
-        {!firstRun && <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} onQuestDone={f => { game.earn("buddy"); burst(); toast(`Quest done with ${f.name.split(" ")[0]}`, "You both started on 3 days this week. +12 sparks."); }} />}
-        {!firstRun && (deep || nextBlock) && (nextBlock || nextStep || agenda.length > 0) && (
+        {(!firstRun || friends.length > 0) && <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} onQuestDone={f => { game.earn("buddy"); burst(); toast(`Quest done with ${f.name.split(" ")[0]}`, "You both started on 3 days this week. +12 sparks."); }} />}
+        {(nextBlock || nextStep || agenda.length > 0) && (
           <div className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 transition hover:scale-[1.01]">
             <button onClick={() => go("plan")} className="min-w-0 flex-1 text-start"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
               <div className="truncate text-lg font-semibold">{nextBlock ? nextBlock.title : nextStep ? nextStep.s.text : agenda[0]?.title}</div>

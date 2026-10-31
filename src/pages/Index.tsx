@@ -110,7 +110,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const hops = useHops(people.friends, true);
   const friendsStarted = people.friends.filter(f => hops.hops[f.id] && new Date(hops.hops[f.id]).toDateString() === new Date().toDateString()).length;
   const hasStarted = !!localStorage.getItem("lagomo.firstStart") || (game.g.counts.started ?? 0) > 0;
-  const deepUser = hasStarted && (game.g.counts.started ?? 0) >= 3;
+  const deepUser = true;
   usePresence({ name: user.name, started: game.g.todayActive && game.g.today === dkey(), streak: game.g.streak.current, friendsStarted, wear: wornNow(), starts: game.g.counts.started ?? 0, face: "calm" });
   useEffect(() => { if (!new URLSearchParams(location.search).has("start")) return; const t = window.setTimeout(() => (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(), 700); return () => window.clearTimeout(t); }, []);
   useEffect(() => { track("app_open", undefined, true); }, []);
