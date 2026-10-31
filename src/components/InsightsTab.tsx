@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { tr } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar } from "recharts";
@@ -36,11 +37,11 @@ export function InsightsTab({ profile, history, onFollowUp, onClear, onDelete }:
       <CardHeader><CardTitle className="text-lg">What the app has learned about you</CardTitle></CardHeader>
       <CardContent className="space-y-4 text-sm">
         {profile.entries === 0 ? <p className="text-muted-foreground">Write in the journal. Patterns appear after a few entries.</p> : (<>
-          <p className="text-muted-foreground">{profile.entries} {profile.entries === 1 ? "entry" : "entries"} over {profile.journalDays} {profile.journalDays === 1 ? "day" : "days"}, {profile.words} words. Readiness checks currently lean up to {Math.round(profile.blendWeight * 100)}% on this.</p>
+          <p className="text-muted-foreground">{tr("Entries: {n}, days: {d}, words: {w}. Readiness checks currently lean up to {p}% on this.").replace("{n}", String(profile.entries)).replace("{d}", String(profile.journalDays)).replace("{w}", String(profile.words)).replace("{p}", String(Math.round(profile.blendWeight * 100)))}</p>
           <div className="grid gap-2 sm:grid-cols-2">{VAR_KEYS.map(k => { const l = profile.levels[k]; return (
             <div key={k} className="flex items-center gap-3"><span className="w-16">{FORCE[k].title}</span>
               <div className="h-2 flex-1 rounded-full bg-foreground/10">{l && <div className="h-full rounded-full" style={{ width: `${l.value * 100}%`, background: fc(FORCE[k].color), opacity: 0.4 + 0.6 * l.conf }} />}</div>
-              <span className="w-14 text-right text-xs text-muted-foreground">{l ? `${l.n} ${l.n === 1 ? "note" : "notes"}` : "unknown"}</span></div>); })}</div>
+              <span className="w-14 text-right text-xs text-muted-foreground">{l ? tr(l.n === 1 ? "{n} note" : "{n} notes").replace("{n}", String(l.n)) : tr("unknown")}</span></div>); })}</div>
           {profile.themes.length > 0 && <div><span className="text-muted-foreground">Recurring themes: </span>{profile.themes.join(", ")}</div>}
           {profile.sentiment7 != null && <div><span className="text-muted-foreground">Recent tone: </span>{profile.sentiment7 > 0.15 ? "mostly positive" : profile.sentiment7 < -0.15 ? "mostly heavy" : "mixed"}</div>}
           {profile.divergence.length > 0 && <div><span className="text-muted-foreground">Where your taps and your writing disagree: </span>{profile.divergence.slice(0, 2).map(d => `${FORCE[d.key].title} (writing says ${d.diff > 0 ? "higher" : "lower"})`).join(", ")}</div>}
@@ -57,7 +58,7 @@ export function InsightsTab({ profile, history, onFollowUp, onClear, onDelete }:
     <div>{seg}<div className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
       {profileCard}
       <div className="lg:col-span-2 grid grid-cols-3 gap-3 text-center">
-        {[["Starts", starts, "times you got going"], ["Start days", days.size, "days with at least one start"], ["Average start power", avg.toFixed(2), `across ${history.length} check-ins`]].map(([a, b, c]) => (
+        {[["Starts", starts, "times you got going"], ["Start days", days.size, "days with at least one start"], ["Average start power", avg.toFixed(2), tr(history.length === 1 ? "across 1 check-in" : "across {n} check-ins").replace("{n}", String(history.length))]].map(([a, b, c]) => (
           <div key={a as string} className="glass rounded-3xl p-4"><div className="font-display text-4xl sm:text-5xl">{b}</div><div className="text-sm">{a}</div><div className="text-xs text-muted-foreground">{c}</div></div>))}
         <p className="col-span-3 text-xs text-muted-foreground">Missed days are never penalised. Only starts count.</p>
       </div>
@@ -89,7 +90,7 @@ export function InsightsTab({ profile, history, onFollowUp, onClear, onDelete }:
       <Card className="glass border-0 rounded-3xl">
         <CardHeader><CardTitle className="text-lg">Personal calibration</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {!cal.ready ? <p className="text-muted-foreground">Tell me whether you started after a few more check-ins ({cal.n} so far) and I will learn your own pattern.</p> : (
+          {!cal.ready ? <p className="text-muted-foreground">{tr("Tell me whether you started after a few more check-ins ({n} so far) and I will learn your own pattern.").replace("{n}", String(cal.n))}</p> : (
             <>
               <p>You usually start when your start power is above <b>{cal.threshold?.toFixed(2) ?? "n/a"}</b>.</p>
               <p>{cal.brier.personal < cal.brier.fixed ? "Your personal pattern predicts your starts better than the general rule." : "It does not beat the general rule yet. More follow-ups will help."}</p>

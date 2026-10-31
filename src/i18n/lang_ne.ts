@@ -1,4 +1,10 @@
 export const DICT: Record<string, string> = {
+ "Entries: {n}, days: {d}, words: {w}. Readiness checks currently lean up to {p}% on this.": "लेखहरू: {n}, दिन: {d}, शब्द: {w}। तयारी जाँचले अहिले यसमा {p}% सम्म भर पर्छ।",
+ "{n} note": "{n} नोट",
+ "{n} notes": "{n} नोट",
+ "across 1 check-in": "१ जाँचबाट",
+ "across {n} check-ins": "{n} जाँचबाट",
+ "Tell me whether you started after a few more check-ins ({n} so far) and I will learn your own pattern.": "केही जाँच थपेपछि सुरु गर्नुभयो कि गर्नुभएन भन्नुहोस् (अहिलेसम्म {n}), म तपाईंको आफ्नै ढाँचा सिक्छु।",
  "Start what you are putting off. Two minutes, and a friend sees you begin.": "आफूले पछि सारेको काम सुरु गर्नुहोस्। दुई मिनेट, र एक साथीले तपाईंले सुरु गर्नुभएको देख्छन्।",
  "Evening wrap-up": "साँझको सारांश",
  "What-if": "के भए",
