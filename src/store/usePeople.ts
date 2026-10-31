@@ -29,7 +29,7 @@ export function usePeople(active: boolean, onNew?: (f: Friend, delta: number) =>
   useEffect(() => {
     if (!active) return; refresh();
     let n = 0; const t = setInterval(() => { if (!rtLive() || ++n % 4 === 0) refresh(); }, document.hidden ? 120000 : 30000); const v = () => { if (!document.hidden) refresh(); };
-    let dbn = 0; const w = (e: Event) => { const k = (e as CustomEvent).detail; if (k === "t") return; window.clearTimeout(dbn); dbn = window.setTimeout(refresh, 600); };
+    let dbn = 0; const w = (e: Event) => { const k = (e as CustomEvent).detail; if (k === "t") return; window.clearTimeout(dbn); dbn = window.setTimeout(refresh, 3000); };
     document.addEventListener("visibilitychange", v); window.addEventListener(WAKE_EVENT, w); return () => { clearInterval(t); window.clearTimeout(dbn); document.removeEventListener("visibilitychange", v); window.removeEventListener(WAKE_EVENT, w); };
   }, [active, refresh]);
   const request = useCallback(async (username: string) => { const r = await api<{ status: string }>("friend-request", { body: { username } }); track("invite"); await refresh(); return r.status; }, [refresh]);

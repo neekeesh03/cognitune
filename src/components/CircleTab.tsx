@@ -190,7 +190,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   const joined = (sid: string) => chat.messages.some(m => m.kind === "session_join" && m.session?.id === sid);
   const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "The Corner" : f.name, dur, { sid, friendId: f.id, name: room ? "The Corner" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
   return (
-    <div className="animate-rise mx-auto flex max-w-2xl flex-col gap-4 lg:max-w-4xl" style={{ minHeight: "calc(100vh - 11rem)" }}>
+    <div className="animate-rise mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-4xl" style={{ minHeight: "calc(100vh - 11rem)" }}>
       <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/95 px-5 pb-2 pt-2 lg:mx-0 lg:rounded-b-2xl lg:px-4 shadow-sm backdrop-blur-xl">
       <button onClick={back} className="flex w-fit items-center gap-1 lg:hidden text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
       <div className="flex items-center justify-between gap-3">
