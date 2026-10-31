@@ -35,7 +35,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
   return (
     <div className="animate-rise mx-auto max-w-3xl lg:max-w-5xl">
-      <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["rewards", "Rewards"], ["journal", "Journal"], ["insights", "About me"], ["profile", "Profile"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      <div className="mb-6 flex w-fit flex-wrap gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["journal", "Journal"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
 
       {view === "progress" && (
         <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
@@ -70,7 +70,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
           </div>
         </div>)}
 
-      {view === "rewards" && (
+      {view === "progress" && (
         <div className="space-y-5">
           <div className="glass rounded-3xl p-5 text-center"><div className="text-4xl font-semibold">{g.sparks}</div><div className="text-sm text-muted-foreground">sparks to spend on real rewards you choose</div></div>
           <div className="space-y-3">{g.rewards.map(r => (
@@ -87,9 +87,9 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
         </div>)}
 
       {view === "journal" && <JournalTab j={j} earn={() => game.earn("journal")} />}
-      {view === "insights" && <InsightsTab profile={profile} history={history} onFollowUp={onFollowUp} onClear={onClear} onDelete={onDelete} />}
+      {view === "journal" && <InsightsTab profile={profile} history={history} onFollowUp={onFollowUp} onClear={onClear} onDelete={onDelete} />}
 
-      {view === "profile" && (
+      {view === "data" && (
         <div className="space-y-5">
           <div className="glass space-y-4 rounded-3xl p-5">
             <div className="flex items-center gap-3"><Avatar spec={user.avatar} size={48} /><div><div className="text-lg font-semibold">{user.name}</div><div className="text-sm text-muted-foreground">@{user.username}</div></div></div>

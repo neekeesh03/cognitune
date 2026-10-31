@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, Flame, Gift, Play, RefreshCw, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Gift, Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PinkyDoor } from "@/components/Pinky";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,8 @@ import { dkey } from "@/engine/game";
 import { fmtTime, hasResources, type Block } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
 import { StartHero } from "@/components/StartHero";
-import { HopStrip } from "@/components/HopStrip";
+import { FriendsHere } from "@/components/FriendsHere";
+import { WeekDots } from "@/components/WeekDots";
 import { StoryCard } from "@/components/StoryCard";
 import { NameCheck } from "@/components/NameCheck";
 import { GetStarted } from "@/components/GetStarted";
@@ -44,30 +45,22 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
     j.addUser(text, "journal", { prompt: prompt.text }); game.earn("journal"); setSaved(true); setText("");
   };
   const hour = new Date().getHours(); const hello = `${hour < 12 ? "Good morning" : hour < 18 ? "Hi" : "Good evening"}, ${name.split(" ")[0]}.`;
+  const hopRecent = friends.filter(f => hops.hops[f.id] && Date.now() - hops.hops[f.id] < 3 * 36e5).sort((a, b) => hops.hops[b.id] - hops.hops[a.id])[0];
+  const waiting = hopRecent && !game.g.todayActive ? hopRecent : null; const agoMin = (ts: number) => { const m = Math.max(1, Math.round((Date.now() - ts) / 60000)); return m < 60 ? m + " min ago" : Math.round(m / 60) + " h ago"; };
+  const [more, setMore] = useState(false); const streak = game.g.streak.current;
   return (
-    <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-2 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
-      <div className="text-center lg:col-span-2"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p><p className="mt-1 text-sm text-muted-foreground">{planned ? `You planned to hop in ${planned}.` : "One start is enough for today."}</p></div>
-      <div className="space-y-6">
-      <StoryCard />
-      <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
-      <GetStarted username={username} friends={friends.length} started={started} />
-      <HopStrip friends={friends} hops={hops} />
-      {showDoor && <PinkyDoor friends={friends} when={doorWhen} setWhen={w => { setDoorWhen(w); localStorage.setItem("lagomo.pinky.when", w); }} onHide={() => { localStorage.setItem("lagomo.pinky.hide", dkey()); setDoorHidden(true); }} onPick={id => onPinky!(id)} />}
-      {together.length > 0 && <div className="flex flex-wrap justify-center gap-2">{together.map(f => <span key={f.id} className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-sm"><Avatar spec={f.avatar} size={26} />{`You and ${f.name.split(" ")[0]} started together ${burrow.pairs[f.id].both} ${burrow.pairs[f.id].both === 1 ? "day" : "days"} this week`}</span>)}</div>}
-      {burrow.starters >= 5 && <p className="text-center text-xs text-muted-foreground">{`${burrow.starters} people started today`}</p>}
-      <InstallNudge started={started} />
-      <NameCheck />
+    <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-5 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
+      <div className="text-center lg:col-span-5"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground"><span>{planned ? `You planned to hop in ${planned}.` : "One start is enough for today."}</span>
+          {!calm && streak > 0 && <button onClick={() => go("me")} className="rounded-full bg-secondary/70 px-3 py-1 text-foreground hover:bg-secondary" aria-label={`${streak} days showing up`}>{streak} {streak === 1 ? "day" : "days"} in a row</button>}
+          {boxReady && <button onClick={game.openBox} className="flex animate-breathe items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-primary"><Gift className="h-3.5 w-3.5" />Open spark box</button>}</div></div>
+      <div className="space-y-5 lg:col-span-3">
+        {waiting && <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3 text-sm lg:hidden" role="status"><Avatar spec={waiting.avatar} size={36} /><div className="min-w-0 flex-1"><b translate="no">{waiting.name}</b> started {agoMin(hops.hops[waiting.id])}. <span className="text-muted-foreground">Start something small too?</span></div></div>}
+        <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
+        <NameCheck />
       </div>
-
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:gap-3">
-          {!calm && <>
-          <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Flame className="h-4 w-4" style={{ color: "hsl(var(--f-primode))" }} /><b>{game.g.streak.current}</b> showing-up days</span>
-          <span className="glass flex items-center gap-1.5 rounded-full px-4 py-2"><Sparkles className="h-4 w-4 text-primary" /><b>{game.g.sparks}</b> sparks</span>
-          </>}
-          {boxReady && <button onClick={game.openBox} className="glass flex animate-breathe items-center gap-1.5 rounded-full px-4 py-2 text-primary"><Gift className="h-4 w-4" />Open spark box</button>}
-          <button onClick={toggleCalm} className="rounded-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground">{calm ? "Show numbers" : "Hide numbers"}</button>
-        </div>
+      <div className="space-y-5 lg:col-span-2">
+        <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} />
         {(nextBlock || nextStep || agenda.length > 0) && (
           <div className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 transition hover:scale-[1.01]">
             <button onClick={() => go("plan")} className="min-w-0 flex-1 text-start"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
@@ -76,6 +69,11 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
             </button>
             {nextBlock && onStartBlock ? <button onClick={() => onStartBlock(nextBlock)} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm"><Play className="h-3.5 w-3.5" />Start now</button> : <button onClick={() => go("plan")} className="shrink-0 text-sm text-primary">Open</button>}</div>)}
 
+        <WeekDots g={game.g} />
+        <button onClick={() => setMore(m => !m)} aria-expanded={more} className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">{more ? "Less" : "More for today"}<ChevronDown className={`h-4 w-4 transition ${more ? "rotate-180" : ""}`} /></button>
+        {more && <div className="space-y-5">
+          <GetStarted username={username} friends={friends.length} started={started} />
+          {showDoor && <PinkyDoor friends={friends} when={doorWhen} setWhen={w => { setDoorWhen(w); localStorage.setItem("lagomo.pinky.when", w); }} onHide={() => { localStorage.setItem("lagomo.pinky.hide", dkey()); setDoorHidden(true); }} onPick={id => onPinky!(id)} />}
         {/* The journal prompt stays folded until you want it */}
         {!openJ && !saved ? (
           <button onClick={() => setOpenJ(true)} className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 text-left transition hover:scale-[1.01]">
@@ -97,11 +95,11 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
           </>)}
         </div>)}
 
-        <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
-          <button onClick={() => go("plan")} className="glass rounded-full px-4 py-2 hover:text-primary">Plan a tiny thing</button>
-          <button onClick={() => go("checkin")} className="glass rounded-full px-4 py-2 hover:text-primary">Ready-to-start check</button>
-        </div>
-
+          <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+            <button onClick={() => go("plan")} className="glass rounded-full px-4 py-2 hover:text-primary">Plan a tiny thing</button>
+            <button onClick={() => go("checkin")} className="glass rounded-full px-4 py-2 hover:text-primary">Ready-to-start check</button>
+            <button onClick={toggleCalm} className="rounded-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground">{calm ? "Show streak" : "Hide streak"}</button>
+          </div>
         {profile.openLoops.length > 0 && (
           <div className="glass rounded-3xl p-5">
             <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Things you mentioned</div>
@@ -109,6 +107,9 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
               <div key={l.text + l.ts} className="flex items-center justify-between gap-3 rounded-2xl bg-foreground/[.05] p-3 text-sm"><span>{l.text}</span><button className="shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground" onClick={() => j.resolve(l.text)}>Done</button></div>))}</div>
           </div>
         )}
+          <InstallNudge started={started} />
+        </div>}
+        <StoryCard />
       </div>
     </div>
   );

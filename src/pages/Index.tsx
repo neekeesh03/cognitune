@@ -131,20 +131,20 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl overflow-x-clip px-5 pt-8">
-        {tab === "today" && <TodayTab onPinky={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} go={t => setTab(t as Tab)} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
+        {tab === "today" && <TodayTab onPinky={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} go={t => { if (t.startsWith("circle:")) { setOpenId(t.slice(7)); setTab("circle"); } else setTab(t as Tab); }} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab startPinky={(title, onDoneExtra) => setLive({ title, dur: 2, solo: true, onDoneExtra })} pairs={burrow.pairs} people={people} game={game} plan={plan} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In The Corner" : `Focusing with ${name}`, dur, buddy })} />}
         {tab === "me" && <MeTab j={j} auth={auth} game={game} profile={j.profile} history={history} onFollowUp={(id, s) => update(id, { started: s })} onClear={() => { clear(); j.clear(); }} onDelete={remove} />}
       </main>
       <nav className="fixed inset-y-0 left-0 z-40 hidden w-56 flex-col gap-1 border-r border-border bg-background/70 px-3 pb-6 pt-24 backdrop-blur lg:flex" aria-label="Main">
-        {TABS.map(t => { const I = t.icon, on = tab === t.id; return (
+        {TABS.filter(t => t.id !== "checkin").map(t => { const I = t.icon, on = tab === t.id; return (
           <button key={t.id} onClick={() => setTab(t.id)} aria-current={on ? "page" : undefined} className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-start text-[15px] transition ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"}`}>
             <span className="relative"><I className="h-5 w-5" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span>{t.label}
           </button>); })}
       </nav>
       <nav className="glass fixed bottom-5 lg:hidden left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
-        {TABS.map(t => { const I = t.icon, on = tab === t.id; return (
+        {TABS.filter(t => t.id !== "checkin").map(t => { const I = t.icon, on = tab === t.id; return (
           <button key={t.id} onClick={() => setTab(t.id)} aria-label={t.label} aria-current={on ? "page" : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-2.5 text-sm transition ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <span className="relative"><I className="h-4 w-4" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span><span className={on ? "" : "hidden lg:inline"}>{t.label}</span>
           </button>); })}
