@@ -3,17 +3,24 @@ import { Avatar } from "@/components/Avatar";
 import { shareInvite } from "@/lib/invite";
 import { track } from "@/lib/track";
 import type { Friend } from "@/store/usePeople";
-import type { HopsApi } from "@/store/useHops";
+import { CHEER_EMOJI, type HopsApi } from "@/store/useHops";
 import type { BurrowApi } from "@/store/useBurrow";
 
 const ago = (ts: number) => { const m = Math.max(1, Math.round((Date.now() - ts) / 60000)); return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
 
 /** One calm place for people: who started today (with a cheer), and how many days you have started together. No feed, no scores. */
+/** One tap to cheer, a second tap to pick how. Five little emoji, nothing to type. */
+function CheerBtn({ done, sent, open, onToggle, onPick }: { done: boolean; sent?: string; open: boolean; onToggle: () => void; onPick: (e: string) => void }) {
+  if (done) return <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1.5 text-sm text-primary" translate="no">Cheered {sent ?? ""}</span>;
+  if (!open) return <button onClick={onToggle} className="shrink-0 rounded-full bg-primary/15 px-3 py-1.5 text-sm text-primary">Cheer</button>;
+  return <span className="flex shrink-0 gap-0.5 rounded-full bg-primary/10 p-0.5" role="group" aria-label="Pick a cheer" translate="no">{CHEER_EMOJI.map(e => <button key={e} onClick={() => onPick(e)} aria-label={`Cheer ${e}`} className="rounded-full px-1.5 py-1 text-lg leading-none transition hover:scale-125">{e}</button>)}</span>;
+}
+
 const QUEST = 3; // days you both start within a week
 const weekKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
 
 export function FriendsHere({ friends, hops, burrow, username, onOpen, onQuestDone }: { friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string; onOpen: (id: string) => void; onQuestDone?: (f: Friend) => void }) {
-  const [msg, setMsg] = useState("");
+  const [msg, setMsg] = useState(""); const [pick, setPick] = useState<string | null>(null); const [sent, setSent] = useState<Record<string, string>>({});
   useEffect(() => { // a small celebration, once per friend per week
     friends.forEach(f => { if ((burrow.pairs[f.id]?.both ?? 0) >= QUEST) { const k = `lagomo.quest.${weekKey()}.${f.id}`; if (!localStorage.getItem(k)) { localStorage.setItem(k, "1"); onQuestDone?.(f); } } });
   }, [friends, burrow.pairs]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -40,7 +47,7 @@ export function FriendsHere({ friends, hops, burrow, username, onOpen, onQuestDo
                 <span className="min-w-0"><span className="block truncate font-medium" translate="no">{f.name}</span>{sub && <span className="block truncate text-xs text-muted-foreground">{sub}</span>}</span>
                 {days > 0 && <span className="ms-auto flex shrink-0 gap-1" aria-hidden="true">{Array.from({ length: QUEST }, (_, i) => <span key={i} className={`h-2 w-2 rounded-full ${i < days ? "bg-primary" : "bg-foreground/15"}`} />)}</span>}
               </button>
-              {hopped && <button disabled={!!hops.cheered[f.id]} onClick={() => hops.cheer(f.id)} className="shrink-0 rounded-full bg-primary/15 px-3 py-1.5 text-sm text-primary disabled:opacity-60">{hops.cheered[f.id] ? "Cheered" : "Cheer"}</button>}
+              {hopped && <CheerBtn done={!!hops.cheered[f.id]} sent={sent[f.id]} open={pick === f.id} onToggle={() => setPick(p => (p === f.id ? null : f.id))} onPick={e => { setSent(s => ({ ...s, [f.id]: e })); setPick(null); hops.cheer(f.id, e); }} />}
             </div>);
         })}
       </div>

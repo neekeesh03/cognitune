@@ -2,19 +2,19 @@ import { useState } from "react";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { suggestSteps } from "@/engine/plan";
-import { Mascot } from "@/components/Mascot";
+import { Rabbit, type Mood } from "@/components/Rabbit";
 import { tr } from "@/i18n";
 
 const EXAMPLES = ["Reply to that email", "Start my essay", "Tidy my desk"];
 
 /** The one thing Lagomo is for: press Start on something you have been putting off. */
-export function StartHero({ suggestion, onStart }: { suggestion: string; onStart: (title: string, firstStep: string) => void }) {
+export function StartHero({ suggestion, onStart, mood = "ready", rabbitLine, quiet }: { suggestion: string; onStart: (title: string, firstStep: string) => void; mood?: Mood; rabbitLine?: string; quiet?: boolean }) {
   const [what, setWhat] = useState(() => { const p = sessionStorage.getItem("lagomo.prefill") || ""; if (p) sessionStorage.removeItem("lagomo.prefill"); return p; }); const [hop, setHop] = useState(false);
   const title = (what.trim() || suggestion).trim();
   const step = title ? suggestSteps(title)[0]?.text ?? "Just open it" : "";
   return (
     <div className="rounded-3xl border border-primary/25 p-7 text-center shadow-[var(--shadow-soft)]" style={{ background: "linear-gradient(160deg, hsl(var(--primary) / .14), hsl(var(--f-grain) / .22))" }}>
-      <div className={`mx-auto mb-2 w-fit ${hop ? "animate-hop" : ""}`}><Mascot size={52} /></div>
+      <div className={`mx-auto mb-2 w-fit ${hop ? "animate-hop" : ""}`}><Rabbit size={52} mood={hop ? "proud" : mood} line={hop ? tr("Here we go.") : rabbitLine} quiet={quiet} /></div>
       <div className="mb-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">Just enough to start</div>
       <h2 className="text-3xl leading-snug">What are you putting off?</h2>
       <input value={what} onChange={e => setWhat(e.target.value)} placeholder={suggestion || "e.g. start my essay"} aria-label="What are you putting off" className="mx-auto mt-4 w-full max-w-md rounded-2xl border border-border bg-secondary/40 px-4 py-3 text-base outline-none focus:ring-2 focus:ring-primary/40" />

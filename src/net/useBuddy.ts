@@ -16,7 +16,9 @@ export function useBuddy(b: Buddy | null | undefined, mine: "waiting" | "working
 }
 
 // The Corner: a room of 2 to 6 friends. Same rule as before: only a state word is shared, never what you are working on.
-export interface RoomMember { id: string; name: string; avatar: AvatarSpec; state: BuddyState }
+export interface RoomMember { id: string; name: string; avatar: AvatarSpec; state: BuddyState; e?: string; et?: number }
+/** One small cheer to everyone in the room. It floats up for a moment on their screens. */
+export const roomCheer = (sid: string, state: "waiting" | "working" | "done", e: string) => api("room-ping", { body: { sid, state, e } }).catch(() => undefined);
 export function useRoom(sid: string | null | undefined, mine: "waiting" | "working" | "done") {
   const [members, setMembers] = useState<RoomMember[]>([]); const me = useRef(mine); me.current = mine;
   useEffect(() => {

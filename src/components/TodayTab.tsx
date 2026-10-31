@@ -13,6 +13,7 @@ import { dkey } from "@/engine/game";
 import { dueDays, dueText, fmtTime, hasResources, type Block } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
 import { StartHero } from "@/components/StartHero";
+import type { Mood } from "@/components/Rabbit";
 import { FriendsHere } from "@/components/FriendsHere";
 import { WeekDots } from "@/components/WeekDots";
 import { StoryCard } from "@/components/StoryCard";
@@ -55,6 +56,11 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   useEffect(() => { localStorage.setItem("lagomo.lastVisit", String(Date.now())); }, []);
   const nowD = new Date(); const monday = nowD.getDay() === 1, first = nowD.getDate() === 1; const freshKey = "lagomo.fresh." + nowD.toISOString().slice(0, 10);
   const [freshGone, setFreshGone] = useState(() => !!localStorage.getItem(freshKey)); const [backGone, setBackGone] = useState(false);
+  const [quietRabbit, setQuietRabbit] = useState(() => !!localStorage.getItem("lagomo.rabbit.quiet")); const toggleRabbit = () => { const v = !quietRabbit; setQuietRabbit(v); v ? localStorage.setItem("lagomo.rabbit.quiet", "1") : localStorage.removeItem("lagomo.rabbit.quiet"); };
+  const cheerNow = hops.lastCheer && Date.now() - hops.lastCheer.ts < 10 * 60e3 ? hops.lastCheer : null; const cheerer = cheerNow ? friends.find(f => f.id === cheerNow.from) : undefined;
+  const hr1 = new Date().getHours();
+  const mood: Mood = cheerNow ? "cheering" : game.g.todayActive ? "proud" : idle >= 2 ? "cosy" : hr1 >= 22 || hr1 < 5 ? "sleepy" : waiting ? "curious" : "ready";
+  const rabbitLine = cheerNow ? `${(cheerer?.name ?? "A friend").split(" ")[0]} sent you ${cheerNow.e}` : mood === "curious" && waiting ? `${waiting.name.split(" ")[0]} started. Join them?` : undefined;
   const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first) && !freshGone ? "fresh" : "";
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
@@ -68,7 +74,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
       <div className="space-y-5 lg:col-span-3">
         {banner && <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-4 text-sm" role="status"><div className="min-w-0 flex-1">{banner === "back" ? <><b>Welcome back, {name.split(" ")[0]}.</b> <span className="text-muted-foreground">Nothing is lost and nothing withered. One tiny start?</span></> : <><b>{first ? "New month." : "New week."}</b> <span className="text-muted-foreground">A fresh page. What will you start first?</span></>}</div><div className="flex shrink-0 items-center gap-2"><button onClick={focusStart} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Pick one</button><button onClick={dismissBanner} className="text-xs text-muted-foreground hover:text-foreground">Not now</button></div></div>}
         {waiting && <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3 text-sm lg:hidden" role="status"><Avatar spec={waiting.avatar} size={36} /><div className="min-w-0 flex-1"><b translate="no">{waiting.name}</b> started {agoMin(hops.hops[waiting.id])}. <span className="text-muted-foreground">Start something small too?</span></div></div>}
-        <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} />
+        <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} mood={mood} rabbitLine={rabbitLine} quiet={quietRabbit} />
         <NameCheck />
       </div>
       <div className="space-y-5 lg:col-span-2">
@@ -114,6 +120,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
             <button onClick={() => go("plan")} className="glass rounded-full px-4 py-2 hover:text-primary">Plan a tiny thing</button>
             <button onClick={() => go("checkin")} className="glass rounded-full px-4 py-2 hover:text-primary">Ready-to-start check</button>
             <button onClick={toggleCalm} className="rounded-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground">{calm ? "Show streak" : "Hide streak"}</button>
+            <button onClick={toggleRabbit} className="rounded-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground">{quietRabbit ? "Rabbit can talk" : "Quiet rabbit"}</button>
           </div>
         {profile.openLoops.length > 0 && (
           <div className="glass rounded-3xl p-5">

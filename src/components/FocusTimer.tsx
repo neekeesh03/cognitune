@@ -10,7 +10,8 @@ import { Celebration } from "@/components/Celebration";
 import { ResourceList } from "@/components/BringAlong";
 import { hasResources, type Block } from "@/engine/plan";
 import { Avatar } from "@/components/Avatar";
-import { useBuddy, useRoom, type Buddy } from "@/net/useBuddy";
+import { useBuddy, useRoom, roomCheer, type Buddy } from "@/net/useBuddy";
+import { CHEER_EMOJI } from "@/store/useHops";
 import type { AvatarSpec } from "@/engine/avatar";
 
 interface Props { color: string; task: string; onStarted: () => void; onClose: () => void; onDone?: () => void; minutes?: number; autoStart?: boolean; buddy?: Buddy & { avatar: AvatarSpec }; hasFriends?: boolean; username?: string; guest?: { onSave: () => void }; extra?: ReactNode; cele?: { sparks?: number; streak?: number; me?: AvatarSpec }; resources?: Block }
@@ -30,6 +31,9 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
   const isRoom = !!buddy?.room;
   const buddyState = useBuddy(isRoom ? undefined : buddy, mineState);
   const members = useRoom(isRoom ? buddy!.sid : undefined, mineState);
+  const seenCheer = useRef<Record<string, number>>({}); const [floats, setFloats] = useState<Record<string, string>>({}); const [mineFloat, setMineFloat] = useState("");
+  useEffect(() => { members.forEach(m => { if (m.e && m.et && m.et > (seenCheer.current[m.id] || 0)) { seenCheer.current[m.id] = m.et; setFloats(f => ({ ...f, [m.id]: m.e! })); window.setTimeout(() => setFloats(f => { const n = { ...f }; delete n[m.id]; return n; }), 2600); } }); }, [members]);
+  const cheerRoom = (e: string) => { if (!isRoom) return; setMineFloat(e); window.setTimeout(() => setMineFloat(""), 2600); roomCheer(buddy!.sid, mineState, e); };
   const roomDone = isRoom && members.length > 0 && members.every(m => m.state === "done");
   const roomLine = (m: { name: string; state: string }) => m.state === "working" ? "working" : m.state === "done" ? "finished" : m.state === "left" ? "stepped away" : m.state === "waiting" ? "here" : "not here yet";
   const first = buddy?.name.split(" ")[0] ?? "";
@@ -54,7 +58,8 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
       <h2 className={`${buddy ? "mb-4" : "mb-8"} max-w-sm px-6 text-center text-3xl`}>{task || "Your task"}</h2>
       {!buddy && !done && <div className="mb-6 flex items-center gap-2 rounded-full bg-secondary/70 px-3 py-1.5 text-sm" role="status"><span className={run ? "animate-pulse" : ""}><Mascot size={28} /></span>Lagomo is here with you</div>}
       {resources && hasResources(resources) && !done && <div className="mb-5 w-full max-w-sm px-6"><div className="mb-1 text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">Bring along</div><ResourceList b={resources} /></div>}
-      {isRoom && <div className="mb-6 flex max-w-sm flex-wrap items-center justify-center gap-2" role="status">{members.length === 0 && <span className="rounded-full bg-secondary/70 px-3 py-1.5 text-sm">Waiting for friends to join the corner...</span>}{members.map(m => <span key={m.id} title={`${m.name}: ${roomLine(m)}`} className="flex items-center gap-1.5 rounded-full bg-secondary/70 px-2.5 py-1 text-xs"><span className={m.state === "working" ? "animate-pulse" : m.state === "none" || m.state === "left" ? "opacity-40" : ""}><Avatar spec={m.avatar} size={26} /></span>{m.name.split(" ")[0]} {roomLine(m)}</span>)}<span className="text-xs text-muted-foreground">· quiet by design</span></div>}
+      {isRoom && <div className="mb-6 flex max-w-sm flex-wrap items-center justify-center gap-2" role="status">{members.length === 0 && <span className="rounded-full bg-secondary/70 px-3 py-1.5 text-sm">Waiting for friends to join the quiet room...</span>}{members.map(m => <span key={m.id} title={`${m.name}: ${roomLine(m)}`} className="flex items-center gap-1.5 rounded-full bg-secondary/70 px-2.5 py-1 text-xs"><span className={`relative ${m.state === "working" ? "animate-pulse" : m.state === "none" || m.state === "left" ? "opacity-40" : ""}`}><Avatar spec={m.avatar} size={26} />{floats[m.id] && <span className="cheer-up pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 text-xl" aria-hidden="true" translate="no">{floats[m.id]}</span>}</span>{m.name.split(" ")[0]} {roomLine(m)}</span>)}<span className="text-xs text-muted-foreground">· quiet by design</span></div>}
+      {isRoom && !done && <div className="relative mb-5 flex items-center gap-1 rounded-full bg-secondary/60 p-1" role="group" aria-label="Send a cheer to the room" translate="no">{CHEER_EMOJI.map(e => <button key={e} onClick={() => cheerRoom(e)} aria-label={`Cheer ${e}`} className="rounded-full px-2 py-1 text-xl leading-none transition hover:scale-125">{e}</button>)}{mineFloat && <span className="cheer-up pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 text-2xl" aria-hidden="true">{mineFloat}</span>}</div>}
       {buddy && !isRoom && <div className="mb-6 flex items-center gap-2 rounded-full bg-secondary/70 px-3 py-1.5 text-sm" role="status"><span className={buddyState === "working" ? "animate-pulse" : ""}><Avatar spec={buddy.avatar} size={28} /></span>{buddyLine}<span className="text-xs text-muted-foreground">· quiet by design</span></div>}
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">

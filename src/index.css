@@ -192,3 +192,8 @@ html[lang="ne"] *, html[lang="si"] *, html[lang="dz"] * { letter-spacing: normal
 html[lang="ne"] body { font-family: "Inter Tight", "Noto Sans Devanagari", "Kohinoor Devanagari", "Mangal", system-ui, sans-serif; }
 html[lang="si"] body { font-family: "Inter Tight", "Noto Sans Sinhala", "Sinhala Sangam MN", "Iskoola Pota", "Nirmala UI", system-ui, sans-serif; }
 html[lang="dz"] body { font-family: "Inter Tight", "Noto Serif Tibetan", "Noto Sans Tibetan", "Kailasa", "Microsoft Himalaya", "Tibetan Machine Uni", system-ui, sans-serif; line-height: 1.7; }
+
+/* A cheer floats up for a moment. Still and visible if you prefer less motion. */
+@keyframes cheerUp { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px) scale(1.25); } }
+.cheer-up { animation: cheerUp 2.4s ease-out forwards; }
+@media (prefers-reduced-motion: reduce) { .cheer-up { animation: none; opacity: 1; } }

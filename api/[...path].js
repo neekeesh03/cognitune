@@ -13,6 +13,8 @@ import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_
 import { verifyGoogleToken, cleanUsernameFrom } from "./_google.js";
 const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
 
+const CHEERS = ["\u{1F44F}", "\u{1F525}", "\u{1F4AA}", "\u{1F331}", "\u2764\uFE0F"]; // clap, fire, muscle, seedling, heart
+const okEmoji = e => (CHEERS.includes(e) ? e : "");
 const lsAt = globalThis.__cogLs || (globalThis.__cogLs = new Map()); // last-seen is saved at most every 5 minutes per person
 const MAX_FILE_B64 = 1_100_000; // about 750 KB of file data
 export { eventsFromIcs };
@@ -205,7 +207,7 @@ export default async function handler(req, res) {
     if (path === "cheer" && method === "POST") {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
       const n = await rd("INCR", `rl:cheer:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:cheer:${me.id}:${dayStr()}`, 172800); if (n > 80) return res.json({ ok: true });
-      await rdp([["LPUSH", "cheer:" + to, JSON.stringify({ from: me.id, ts: Date.now() })], ["LTRIM", "cheer:" + to, 0, 19], ["EXPIRE", "cheer:" + to, 172800]]);
+      await rdp([["LPUSH", "cheer:" + to, JSON.stringify({ from: me.id, ts: Date.now(), e: okEmoji(body.e) || CHEERS[0] })], ["LTRIM", "cheer:" + to, 0, 19], ["EXPIRE", "cheer:" + to, 172800]]);
       await bump("cheer"); await wake(to, "h"); await pushTo(to, l => ({ title: TT(l, "cheered", me.name), body: TT(l, "cheerBody"), tag: "cheer:" + me.id }), { limitKey: `rl:cheerpush:${to}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
     }
     if (path === "room-create" && method === "POST") {
@@ -219,10 +221,12 @@ export default async function handler(req, res) {
       const sid = String(body.sid || "").slice(0, 60), st = ["waiting", "working", "done", "left"].includes(body.state) ? body.state : "waiting";
       if (!sid || !(await rd("SISMEMBER", "rm:" + sid, me.id))) throw err(403, "You are not in this room.");
       await rd("SET", `sp:${sid}:${me.id}`, JSON.stringify({ state: st, ts: Date.now() }), "EX", 40);
+      const em = okEmoji(body.e); if (em) await rd("SET", `spe:${sid}:${me.id}`, JSON.stringify({ e: em, ts: Date.now() }), "EX", 15);
       const ids = ((await rd("SMEMBERS", "rm:" + sid)) || []).filter(i => i !== me.id);
       const us = ids.length ? (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)) : [];
       const sts = ids.length ? await rdp(ids.map(i => ["GET", `sp:${sid}:${i}`])) : [];
-      return res.json({ members: ids.map((i, n) => { const u = us[n]; const v = sts[n] && JSON.parse(sts[n]); return u ? { id: i, name: u.name, avatar: u.avatar, state: v && Date.now() - v.ts < 30000 ? v.state : "none" } : null; }).filter(Boolean) });
+      const ems = ids.length ? await rd("MGET", ...ids.map(i => `spe:${sid}:${i}`)) : [];
+      return res.json({ members: ids.map((i, n) => { const u = us[n]; const v = sts[n] && JSON.parse(sts[n]); const ev = ems[n] && JSON.parse(ems[n]); return u ? { id: i, name: u.name, avatar: u.avatar, state: v && Date.now() - v.ts < 30000 ? v.state : "none", ...(ev && Date.now() - ev.ts < 12000 ? { e: ev.e, et: ev.ts } : {}) } : null; }).filter(Boolean) });
     }
     if (path === "pulse-check" && method === "GET") return res.json({ eligible: await pulseEligible(me) });
     if (path === "pulse" && method === "POST") { if (!(await pulseEligible(me))) throw err(400, "Not right now."); await pulseAnswer(me, body); return res.json({ ok: true }); }
