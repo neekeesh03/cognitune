@@ -1,7 +1,7 @@
 // Account recovery by email. Off until RESEND_API_KEY (and MAIL_FROM) are set in Vercel.
 // People add and confirm a recovery email in Me > Profile. Only confirmed emails can be used to reset a password.
 import crypto from "node:crypto";
-import { rd, rdp, getJ, setJ, err, hashPw, randomToken } from "./_core.js";
+import { rd, rdp, getJ, setJ, err, hashPw, checkPw, randomToken } from "./_core.js";
 
 export const mailOn = () => !!process.env.RESEND_API_KEY;
 const sha = s => crypto.createHash("sha256").update(String(s)).digest("hex");
@@ -18,8 +18,27 @@ async function sendMail(to, subject, text) {
 
 const base = req => process.env.PUBLIC_URL || `https://${req.headers.host}`;
 
+// Recovery code: free, no email needed. Shown once, only a hash is kept. 16 letters and numbers (80 bits).
+const ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const newCode = () => { const b = crypto.randomBytes(16); let c = ""; for (let i = 0; i < 16; i++) c += ABC[b[i] % 32]; return c.match(/.{4}/g).join("-"); };
+const normCode = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
 /** Routes anyone can call (no sign-in). Returns true when it handled the request. */
 export async function recoverPublic(path, method, { body, res, req, ip }) {
+  if (path === "reset-code" && method === "POST") {
+    const hr = Math.floor(Date.now() / 36e5);
+    if ((await rd("INCR", `rl:rk:${ip}:${hr}`)) > 20) throw err(429, "Too many tries. Try again in an hour.");
+    const username = String(body.username || "").toLowerCase().trim(); const pw = String(body.password || "");
+    if (pw.length < 8) throw err(400, "Password needs at least 8 characters.");
+    const bad = () => err(400, "That username and recovery code do not match.");
+    const id = username ? await rd("GET", "u:" + username) : null; if (!id) throw bad();
+    if ((await rd("INCR", `rl:ru2:${id}:${hr}`)) > 6) throw err(429, "Too many tries for this account. Try again in an hour.");
+    const user = await getJ("user:" + id); const code = normCode(body.code);
+    if (!user || !user.pw || !user.rc || code.length !== 16 || sha(code) !== user.rc) throw bad();
+    user.pw = hashPw(pw); user.pwv = (user.pwv || 0) + 1; delete user.pk; delete user.wk; delete user.rc; // the code works once
+    await setJ("user:" + user.id, user);
+    return res.json({ ok: true }), true;
+  }
   if (path === "reset-request" && method === "POST") {
     if (!mailOn()) throw err(503, "Password reset is not turned on yet.");
     const hr = Math.floor(Date.now() / 36e5);
@@ -52,6 +71,13 @@ export async function recoverPublic(path, method, { body, res, req, ip }) {
 
 /** Routes for a signed-in person. */
 export async function recoverAuthed(path, method, { me, body, res }) {
+  if (path === "rcode-status" && method === "GET") return res.json({ has: !!me.rc, google: !me.pw }), true;
+  if (path === "rcode-new" && method === "POST") {
+    if (!me.pw) throw err(400, "This account signs in with Google, so it has no password to reset.");
+    if (!checkPw(String(body.password || ""), me.pw)) throw err(401, "Wrong password.");
+    const code = newCode(); me.rc = sha(normCode(code)); await setJ("user:" + me.id, me);
+    return res.json({ code }), true;
+  }
   if (path === "email-status" && method === "GET") return res.json({ enabled: mailOn(), email: me.email ? maskEmail(me.email) : null, google: !me.pw }), true;
   if (path === "email-set" && method === "POST") {
     if (!mailOn()) throw err(503, "Recovery email is not turned on yet.");

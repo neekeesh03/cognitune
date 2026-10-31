@@ -31,7 +31,7 @@ function Brand({ small }: { small?: boolean }) {
 
 export function AuthScreen({ auth }: { auth: AuthApi }) {
   const [step, setStep] = useState<Step>(() => (resetToken() ? "reset" : "welcome"));
-  const [resetOn, setResetOn] = useState(false); const [who, setWho] = useState(""); const [note, setNote] = useState(""); useEffect(() => { resetEnabled().then(setResetOn); }, []);
+  const [fmode, setFmode] = useState<"code" | "email">("code"); const [rcode, setRcode] = useState(""); const [resetOn, setResetOn] = useState(false); const [who, setWho] = useState(""); const [note, setNote] = useState(""); useEffect(() => { resetEnabled().then(setResetOn); }, []);
   const [name, setName] = useState(""); const [username, setUsername] = useState(""); const [password, setPassword] = useState("");
   const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const crowd = useMemo(() => Array.from({ length: 5 }, () => randomAvatar()), []);
@@ -44,6 +44,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
   const ok = username.trim().length >= 3 && password.length >= (step === "signup" ? 8 : 1);
 
   const sendLink = async () => { setErr(""); setBusy(true); try { await api("reset-request", { body: { who } }); setNote("If that account has a confirmed recovery email, a reset link is on its way. It works for 30 minutes."); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
+  const useCode = async () => { setErr(""); setBusy(true); try { await api("reset-code", { body: { username: who, code: rcode, password } }); setPassword(""); setRcode(""); setNote("Password changed. Sign in with your new one."); setStep("login"); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
   const doReset = async () => { setErr(""); setBusy(true); try { await api("reset-confirm", { body: { token: resetToken(), password } }); window.history.replaceState({}, "", "/"); setPassword(""); setNote("Password changed. Sign in with your new one."); setStep("login"); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
   if (step === "forgot" || step === "reset") return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10">
@@ -51,15 +52,23 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
       {step === "forgot" && <button onClick={() => { setNote(""); to("login"); }} className="mb-4 flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Back</button>}
       <Brand small />
       <h1 className="mt-5 text-center text-4xl leading-tight">{step === "forgot" ? "Forgot your password?" : "Choose a new password"}</h1>
-      <p className="mx-auto mt-2 max-w-xs text-center text-muted-foreground">{step === "forgot" ? "Enter your username or the recovery email on your account. We will email you a link." : "After this, your old private messages cannot be opened, because they were locked with your old password. New messages work as normal."}</p>
+      <p className="mx-auto mt-2 max-w-xs text-center text-muted-foreground">{step === "forgot" ? fmode === "code" || !resetOn ? "Enter your username, your recovery code and a new password." : "Enter your username or the recovery email on your account. We will email you a link." : "After this, your old private messages cannot be opened, because they were locked with your old password. New messages work as normal."}</p>
       <div className="glass mt-6 space-y-3 rounded-3xl p-5">
-        {step === "forgot" ? <>
+        {step === "forgot" ? (fmode === "code" || !resetOn ? <>
+          <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Username" autoCapitalize="none" autoCorrect="off" value={who} onChange={e => setWho(e.target.value)} />
+          <Input className="h-11 rounded-2xl bg-secondary/60 font-mono tracking-wider" placeholder="Recovery code (XXXX-XXXX-XXXX-XXXX)" autoCapitalize="characters" autoCorrect="off" value={rcode} onChange={e => setRcode(e.target.value)} />
+          <Input className="h-11 rounded-2xl bg-secondary/60" type="password" placeholder="New password (8 or more characters)" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && who.trim() && rcode && password.length >= 8 && !busy && useCode()} />
+          {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
+          <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={!who.trim() || rcode.replace(/[^a-z0-9]/gi, "").length < 16 || password.length < 8 || busy} onClick={useCode}>{busy ? "Saving..." : "Reset with my code"}</Button>
+          <p className="text-center text-xs text-muted-foreground">Made a code in Me, then Profile? Use it here. No code? Sign in with Google if you used it, or make a new account.</p>
+          {resetOn && <button type="button" onClick={() => { setErr(""); setFmode("email"); }} className="w-full text-center text-sm text-muted-foreground underline hover:text-foreground">Email me a link instead</button>}
+        </> : <>
           <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Username or email" autoCapitalize="none" autoCorrect="off" value={who} onChange={e => setWho(e.target.value)} onKeyDown={e => e.key === "Enter" && who.trim() && !busy && sendLink()} />
           {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
           {note && <p role="status" className="text-sm text-primary">{note}</p>}
           <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={!who.trim() || busy} onClick={sendLink}>{busy ? "Sending..." : "Send reset link"}</Button>
-          <p className="text-center text-xs text-muted-foreground">No recovery email on your account? Sign in with Google if you used it, or make a new account.</p>
-        </> : <>
+          <button type="button" onClick={() => { setErr(""); setNote(""); setFmode("code"); }} className="w-full text-center text-sm text-muted-foreground underline hover:text-foreground">Use a recovery code instead</button>
+        </>) : <>
           <Input className="h-11 rounded-2xl bg-secondary/60" type="password" placeholder="New password (8 or more characters)" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && password.length >= 8 && !busy && doReset()} />
           {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
           <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={password.length < 8 || busy} onClick={doReset}>{busy ? "Saving..." : "Save new password"}</Button>
@@ -107,7 +116,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
         {step === "login" && note && <p role="status" className="text-sm text-primary">{note}</p>}
         <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={!ok || busy} onClick={go}>{busy ? "One moment..." : step === "signup" ? "Continue" : "Sign in"}</Button>
-        {step === "login" && resetOn && <button type="button" onClick={() => { setNote(""); setErr(""); to("forgot"); }} className="w-full text-center text-sm text-muted-foreground underline hover:text-foreground">Forgot password?</button>}
+        {step === "login" && <button type="button" onClick={() => { setNote(""); setErr(""); to("forgot"); }} className="w-full text-center text-sm text-muted-foreground underline hover:text-foreground">Forgot password?</button>}
         <p className="text-center text-xs text-muted-foreground">{step === "signup" ? "Your journal, plans and rewards stay on this device. Messages to friends are end-to-end encrypted and locked with your password. There is no password reset yet, so remember yours." : <>New here? <button className="underline" onClick={() => to("signup")}>Get started</button></>}</p>
       </div>
       {step === "signup" && <p className="mt-4 text-center text-sm text-muted-foreground">Already have an account? <button className="underline" onClick={() => to("login")}>Sign in</button></p>}

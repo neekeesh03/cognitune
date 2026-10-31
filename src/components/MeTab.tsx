@@ -9,6 +9,7 @@ import { StartsCard } from "@/components/StartsCard";
 import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
 import { RecoveryEmail } from "@/components/RecoveryEmail";
+import { RecoveryCode } from "@/components/RecoveryCode";
 import { JournalTab } from "@/components/JournalTab";
 import type { JournalApi } from "@/store/useJournal";
 import type { AvatarSpec } from "@/engine/avatar";
@@ -97,6 +98,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
             <Button variant="hero" className="w-full rounded-2xl" onClick={saveProfile}>Save profile</Button>
             {pmsg && <p className="text-sm text-muted-foreground" role="status">{pmsg}</p>}
           </div>
+          <RecoveryCode />
           <RecoveryEmail />
           <div className="glass space-y-3 rounded-3xl p-5 text-sm"><Button variant="outline" className="rounded-full" onClick={auth.logout}>Log out</Button>
             <div className="border-t border-border pt-3"><div className="font-semibold">Delete account</div><p className="mb-2 text-muted-foreground">Removes your account, friends list and messages from our server. Your journal and plans on this device are not touched.</p><div className="flex gap-2"><Input type={user.g ? "text" : "password"} className="h-10 rounded-2xl bg-secondary/60" placeholder={user.g ? "Type your username to confirm" : "Your password"} value={delPw} onChange={e => setDelPw(e.target.value)} /><Button variant="outline" className="rounded-full" disabled={!delPw} onClick={deleteAccount}>Delete</Button></div></div></div>

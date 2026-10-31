@@ -12,6 +12,7 @@ import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_
 import { verifyGoogleToken, cleanUsernameFrom } from "./_google.js";
 const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
 
+const lsAt = globalThis.__cogLs || (globalThis.__cogLs = new Map()); // last-seen is saved at most every 5 minutes per person
 const MAX_FILE_B64 = 1_100_000; // about 750 KB of file data
 export { eventsFromIcs };
 
@@ -119,7 +120,7 @@ export default async function handler(req, res) {
     if (!claims) throw err(401, "Please sign in.");
     const me = await getJ("user:" + claims.sub); if (!me || (claims.v || 0) !== (me.pwv || 0)) throw err(401, "Please sign in.");
     if (me.suspended) throw err(403, "This account is paused. Please contact the Lagomo team.");
-    const nowTs = String(Date.now()); await rdp([["SET", "seen:" + me.id, nowTs, "EX", 120], ["SET", "ls:" + me.id, nowTs, "EX", 7 * 86400]]); touchActive(me.id).catch(() => {});
+    const nowTs = String(Date.now()); await rd("SET", "seen:" + me.id, nowTs, "EX", 120); if (!lsAt.get(me.id) || Date.now() - lsAt.get(me.id) > 3e5) { lsAt.set(me.id, Date.now()); await rd("SET", "ls:" + me.id, nowTs, "EX", 7 * 86400); } touchActive(me.id).catch(() => {});
     const isOn = v => !!v && (v === "1" || Date.now() - (+v || 0) < 50000);
 
     if (path === "block-remind" && method === "POST") {
@@ -135,15 +136,15 @@ export default async function handler(req, res) {
     if (path === "me" && method === "GET") {
       const [friendIds, inIds, outIds, blocked] = await rdp([["SMEMBERS", "f:" + me.id], ["SMEMBERS", "fin:" + me.id], ["SMEMBERS", "fout:" + me.id], ["SMEMBERS", "blk:" + me.id]]);
       const ids = [...new Set([...friendIds, ...inIds, ...outIds])];
-      const users = ids.length ? (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(Boolean) : [];
-      const seen = ids.length ? await rdp(ids.map(i => ["GET", "seen:" + i])) : [];
+      const [uRaw, seen, lasts2, reads] = ids.length ? await rdp([["MGET", ...ids.map(i => "user:" + i)], ["MGET", ...ids.map(i => "seen:" + i)], ["MGET", ...ids.map(i => "ls:" + i)], ["MGET", ...ids.map(i => "rd:" + me.id + ":" + i)]]) : [[], [], [], []]; // one command per list, not one per friend
+      const users = uRaw.map(v => v && JSON.parse(v)).filter(Boolean);
       const online = Object.fromEntries(ids.map((i, n) => [i, isOn(seen[n])]));
-      const lasts2 = ids.length ? await rdp(ids.map(i => ["GET", "ls:" + i])) : []; const lastSeen = Object.fromEntries(ids.map((i, n) => [i, +(lasts2[n] || 0) || null]));
+      const lastSeen = Object.fromEntries(ids.map((i, n) => [i, +(lasts2[n] || 0) || null]));
       const byId = Object.fromEntries(users.map(u => [u.id, u]));
-      const reads = friendIds.length ? await rdp(friendIds.map(f => ["GET", `rd:${me.id}:${f}`])) : [];
+      const rdOf = Object.fromEntries(ids.map((i, n) => [i, reads[n]]));
       const lasts = friendIds.length ? await rdp(friendIds.map(f => ["LRANGE", convoKey(me.id, f), -40, -1])) : [];
       const friends = friendIds.filter(i => byId[i]).map((i, n) => {
-        const msgs = (lasts[n] || []).map(m => JSON.parse(m)); const lr = +(reads[n] || 0);
+        const msgs = (lasts[n] || []).map(m => JSON.parse(m)); const lr = +(rdOf[i] || 0);
         const shown = msgs.filter(m => m.kind !== "react" && m.kind !== "pinky_quiet"); const last = shown[shown.length - 1];
         return { ...pub(byId[i]), online: online[i], lastSeen: lastSeen[i], unread: shown.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
       });
@@ -195,7 +196,7 @@ export default async function handler(req, res) {
     }
     if (path === "hops" && method === "GET") {
       const fids = await rd("SMEMBERS", "f:" + me.id); const ids = Array.isArray(fids) ? fids : [];
-      const vals = ids.length ? await rdp(ids.map(i => ["GET", "hop:" + i])) : [];
+      const vals = ids.length ? await rd("MGET", ...ids.map(i => "hop:" + i)) : [];
       const hops = {}; ids.forEach((i, k) => { if (vals[k]) { const v = JSON.parse(vals[k]); if (Date.now() - v.ts < 12 * 36e5) hops[i] = { ts: v.ts }; } });
       const raw = await rd("LRANGE", "cheer:" + me.id, 0, 19); const cheers = (Array.isArray(raw) ? raw : []).map(x => JSON.parse(x)).filter(c => Date.now() - c.ts < 12 * 36e5);
       return res.json({ hops, cheers });
