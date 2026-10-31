@@ -20,6 +20,7 @@ import { NameCheck } from "@/components/NameCheck";
 import { GetStarted } from "@/components/GetStarted";
 import { InstallNudge } from "@/components/InstallNudge";
 import { Avatar } from "@/components/Avatar";
+import { tr } from "@/i18n";
 import { burst, toast } from "@/lib/fx";
 import type { AvatarSpec } from "@/engine/avatar";
 import type { BurrowApi } from "@/store/useBurrow";
@@ -49,7 +50,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const hour = new Date().getHours(); const hello = `${hour < 12 ? "Good morning" : hour < 18 ? "Hi" : "Good evening"}, ${name.split(" ")[0]}.`;
   const hopRecent = friends.filter(f => hops.hops[f.id] && Date.now() - hops.hops[f.id] < 3 * 36e5).sort((a, b) => hops.hops[b.id] - hops.hops[a.id])[0];
   const waiting = hopRecent && !game.g.todayActive ? hopRecent : null; const agoMin = (ts: number) => { const m = Math.max(1, Math.round((Date.now() - ts) / 60000)); return m < 60 ? m + " min ago" : Math.round(m / 60) + " h ago"; };
-  const [more, setMore] = useState(false); const streak = game.g.streak.current;
+  const firstRun = !started && friends.length === 0; const [more, setMore] = useState(false); const streak = game.g.streak.current;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-5 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
       <div className="text-center lg:col-span-5"><p className="mx-auto max-w-md font-display text-3xl leading-snug">{hello}</p>
@@ -62,6 +63,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
         <NameCheck />
       </div>
       <div className="space-y-5 lg:col-span-2">
+        {firstRun && <HowItWorks />}
         <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} onQuestDone={f => { game.earn("buddy"); burst(); toast(`Quest done with ${f.name.split(" ")[0]}`, "You both started on 3 days this week. +12 sparks."); }} />
         {(nextBlock || nextStep || agenda.length > 0) && (
           <div className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 transition hover:scale-[1.01]">
@@ -71,6 +73,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
             </button>
             {nextBlock && onStartBlock ? <button onClick={() => onStartBlock(nextBlock)} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm"><Play className="h-3.5 w-3.5" />Start now</button> : <button onClick={() => go("plan")} className="shrink-0 text-sm text-primary">Open</button>}</div>)}
 
+        {!firstRun && <>
         <WeekDots g={game.g} name={name} avatar={avatar} />
         <button onClick={() => setMore(m => !m)} aria-expanded={more} className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">{more ? "Less" : "More for today"}<ChevronDown className={`h-4 w-4 transition ${more ? "rotate-180" : ""}`} /></button>
         {more && <div className="space-y-5">
@@ -111,8 +114,19 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
         )}
           <InstallNudge started={started} />
         </div>}
-        <StoryCard />
+        </>}
+        {!firstRun && <StoryCard />}
       </div>
     </div>
   );
+}
+
+/** The first thing a new person sees besides Start: what this app is, in three plain steps. */
+function HowItWorks() {
+  const steps = ["Type one thing you are putting off.", "Do a two-minute first step. Just two minutes.", "A friend sees you started and can cheer you on."];
+  return (
+    <div className="glass rounded-3xl p-5">
+      <div className="mb-3 text-sm font-semibold">{tr("How Lagomo works")}</div>
+      <ol className="space-y-3 text-sm">{steps.map((t, i) => <li key={t} className="flex items-start gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 font-semibold text-primary">{i + 1}</span><span className="pt-0.5">{tr(t)}</span></li>)}</ol>
+    </div>);
 }

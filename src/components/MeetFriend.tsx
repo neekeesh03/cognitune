@@ -17,8 +17,8 @@ export function MeetFriend({ auth }: { auth: AuthApi }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-10 text-center">
       <p className="text-sm text-muted-foreground">Nice to meet you, {user.name.split(" ")[0]}.</p>
-      <h1 className="mt-1 text-4xl leading-tight">Meet your friend.</h1>
-      <p className="mt-2 max-w-xs text-muted-foreground">This is how you will show up in Lagomo. Keep it, or make it yours.</p>
+      <h1 className="mt-1 text-4xl leading-tight">Pick your look.</h1>
+      <p className="mt-2 max-w-xs text-muted-foreground">This is how friends see you in Lagomo. Keep it, or make it yours.</p>
       <div className="my-6"><Avatar spec={av} size={150} /></div>
       {!edit ? (
         <div className="w-full space-y-3">

@@ -51,7 +51,7 @@ export function CircleTab(props: Props) {
   if (f && wide) return (
     <div className="mx-auto grid max-w-6xl grid-cols-[300px_minmax(0,1fr)] items-start gap-6">
       <aside className="sticky top-4 space-y-2">
-        <button onClick={() => setOpenId(null)} className="flex items-center gap-1 px-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
+        <button onClick={() => setOpenId(null)} className="flex items-center gap-1 px-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Friends</button>
         <div className="max-h-[calc(100vh-7rem)] space-y-1.5 overflow-y-auto pe-1">
           {people.friends.map(x => (
             <button key={x.id} aria-label={`Chat with ${x.name}`} aria-current={x.id === f.id ? "true" : undefined} onClick={() => setOpenId(x.id)} className={`flex w-full items-center gap-3 rounded-2xl p-3 text-start transition ${x.id === f.id ? "bg-primary/15" : "hover:bg-secondary/60"}`}>
@@ -66,7 +66,7 @@ export function CircleTab(props: Props) {
   if (f) return <Conversation {...props} f={f} back={() => setOpenId(null)} openProfile={openProfile} />;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-5 lg:max-w-4xl">
-      <div className="text-center"><h1 className="text-4xl">Your circle</h1></div>
+      <div className="text-center"><h1 className="text-4xl">Friends</h1></div>
       <div className="glass mx-auto flex w-fit gap-1 rounded-full p-1" role="tablist" aria-label="Circle">
         {(["feed", "friends"] as const).map(v => <button key={v} role="tab" aria-selected={view === v} onClick={() => pick(v)} className={`rounded-full px-5 py-2 text-sm ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>{v === "feed" ? "Feed" : "Friends and chats"}</button>)}
       </div>
@@ -79,11 +79,11 @@ export function CircleTab(props: Props) {
 function Corner({ people, me, startSession }: Pick<Props, "people" | "me" | "startSession">) {
   const [open, setOpen] = useState(false); const [pick, setPick] = useState<string[]>([]); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const toggle = (id: string) => setPick(p => (p.includes(id) ? p.filter(x => x !== id) : p.length < 5 ? [...p, id] : p));
-  const go = async (dur: number) => { setErr(""); setBusy(true); try { const sid = await inviteToRoom(me.id, people.friends.filter(f => pick.includes(f.id)), dur); setOpen(false); setPick([]); startSession("The Corner", dur, { sid, friendId: "", name: "The Corner", avatar: me.avatar, room: true }); } catch (e) { setErr((e as Error).message); } setBusy(false); };
+  const go = async (dur: number) => { setErr(""); setBusy(true); try { const sid = await inviteToRoom(me.id, people.friends.filter(f => pick.includes(f.id)), dur); setOpen(false); setPick([]); startSession("Quiet room", dur, { sid, friendId: "", name: "Quiet room", avatar: me.avatar, room: true }); } catch (e) { setErr((e as Error).message); } setBusy(false); };
   if (people.friends.length === 0) return null;
   return (
     <div className="glass space-y-3 rounded-3xl p-4">
-      <div className="flex items-center justify-between gap-3"><div><div className="text-sm font-semibold">The Corner</div><div className="text-xs text-muted-foreground">Work side by side with up to 5 friends. No cameras, just company.</div></div>{!open && <Button variant="hero" size="sm" className="rounded-full" onClick={() => setOpen(true)}>Open a corner</Button>}</div>
+      <div className="flex items-center justify-between gap-3"><div><div className="text-sm font-semibold">Quiet room</div><div className="text-xs text-muted-foreground">Work side by side with up to 5 friends. No cameras, just company.</div></div>{!open && <Button variant="hero" size="sm" className="rounded-full" onClick={() => setOpen(true)}>Open a quiet room</Button>}</div>
       {open && <>
         <div className="flex flex-wrap gap-2">{people.friends.map(f => <button key={f.id} aria-pressed={pick.includes(f.id)} onClick={() => toggle(f.id)} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${pick.includes(f.id) ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}><Avatar spec={f.avatar} size={22} />{f.name.split(" ")[0]}</button>)}</div>
         <div className="flex flex-wrap items-center gap-2"><span className="text-xs text-muted-foreground">{pick.length === 0 ? "Pick who to invite, then how long." : `${pick.length} invited`}</span>{[15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" disabled={!pick.length || busy} onClick={() => go(d)}>{d} min</Button>)}<Button size="sm" variant="ghost" className="rounded-full" onClick={() => { setOpen(false); setPick([]); }}>Cancel</Button></div>
@@ -188,11 +188,11 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   const send = () => { const t = text.trim(); if (!t) return; setText(""); run(async () => { await chat.sendText(t); game.earn("chat"); }); };
   const onType = (v: string) => { setText(v); window.clearTimeout(tt.current); tt.current = window.setTimeout(chat.sendTyping, 300); };
   const joined = (sid: string) => chat.messages.some(m => m.kind === "session_join" && m.session?.id === sid);
-  const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "The Corner" : f.name, dur, { sid, friendId: f.id, name: room ? "The Corner" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
+  const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "Quiet room" : f.name, dur, { sid, friendId: f.id, name: room ? "Quiet room" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
   return (
     <div className="animate-rise mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-4xl" style={{ minHeight: "calc(100vh - 11rem)" }}>
       <div className="sticky top-0 z-30 -mx-5 -mt-2 border-b border-border/50 bg-background/95 px-5 pb-2 pt-2 lg:mx-0 lg:rounded-b-2xl lg:px-4 shadow-sm backdrop-blur-xl">
-      <button onClick={back} className="flex w-fit items-center gap-1 lg:hidden text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Your circle</button>
+      <button onClick={back} className="flex w-fit items-center gap-1 lg:hidden text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Friends</button>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3"><div className="relative"><button aria-label={`Open ${f.name}'s profile`} onClick={() => openProfile(f.username)}><Avatar spec={f.avatar} size={40} /></button><span className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-background ${chat.online ? "bg-success" : "bg-muted-foreground/50"}`} /></div>
           <div><button onClick={() => openProfile(f.username)} className="text-start"><h1 className="text-xl font-semibold hover:underline">{f.name}</h1></button><div className="text-sm text-muted-foreground">{chat.online ? "Online now" : lastSeenText(f.lastSeen)}</div>{!f.pk && <div className="mt-0.5 text-xs text-accent">{first} has not turned on private messaging yet. They need to sign in once.</div>}</div></div>
@@ -223,7 +223,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
                   <div><div className="flex items-center gap-2 font-medium"><Timer className="h-4 w-4" />{m.text}</div>
                     {!mine && !sj && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => run(async () => { await chat.joinSession(m.session!.id, m.session!.dur, m.session!.room); begin(m.session!.id, m.session!.dur, m.session!.room); })}>Join now</Button>}
                     {!mine && sj && !started.includes(m.session.id) && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => begin(m.session!.id, m.session!.dur, m.session!.room)}>Open timer</Button>}
-                    {mine && m.session.room && <div className="mt-1 text-xs opacity-80">Invite sent. Your corner is open.</div>}
+                    {mine && m.session.room && <div className="mt-1 text-xs opacity-80">Invite sent. Your quiet room is open.</div>}
                     {mine && !m.session.room && !sj && <div className="mt-1 text-xs opacity-80">Waiting for {first} to join...</div>}
                     {mine && !m.session.room && sj && <Button size="sm" variant="outline" className="mt-2 rounded-full bg-transparent" onClick={() => begin(m.session!.id, m.session!.dur)}>{first} joined. Start</Button>}</div>
                 ) : <div className="whitespace-pre-wrap" translate="no" dir="auto">{m.text}</div>}
@@ -238,10 +238,10 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
       </div>
       <>
         <div className="flex flex-wrap gap-2">
-          {!pickDur && <Button size="sm" variant="outline" className="rounded-full" disabled={!!activeP && !pinkyOpen} title={activeP ? "A Pinky is already open with this friend" : undefined} onClick={() => setPinkyOpen(o => !o)}><HeartHandshake className="mr-1 h-3.5 w-3.5" />Pinky</Button>}
+          {!pickDur && <Button size="sm" variant="outline" className="rounded-full" disabled={!!activeP && !pinkyOpen} title={activeP ? "A Pinky is already open with this friend" : undefined} onClick={() => setPinkyOpen(o => !o)}><HeartHandshake className="mr-1 h-3.5 w-3.5" />Promise</Button>}
           {!pickDur && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPlanOpen(o => !o)}><CalendarPlus className="mr-1 h-3.5 w-3.5" />Plan together</Button>}
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
-          {pacts.length > 0 && !pickDur && <Button size="sm" variant="ghost" className="rounded-full text-muted-foreground" onClick={() => setBurrowOpen(o => !o)}>Burrow {rhythm(pacts, now).thisWeek}/{rhythm(pacts, now).goal}</Button>}
+          {pacts.length > 0 && !pickDur && <Button size="sm" variant="ghost" className="rounded-full text-muted-foreground" onClick={() => setBurrowOpen(o => !o)}>Together {rhythm(pacts, now).thisWeek}/{rhythm(pacts, now).goal}</Button>}
         </div>
         {pacts.length > 0 && burrowOpen && <Burrow first={first} kept={keptN} r={rhythm(pacts, now)} />}
         {pinkyOpen && !activeP && <PinkyForm first={first} onClose={() => setPinkyOpen(false)} onSend={pinkyMake} />}

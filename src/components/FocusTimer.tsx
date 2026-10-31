@@ -63,7 +63,7 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="font-display text-7xl tabular-nums">{done ? "Done" : `${mm}:${ss}`}</div>
-          <div className="mt-1 text-xs text-muted-foreground">{done ? (roomDone ? "Everyone in the corner finished." : isRoom ? "You started. That is the hard part." : buddy && buddyState === "done" ? "You both finished." : buddy ? "You started. That is the hard part." : "You started. That is the hard part.") : run ? "Just stay with it" : "Press start"}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{done ? (roomDone ? "Everyone in the quiet room finished." : isRoom ? "You started. That is the hard part." : buddy && buddyState === "done" ? "You both finished." : buddy ? "You started. That is the hard part." : "You started. That is the hard part.") : run ? "Just stay with it" : "Press start"}</div>
         </div>
       </div>
       {!minutes && !run && !done && left === total && (

@@ -14,8 +14,8 @@ export function GetStarted({ username, friends, started }: { username: string; f
   if (started && hasFriend && alertsOn) return null;
   const items: { done: boolean; title: string; sub: string; act?: { label: string; run: () => void } }[] = [
     { done: started, title: "Press Start once", sub: "Two minutes is enough. Use the card above." },
-    { done: hasFriend, title: "Invite a friend", sub: "They will see you hop in. Nothing else.", act: { label: "Send link", run: async () => { const r = await shareInvite(username); track("invite_share"); if (r !== "failed") setInvited(true); setMsg(r === "copied" ? "Link copied. Paste it to a friend." : r === "failed" ? "Could not share. Try again." : ""); } } },
-    { done: alertsOn, title: "Get a tap on the shoulder", sub: "A gentle alert when a friend hops in.", act: al === "blocked" ? undefined : { label: "Turn on", run: async () => { try { setAl(await turnOnAlerts()); track("alerts_prime_yes"); } catch { setMsg("Could not turn alerts on."); } } } },
+    { done: hasFriend, title: "Invite a friend", sub: "They will see you started. Nothing else.", act: { label: "Send link", run: async () => { const r = await shareInvite(username); track("invite_share"); if (r !== "failed") setInvited(true); setMsg(r === "copied" ? "Link copied. Paste it to a friend." : r === "failed" ? "Could not share. Try again." : ""); } } },
+    { done: alertsOn, title: "Get a tap on the shoulder", sub: "A gentle alert when a friend starts.", act: al === "blocked" ? undefined : { label: "Turn on", run: async () => { try { setAl(await turnOnAlerts()); track("alerts_prime_yes"); } catch { setMsg("Could not turn alerts on."); } } } },
   ];
   const left = items.filter(i => !i.done).length;
   return (

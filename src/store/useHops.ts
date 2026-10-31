@@ -17,7 +17,7 @@ export function useHops(friends: Person[], active = true) {
     try {
       const r = await api<HopsResp>("hops");
       const next: Record<string, number> = {}; Object.entries(r.hops).forEach(([id, v]) => { next[id] = v.ts; });
-      if (!first.current) Object.entries(next).forEach(([id, ts]) => { if (ts > (seenHop.current[id] ?? 0)) { const f = fr.current.find(x => x.id === id); if (f) notify({ id: `hop:${id}:${ts}`, tag: "hop:" + id, title: f.name + " hopped in", body: "Your turn? One small start is enough." }); } });
+      if (!first.current) Object.entries(next).forEach(([id, ts]) => { if (ts > (seenHop.current[id] ?? 0)) { const f = fr.current.find(x => x.id === id); if (f) notify({ id: `hop:${id}:${ts}`, tag: "hop:" + id, title: f.name + " started", body: "Your turn? One small start is enough." }); } });
       seenHop.current = next; first.current = false; setHops(next);
       r.cheers.filter(c => c.ts > seenCheer.current).forEach(c => { const f = fr.current.find(x => x.id === c.from); notify({ id: `cheer:${c.from}:${c.ts}`, tag: "cheer:" + c.from, title: (f?.name ?? "A friend") + " cheered you on", body: "Nice hop." }); });
       if (r.cheers.length) seenCheer.current = Math.max(seenCheer.current, ...r.cheers.map(c => c.ts));

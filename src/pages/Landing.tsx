@@ -14,7 +14,7 @@ const STEPS = [
 ];
 const FAQ = [
   ["Is it free?", "Yes, completely. Every part of Lagomo is free. No paid plan, no ads, no card."],
-  ["Do my friends see what I am working on?", "No. They only see that you hopped in. Task names never leave your device."],
+  ["Do my friends see what I am working on?", "No. They only see that you started. Task names never leave your device."],
   ["Who can read my messages?", "Only you and your friend. Chats are end-to-end encrypted and your journal stays on your device."],
   ["What if I stop after a minute?", "That still counts. Lagomo has no streak shame and missed days never count against you."],
 ];
@@ -64,11 +64,11 @@ export default function Landing() {
         <div className="grid items-center gap-8 md:grid-cols-2">
           <div className="text-center md:text-left">
             <h2 className="text-4xl leading-tight">Starting is easier when someone is beside you.</h2>
-            <p className="mt-4 text-lg text-muted-foreground">Hop in, and your friends get one quiet ping. No public feed, no scores, no pressure to reply.</p>
+            <p className="mt-4 text-lg text-muted-foreground">Press Start, and your friends get one quiet ping. No public feed, no scores, no pressure to reply.</p>
           </div>
           <div className="relative mx-auto w-full max-w-sm" aria-hidden="true">
             <div className="glass rounded-3xl p-5">
-              <div className="flex items-center gap-3"><Avatar spec={crowd[0]} size={44} /><div className="text-left"><div className="font-semibold">Mia hopped in</div><div className="text-sm text-muted-foreground">Your turn? One small start is enough.</div></div></div>
+              <div className="flex items-center gap-3"><Avatar spec={crowd[0]} size={44} /><div className="text-left"><div className="font-semibold">Mia started</div><div className="text-sm text-muted-foreground">Your turn? One small start is enough.</div></div></div>
             </div>
             <div className="glass ml-8 mt-3 rounded-3xl p-5">
               <div className="flex items-center gap-3"><Avatar spec={crowd[1]} size={44} /><div className="text-left"><div className="font-semibold">You are in. 2:00</div><div className="text-sm text-muted-foreground">Mia cheered you on</div></div></div>
