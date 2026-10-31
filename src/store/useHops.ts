@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { notify } from "@/lib/notify";
 import { track } from "@/lib/track";
+import { rtLive, WAKE_EVENT } from "@/lib/realtime";
 
 interface HopsResp { hops: Record<string, { ts: number }>; cheers: { from: string; ts: number }[] }
 type Person = { id: string; name: string };
@@ -24,8 +25,10 @@ export function useHops(friends: Person[], active = true) {
   }, []);
   useEffect(() => {
     if (!active) return; poll();
-    const t = setInterval(poll, document.hidden ? 120000 : 45000);
-    return () => clearInterval(t);
+    let n = 0; const t = setInterval(() => { if (!rtLive() || ++n % 4 === 0) poll(); }, document.hidden ? 120000 : 45000);
+    const w = (e: Event) => { const k = (e as CustomEvent).detail; if (k === "h") poll(); };
+    window.addEventListener(WAKE_EVENT, w);
+    return () => { clearInterval(t); window.removeEventListener(WAKE_EVENT, w); };
   }, [active, poll]);
   const hopIn = useCallback(() => { api("hop", { body: {} }).catch(() => undefined); }, []);
   const cheer = useCallback(async (id: string) => { setCheered(c => ({ ...c, [id]: Date.now() })); track("hop_cheer"); try { await api("cheer", { body: { to: id } }); } catch { /* ignore */ } }, []);

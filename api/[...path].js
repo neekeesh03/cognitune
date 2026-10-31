@@ -8,6 +8,7 @@ import { dayStr, lastDays, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, toke
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
 import { recoverPublic, recoverAuthed, mailOn } from "./_recover.js";
+import { wake, rtInfo } from "./_rt.js";
 import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_exp.js";
 import { verifyGoogleToken, cleanUsernameFrom } from "./_google.js";
 const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
@@ -148,7 +149,7 @@ export default async function handler(req, res) {
         const shown = msgs.filter(m => m.kind !== "react" && m.kind !== "pinky_quiet"); const last = shown[shown.length - 1];
         return { ...pub(byId[i]), online: online[i], lastSeen: lastSeen[i], unread: shown.filter(m => m.from === i && m.ts > lr).length, last: last ? { enc: last.enc || null, text: last.enc ? "" : last.kind === "file" ? "Sent a file" : last.kind === "session" ? "Focus invite" : last.text, ts: last.ts, mine: last.from === me.id } : null };
       });
-      const feedTok = await rd("GET", "calu:" + me.id); return res.json({ user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
+      const feedTok = await rd("GET", "calu:" + me.id); return res.json({ rt: rtInfo(me.id), user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
     }
     if (path === "ev" && method === "POST") { const rl = await rd("INCR", `rl:ev:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 120) return res.json({ ok: true }); await track(me, String(body.name || ""), body.props || {}); return res.json({ ok: true }); }
     if (path === "session-ping" && method === "POST") {
@@ -189,7 +190,7 @@ export default async function handler(req, res) {
       const n = await rd("INCR", `rl:hop:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:hop:${me.id}:${dayStr()}`, 172800);
       if (n > 40) return res.json({ ok: true });
       await rd("SET", "hop:" + me.id, JSON.stringify({ ts: Date.now() }), "EX", 129600);
-      await bump("hop");
+      await bump("hop"); { const f2 = (await rd("SMEMBERS", "f:" + me.id)) || []; await Promise.all(f2.map(x => wake(x, "h"))); }
       await rdp([["SADD", "sd:" + me.id, dayStr()], ["EXPIRE", "sd:" + me.id, 45 * 86400], ["SADD", "hd:" + dayStr(), me.id], ["EXPIRE", "hd:" + dayStr(), 3 * 86400]]);
       if (await rd("SETNX", `hopp:${me.id}:${dayStr()}`, "1")) { await rd("EXPIRE", `hopp:${me.id}:${dayStr()}`, 172800); const fids = (await rd("SMEMBERS", "f:" + me.id)) || []; await Promise.all(fids.map(f => pushTo(f, l => ({ title: TT(l, "hopped", me.name), body: TT(l, "hopBody"), tag: "hop:" + me.id }), { limitKey: `rl:hoppush:${f}:${dayStr()}`, limit: 4 }))); }
       return res.json({ ok: true });
@@ -205,7 +206,7 @@ export default async function handler(req, res) {
       const to = String(body.to || ""); if (!(await rd("SISMEMBER", "f:" + me.id, to))) throw err(403, "Not friends yet.");
       const n = await rd("INCR", `rl:cheer:${me.id}:${dayStr()}`); await rd("EXPIRE", `rl:cheer:${me.id}:${dayStr()}`, 172800); if (n > 80) return res.json({ ok: true });
       await rdp([["LPUSH", "cheer:" + to, JSON.stringify({ from: me.id, ts: Date.now() })], ["LTRIM", "cheer:" + to, 0, 19], ["EXPIRE", "cheer:" + to, 172800]]);
-      await bump("cheer"); await pushTo(to, l => ({ title: TT(l, "cheered", me.name), body: TT(l, "cheerBody"), tag: "cheer:" + me.id }), { limitKey: `rl:cheerpush:${to}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
+      await bump("cheer"); await wake(to, "h"); await pushTo(to, l => ({ title: TT(l, "cheered", me.name), body: TT(l, "cheerBody"), tag: "cheer:" + me.id }), { limitKey: `rl:cheerpush:${to}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
     }
     if (path === "room-create" && method === "POST") {
       const sid = String(body.sid || "").slice(0, 60), inv = [...new Set((Array.isArray(body.inv) ? body.inv : []).map(String))].slice(0, 5);
@@ -252,12 +253,12 @@ export default async function handler(req, res) {
       if (await rd("SISMEMBER", "blk:" + tid, me.id)) throw err(404, "No one with that username.");
       if (await rd("SISMEMBER", "f:" + me.id, tid)) return res.json({ ok: true, status: "friends" });
       if (await rd("SISMEMBER", "fout:" + tid, me.id)) { await rdp([["SADD", "f:" + me.id, tid], ["SADD", "f:" + tid, me.id], ["SREM", "fout:" + tid, me.id], ["SREM", "fin:" + me.id, tid]]); return res.json({ ok: true, status: "friends" }); }
-      await rdp([["SADD", "fout:" + me.id, tid], ["SADD", "fin:" + tid, me.id]]); await pushTo(tid, l => ({ title: TT(l, "frTitle"), body: TT(l, "frBody", me.name), tag: "fr:" + me.id }), { limitKey: `rl:frpush:${tid}:${dayStr()}`, limit: 10 }); return res.json({ ok: true, status: "sent" });
+      await rdp([["SADD", "fout:" + me.id, tid], ["SADD", "fin:" + tid, me.id]]); await wake(tid, "f"); await pushTo(tid, l => ({ title: TT(l, "frTitle"), body: TT(l, "frBody", me.name), tag: "fr:" + me.id }), { limitKey: `rl:frpush:${tid}:${dayStr()}`, limit: 10 }); return res.json({ ok: true, status: "sent" });
     }
     if (path === "friend-respond" && method === "POST") {
       const id = String(body.id || ""); if (!(await rd("SISMEMBER", "fin:" + me.id, id))) throw err(404, "No such request.");
       const cmds = [["SREM", "fin:" + me.id, id], ["SREM", "fout:" + id, me.id]]; if (body.accept) cmds.push(["SADD", "f:" + me.id, id], ["SADD", "f:" + id, me.id]);
-      await rdp(cmds); if (body.accept) await pushTo(id, l => ({ title: TT(l, "frOkTitle", me.name), body: TT(l, "frOkBody"), tag: "fr:" + me.id }), { limitKey: `rl:frpush:${id}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
+      await rdp(cmds); if (body.accept) await wake(id, "f"); if (body.accept) await pushTo(id, l => ({ title: TT(l, "frOkTitle", me.name), body: TT(l, "frOkBody"), tag: "fr:" + me.id }), { limitKey: `rl:frpush:${id}:${dayStr()}`, limit: 10 }); return res.json({ ok: true });
     }
     if (path === "friend-remove" && method === "POST") {
       const id = String(body.id || ""); const cmds = [["SREM", "f:" + me.id, id], ["SREM", "f:" + id, me.id], ["SREM", "fout:" + me.id, id], ["SREM", "fin:" + me.id, id]];
@@ -286,9 +287,10 @@ export default async function handler(req, res) {
       const ck = convoKey(me.id, to); await rdp([["RPUSH", ck, JSON.stringify(msg)], ["LTRIM", ck, -300, -1]]);
       bump("msgs");
       if (kind !== "pinky_quiet") await pushTo(to, l => ({ title: me.name, body: kind === "pinky" ? TT(l, "msgPinky") : kind === "file" ? TT(l, "msgFile") : kind === "react" ? TT(l, "msgReact") : kind.startsWith("session") ? TT(l, "msgSession") : kind === "plan" ? TT(l, "msgPlan") : TT(l, "msgText"), tag: "msg:" + me.id }), { limitKey: `rl:msgpush:${to}:${me.id}:${Math.floor(Date.now() / 3e5)}`, limit: 3 });
+      await wake(to, "m");
       return res.json({ message: msg });
     }
-    if (path === "typing" && method === "POST") { await rd("SET", `typ:${me.id}:${String(body.to || "")}`, "1", "EX", 4); return res.json({ ok: true }); }
+    if (path === "typing" && method === "POST") { const tt = String(body.to || ""); await rd("SET", `typ:${me.id}:${tt}`, "1", "EX", 4); if (tt && (await rd("SISMEMBER", "f:" + me.id, tt))) await wake(tt, "t"); return res.json({ ok: true }); }
     if (path === "read" && method === "POST") { await rd("SET", `rd:${me.id}:${String(body.with || "")}`, String(Date.now())); return res.json({ ok: true }); }
     if (path === "file" && method === "GET") {
       const f = await getJ("file:" + String(query.id || "")); if (!f || (f.to !== me.id && f.from !== me.id)) throw err(404, "File not found.");

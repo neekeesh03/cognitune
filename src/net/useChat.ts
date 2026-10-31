@@ -1,5 +1,6 @@
 // One conversation with one friend. Messages live on the server, so they arrive even when your friend is away.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { rtLive, WAKE_EVENT } from "@/lib/realtime";
 import { api } from "@/lib/api";
 import { summary, type PinkyEvt } from "@/engine/pinky";
 import { filePayload } from "@/net/blobs";
@@ -32,10 +33,11 @@ export function useChat(friendId: string | null, meId: string, friendPk: string 
   }, [decode]);
   useEffect(() => {
     if (!friendId) return; let stop = false; let tm = 0; act.current = Date.now();
-    const loop = async () => { if (stop) return; if (!document.hidden) await pull(); const idle = Date.now() - act.current; tm = window.setTimeout(loop, idle < 45e3 ? 3000 : idle < 180e3 ? 6000 : 12000); };
+    const loop = async () => { if (stop) return; if (!document.hidden) await pull(); const idle = Date.now() - act.current; tm = window.setTimeout(loop, rtLive() ? 30000 : idle < 45e3 ? 3000 : idle < 180e3 ? 6000 : 12000); };
     const wake = () => { if (!document.hidden) { act.current = Date.now(); window.clearTimeout(tm); loop(); } };
-    document.addEventListener("visibilitychange", wake); loop();
-    return () => { stop = true; window.clearTimeout(tm); document.removeEventListener("visibilitychange", wake); };
+    const onWake = (e: Event) => { const k = (e as CustomEvent).detail; if (k === "m" || k === "t") { act.current = Date.now(); pull(); } };
+    document.addEventListener("visibilitychange", wake); window.addEventListener(WAKE_EVENT, onWake); loop();
+    return () => { stop = true; window.clearTimeout(tm); document.removeEventListener("visibilitychange", wake); window.removeEventListener(WAKE_EVENT, onWake); };
   }, [friendId, pull]);
 
   const post = useCallback(async (kind: ChatMsg["kind"], content: Content, file?: { data: string }, short = false) => {
