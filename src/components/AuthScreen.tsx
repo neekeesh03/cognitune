@@ -94,7 +94,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         <div className="flex gap-2 pt-2"><Button variant="outline" className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-2xl px-2 leading-tight" onClick={() => to("signup")}>Create account</Button><Button variant="ghost" className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-2xl px-2 leading-tight" onClick={() => to("login")}>I already have an account</Button></div>
       </div>
       <p className="mt-6 text-xs text-muted-foreground">You must be 16 or older. By continuing you agree to the <a href="/terms" className="underline">Terms</a> and <a href="/privacy" className="underline">Privacy</a> notes.</p>
-      <p className="mt-2 text-xs text-muted-foreground">{tr("In India you must be 18 or older.")} <a href="/safety" className="underline">{tr("Safety and reporting")}</a></p>
+      <p className="mt-2 text-xs text-muted-foreground">{tr("You must be 16 or older, or the minimum age where you live if that is higher.")} <a href="/safety" className="underline">{tr("Safety and reporting")}</a></p>
       </div>
     </div>);
 

@@ -74,7 +74,7 @@ export function Safety() {
       <p>Lagomo is for friends who start things together. This page says, in plain words, how we keep it safe, what we cannot do, and what to do if something goes wrong.</p>
       <h2>Who it is for</h2>
       <ul>
-        <li>You must be 16 or older. In India you must be 18 or older.</li>
+        <li>You must be 16 or older, or the minimum age to use an online service where you live if that is higher.</li>
         <li>There is no stranger matching and no public feed of strangers. You only talk to people you add by username or invite link.</li>
         <li>We do not check ages. If we learn someone is under the limit, we close the account.</li>
       </ul>

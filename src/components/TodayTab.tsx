@@ -21,6 +21,8 @@ import { StoryCard } from "@/components/StoryCard";
 import { NameCheck } from "@/components/NameCheck";
 import { GetStarted } from "@/components/GetStarted";
 import { InstallNudge } from "@/components/InstallNudge";
+import { EveningWrap } from "@/components/EveningWrap";
+import { WeeklyLetter } from "@/components/WeeklyLetter";
 import { Avatar } from "@/components/Avatar";
 import { tr } from "@/i18n";
 import { burst, toast } from "@/lib/fx";
@@ -91,9 +93,11 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
 
         {!firstRun && <>
         <InstallNudge started={started} />
+        <EveningWrap j={j} game={game} plan={plan} name={name} />
         <WeekDots g={game.g} name={name} avatar={avatar} />
         <button onClick={() => setMore(m => !m)} aria-expanded={more} className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">{more ? "Less" : "More for today"}<ChevronDown className={`h-4 w-4 transition ${more ? "rotate-180" : ""}`} /></button>
         {more && <div className="space-y-5">
+          <WeeklyLetter j={j} game={game} name={name} />
           <GetStarted username={username} friends={friends.length} started={started} />
           {showDoor && <PinkyDoor friends={friends} when={doorWhen} setWhen={w => { setDoorWhen(w); localStorage.setItem("lagomo.pinky.when", w); }} onHide={() => { localStorage.setItem("lagomo.pinky.hide", dkey()); setDoorHidden(true); }} onPick={id => onPinky!(id)} />}
         {/* The journal prompt stays folded until you want it */}

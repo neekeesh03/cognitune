@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Garden } from "@/components/Garden";
 import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
+import { Wardrobe } from "@/components/Wardrobe";
 import { StartsCard } from "@/components/StartsCard";
 import { api, getToken } from "@/lib/api";
 import type { AuthApi } from "@/store/useAuth";
@@ -53,6 +54,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
           </div>
           </div>
           <div className="space-y-5">
+          <Wardrobe starts={g.counts.started ?? 0} />
           <StartsCard name={user.name} avatar={user.avatar} g={g} />
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="glass rounded-3xl p-4"><Flame className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-primode))" }} /><div className="text-3xl font-semibold">{g.streak.current}</div><div className="text-xs text-muted-foreground">showing-up days</div></div>

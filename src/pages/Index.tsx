@@ -38,6 +38,8 @@ import { StartsCard } from "@/components/StartsCard";
 import { invitedBy, clearInvite } from "@/lib/invite";
 import { suggestSteps, uid } from "@/engine/plan";
 import { dkey } from "@/engine/game";
+import { usePresence } from "@/lib/presence";
+import { wornNow } from "@/components/Rabbit";
 
 const TABS = [
   { id: "today", label: "Today", icon: Home },
@@ -106,6 +108,9 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   }, []);
   const unread = totalUnread(people.friends);
   const hops = useHops(people.friends, true);
+  const friendsStarted = people.friends.filter(f => hops.hops[f.id] && new Date(hops.hops[f.id]).toDateString() === new Date().toDateString()).length;
+  usePresence({ name: user.name, started: game.g.todayActive && game.g.today === dkey(), streak: game.g.streak.current, friendsStarted, wear: wornNow(), starts: game.g.counts.started ?? 0, face: "calm" });
+  useEffect(() => { if (!new URLSearchParams(location.search).has("start")) return; const t = window.setTimeout(() => (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(), 700); return () => window.clearTimeout(t); }, []);
   useEffect(() => { track("app_open", undefined, true); }, []);
   useEffect(() => { const n = ({ circle: "tab_circle", plan: "tab_plan", checkin: "tab_checkin" } as Record<string, "tab_circle" | "tab_plan" | "tab_checkin">)[tab]; if (n) track(n, undefined, true); }, [tab]);
   void uid;
