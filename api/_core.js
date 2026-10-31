@@ -105,6 +105,7 @@ export const bump = (name) => rdp([["INCR", `stat:${name}:${dayStr()}`], ["EXPIR
 export async function deleteAccount(me) {
   const fr = await rd("SMEMBERS", "f:" + me.id); const cmds = [["DEL", "u:" + me.username], ["ZREM", "users:z", me.username], ["DEL", "user:" + me.id], ["DEL", "av:" + avKey(me.avatar)], ["DEL", "f:" + me.id], ["DEL", "fin:" + me.id], ["DEL", "fout:" + me.id], ["DEL", "blk:" + me.id], ["DEL", "cal:" + me.id], ["DEL", "la:" + me.id], ["SREM", "admins", me.id]];
   if (me.gsub) cmds.push(["DEL", "g:" + me.gsub]);
+  if (me.email) cmds.push(["DEL", "em:" + crypto.createHash("sha256").update(me.email).digest("hex")]);
   const tk = await rd("GET", "calu:" + me.id); if (tk) cmds.push(["DEL", "calt:" + tk], ["DEL", "calu:" + me.id]);
   const pids = (await rd("LRANGE", "posts:" + me.id, 0, -1)) || []; pids.forEach(p => cmds.push(["DEL", "post:" + p], ["DEL", "prx:" + p], ["LREM", "posts:team", 0, p])); cmds.push(["DEL", "posts:" + me.id], ["DEL", "sd:" + me.id]);
   fr.forEach(f => cmds.push(["SREM", "f:" + f, me.id], ["DEL", convoKey(me.id, f)])); await rdp(cmds);

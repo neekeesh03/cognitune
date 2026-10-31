@@ -7,6 +7,7 @@ import { pushPublicKey, saveSub, dropSub, pushTo } from "./_push.js";
 import { dayStr, lastDays, rd, rdp, getJ, setJ, err, URL_, IS_PROD, verify, tokenFor, hashPw, checkPw, claimAvatar, okPk, okWk, okSealed, avKey, avValid, avRandom, pub, selfPub, cleanName, convoKey, isAdmin, touchActive, bump, deleteAccount, randomId } from "./_core.js";
 import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
+import { recoverPublic, recoverAuthed, mailOn } from "./_recover.js";
 import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_exp.js";
 import { verifyGoogleToken, cleanUsernameFrom } from "./_google.js";
 const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
@@ -70,7 +71,8 @@ export default async function handler(req, res) {
 
     if (path === "hit" && method === "POST") { await landingHit(ip, body); return res.json({ ok: true }); }
     if (path === "waitlist" && method === "POST") { await joinWaitlist(ip, body); return res.json({ ok: true }); }
-    if (path === "config" && method === "GET") return res.json({ googleClientId: GOOGLE_ID() || null });
+    if (path === "config" && method === "GET") return res.json({ googleClientId: GOOGLE_ID() || null, resetEnabled: mailOn() });
+    if (await recoverPublic(path, method, { body, res, req, ip })) return;
     if (path === "google" && method === "POST") {
       if (!GOOGLE_ID()) throw err(503, "Google sign-in is not set up yet.");
       const rl = await rd("INCR", `rl:g:${ip}:${Math.floor(Date.now() / 6e4)}`); if (rl > 20) throw err(429, "Too many tries. Wait a minute.");
@@ -320,6 +322,7 @@ export default async function handler(req, res) {
       if (me.wk) { if (!okWk(body.wk)) throw err(400, "Missing key update."); me.wk = body.wk; }
       me.pw = hashPw(np); me.pwv = (me.pwv || 0) + 1; await setJ("user:" + me.id, me); return res.json({ token: tokenFor(me) });
     }
+    if (await recoverAuthed(path, method, { me, body, res })) return;
     if (await adminRoute(path, method, { me, body, query, res })) return;
     if (path === "account" && method === "DELETE") {
       if (me.pw) { if (!checkPw(String(body.password || ""), me.pw)) throw err(401, "Wrong password."); }

@@ -22,6 +22,7 @@ export function Privacy() {
       <h2>What we store on our server</h2>
       <ul>
         <li>Your username, display name and avatar.</li>
+        <li>Recovery email (optional): if you add one in Me, we store it only to send you a password reset link and a one-time code. We do not use it for marketing. You can remove it any time, and it is deleted with your account.</li>
         <li>If you sign in with Google: Google's private ID number for your account. We do not store your email address, and we only use your Google name and the start of your email to suggest a username and name. We never see your Google password.</li>
         <li>If you sign in with a password: a scrambled (hashed) version of it, never the password itself.</li>
         <li>Your friends list, friend requests and blocks.</li>

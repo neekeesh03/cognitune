@@ -11,8 +11,11 @@ import { invitedBy } from "@/lib/invite";
 import { LangPicker } from "@/components/LangPicker";
 import { GuestStart } from "@/components/GuestStart";
 import { hasGuestStart } from "@/lib/guest";
+import { resetEnabled } from "@/lib/config";
+import { api } from "@/lib/api";
 
-type Step = "welcome" | "signup" | "login";
+type Step = "welcome" | "signup" | "login" | "forgot" | "reset";
+const resetToken = () => new URLSearchParams(window.location.search).get("reset") || "";
 
 function GoogleButton({ auth, text, onError }: { auth: AuthApi; text: "signup_with" | "signin_with"; onError: (m: string) => void }) {
   const box = useRef<HTMLDivElement>(null); const [id, setId] = useState<string | null>(null);
@@ -27,7 +30,8 @@ function Brand({ small }: { small?: boolean }) {
 }
 
 export function AuthScreen({ auth }: { auth: AuthApi }) {
-  const [step, setStep] = useState<Step>("welcome");
+  const [step, setStep] = useState<Step>(() => (resetToken() ? "reset" : "welcome"));
+  const [resetOn, setResetOn] = useState(false); const [who, setWho] = useState(""); const [note, setNote] = useState(""); useEffect(() => { resetEnabled().then(setResetOn); }, []);
   const [name, setName] = useState(""); const [username, setUsername] = useState(""); const [password, setPassword] = useState("");
   const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
   const crowd = useMemo(() => Array.from({ length: 5 }, () => randomAvatar()), []);
@@ -38,6 +42,30 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
   };
   const to = (s: Step) => { setStep(s); setErr(""); };
   const ok = username.trim().length >= 3 && password.length >= (step === "signup" ? 8 : 1);
+
+  const sendLink = async () => { setErr(""); setBusy(true); try { await api("reset-request", { body: { who } }); setNote("If that account has a confirmed recovery email, a reset link is on its way. It works for 30 minutes."); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
+  const doReset = async () => { setErr(""); setBusy(true); try { await api("reset-confirm", { body: { token: resetToken(), password } }); window.history.replaceState({}, "", "/"); setPassword(""); setNote("Password changed. Sign in with your new one."); setStep("login"); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
+  if (step === "forgot" || step === "reset") return (
+    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10">
+      <div className="fixed end-4 top-4 z-10"><LangPicker /></div>
+      {step === "forgot" && <button onClick={() => { setNote(""); to("login"); }} className="mb-4 flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Back</button>}
+      <Brand small />
+      <h1 className="mt-5 text-center text-4xl leading-tight">{step === "forgot" ? "Forgot your password?" : "Choose a new password"}</h1>
+      <p className="mx-auto mt-2 max-w-xs text-center text-muted-foreground">{step === "forgot" ? "Enter your username or the recovery email on your account. We will email you a link." : "After this, your old private messages cannot be opened, because they were locked with your old password. New messages work as normal."}</p>
+      <div className="glass mt-6 space-y-3 rounded-3xl p-5">
+        {step === "forgot" ? <>
+          <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Username or email" autoCapitalize="none" autoCorrect="off" value={who} onChange={e => setWho(e.target.value)} onKeyDown={e => e.key === "Enter" && who.trim() && !busy && sendLink()} />
+          {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
+          {note && <p role="status" className="text-sm text-primary">{note}</p>}
+          <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={!who.trim() || busy} onClick={sendLink}>{busy ? "Sending..." : "Send reset link"}</Button>
+          <p className="text-center text-xs text-muted-foreground">No recovery email on your account? Sign in with Google if you used it, or make a new account.</p>
+        </> : <>
+          <Input className="h-11 rounded-2xl bg-secondary/60" type="password" placeholder="New password (8 or more characters)" autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && password.length >= 8 && !busy && doReset()} />
+          {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
+          <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={password.length < 8 || busy} onClick={doReset}>{busy ? "Saving..." : "Save new password"}</Button>
+        </>}
+      </div>
+    </div>);
 
   if (step === "welcome") return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-10 text-center lg:grid lg:max-w-6xl lg:grid-cols-2 lg:content-center lg:gap-x-20 lg:gap-y-6 lg:px-10 lg:text-start">
@@ -77,7 +105,9 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         <Input className="h-11 rounded-2xl bg-secondary/60" placeholder="Username (letters, numbers, _)" autoCapitalize="none" autoCorrect="off" value={username} maxLength={20} autoFocus={step === "login"} onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))} />
         <Input className="h-11 rounded-2xl bg-secondary/60" type="password" placeholder={step === "signup" ? "Password (8+ characters)" : "Password"} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && ok && go()} />
         {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
+        {step === "login" && note && <p role="status" className="text-sm text-primary">{note}</p>}
         <Button variant="hero" className="h-12 w-full rounded-2xl text-base" disabled={!ok || busy} onClick={go}>{busy ? "One moment..." : step === "signup" ? "Continue" : "Sign in"}</Button>
+        {step === "login" && resetOn && <button type="button" onClick={() => { setNote(""); setErr(""); to("forgot"); }} className="w-full text-center text-sm text-muted-foreground underline hover:text-foreground">Forgot password?</button>}
         <p className="text-center text-xs text-muted-foreground">{step === "signup" ? "Your journal, plans and rewards stay on this device. Messages to friends are end-to-end encrypted and locked with your password. There is no password reset yet, so remember yours." : <>New here? <button className="underline" onClick={() => to("signup")}>Get started</button></>}</p>
       </div>
       {step === "signup" && <p className="mt-4 text-center text-sm text-muted-foreground">Already have an account? <button className="underline" onClick={() => to("login")}>Sign in</button></p>}
