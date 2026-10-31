@@ -60,8 +60,13 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
     </div>);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10">
+    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-5 py-10 lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-center lg:gap-20 lg:px-10">
       <div className="fixed end-4 top-4 z-10"><LangPicker /></div>
+      <div className="relative hidden h-[460px] lg:block" aria-hidden="true">
+        {[{ l: "4%", t: "52%", s: 84, r: -8 }, { l: "30%", t: "6%", s: 96, r: 6 }, { l: "42%", t: "42%", s: 128, r: 0 }, { l: "74%", t: "10%", s: 92, r: -6 }, { l: "76%", t: "58%", s: 84, r: 9 }].map((p, k) => (
+          <div key={k} className="absolute" style={{ left: p.l, top: p.t, transform: `rotate(${p.r}deg)` }}><div className="animate-float" style={{ animationDelay: `${k * 0.6}s` }}><Avatar spec={crowd[k]} size={p.s} /></div></div>))}
+      </div>
+      <div className="flex w-full flex-col">
       <button onClick={() => to("welcome")} className="mb-4 flex items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Back</button>
       <Brand small />
       <h1 className="mt-5 text-center text-4xl leading-tight">{step === "signup" ? "Create your account" : "Welcome back."}</h1>
@@ -76,5 +81,6 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
         <p className="text-center text-xs text-muted-foreground">{step === "signup" ? "Your journal, plans and rewards stay on this device. Messages to friends are end-to-end encrypted and locked with your password. There is no password reset yet, so remember yours." : <>New here? <button className="underline" onClick={() => to("signup")}>Get started</button></>}</p>
       </div>
       {step === "signup" && <p className="mt-4 text-center text-sm text-muted-foreground">Already have an account? <button className="underline" onClick={() => to("login")}>Sign in</button></p>}
+      </div>
     </div>);
 }
