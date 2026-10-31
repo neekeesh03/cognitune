@@ -20,11 +20,13 @@ import { NameCheck } from "@/components/NameCheck";
 import { GetStarted } from "@/components/GetStarted";
 import { InstallNudge } from "@/components/InstallNudge";
 import { Avatar } from "@/components/Avatar";
+import { burst, toast } from "@/lib/fx";
+import type { AvatarSpec } from "@/engine/avatar";
 import type { BurrowApi } from "@/store/useBurrow";
 import type { Friend } from "@/store/usePeople";
 import type { HopsApi } from "@/store/useHops";
 
-export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBlock, onPinky, friends, hops, burrow, username }: { j: JournalApi; name: string; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; onStartBlock?: (b: Block) => void; onPinky?: (friendId: string) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
+export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onStartBlock, onPinky, friends, hops, burrow, username }: { j: JournalApi; name: string; avatar: AvatarSpec; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; onStartBlock?: (b: Block) => void; onPinky?: (friendId: string) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
   const [calm, setCalm] = useState(() => !!localStorage.getItem("lagomo.calm")); const toggleCalm = () => { const v = !calm; setCalm(v); v ? localStorage.setItem("lagomo.calm", "1") : localStorage.removeItem("lagomo.calm"); };
   const started = !!localStorage.getItem("lagomo.firstStart") || (game.g.counts.started ?? 0) > 0;
   const planned = (() => { try { const p = JSON.parse(localStorage.getItem("lagomo.nexthop") || "null"); return p && Date.now() - p.ts < 36e5 * 30 ? String(p.w).toLowerCase() : ""; } catch { return ""; } })();
@@ -60,7 +62,7 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
         <NameCheck />
       </div>
       <div className="space-y-5 lg:col-span-2">
-        <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} />
+        <FriendsHere friends={friends} hops={hops} burrow={burrow} username={username} onOpen={id => go("circle:" + id)} onQuestDone={f => { game.earn("buddy"); burst(); toast(`Quest done with ${f.name.split(" ")[0]}`, "You both started on 3 days this week. +12 sparks."); }} />
         {(nextBlock || nextStep || agenda.length > 0) && (
           <div className="glass flex w-full items-center justify-between gap-3 rounded-3xl px-5 py-4 transition hover:scale-[1.01]">
             <button onClick={() => go("plan")} className="min-w-0 flex-1 text-start"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Up next</div>
@@ -69,7 +71,7 @@ export function TodayTab({ j, name, go, game, plan, agenda, onStart, onStartBloc
             </button>
             {nextBlock && onStartBlock ? <button onClick={() => onStartBlock(nextBlock)} className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm"><Play className="h-3.5 w-3.5" />Start now</button> : <button onClick={() => go("plan")} className="shrink-0 text-sm text-primary">Open</button>}</div>)}
 
-        <WeekDots g={game.g} />
+        <WeekDots g={game.g} name={name} avatar={avatar} />
         <button onClick={() => setMore(m => !m)} aria-expanded={more} className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">{more ? "Less" : "More for today"}<ChevronDown className={`h-4 w-4 transition ${more ? "rotate-180" : ""}`} /></button>
         {more && <div className="space-y-5">
           <GetStarted username={username} friends={friends.length} started={started} />
