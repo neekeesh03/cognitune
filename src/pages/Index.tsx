@@ -117,12 +117,12 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <AnnounceBanner />
       <PulseCard />
       {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} resources={live.resources} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); if (live.blockId) plan.patchBlock(live.blockId, { done: true }); live.onDoneExtra?.(); }} onClose={() => setLive(null)} />}
-      <header className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 pt-6 sm:px-5">
+      <header className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 pt-6 max-[340px]:px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <Mascot size={32} />
           <Wordmark className="text-xl font-semibold tracking-tight max-[340px]:hidden sm:text-2xl" />
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 max-[340px]:gap-1 sm:gap-2">
           <LofiButton />
           <LangPicker />
           <button aria-label="Switch between light and dark" onClick={() => setDark(!dark)} className="glass rounded-full p-2 text-muted-foreground hover:text-foreground sm:p-2.5">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>

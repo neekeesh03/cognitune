@@ -91,7 +91,7 @@ export function AuthScreen({ auth }: { auth: AuthApi }) {
       <p className="mt-3 max-w-xs text-muted-foreground lg:max-w-md lg:text-lg">Press Start. Get a two-minute first step. A friend sees you begin.</p><p className="mt-2 text-xs text-muted-foreground">Lagomo is lagom (just the right amount) + go. One small start is enough.</p>
       <div className="mt-8 w-full space-y-3 lg:max-w-md">
         <GuestStart onSave={() => to("signup")} />
-        <div className="flex gap-2 pt-2"><Button variant="outline" className="h-11 flex-1 rounded-2xl" onClick={() => to("signup")}>Create account</Button><Button variant="ghost" className="h-11 flex-1 rounded-2xl" onClick={() => to("login")}>I already have an account</Button></div>
+        <div className="flex gap-2 pt-2"><Button variant="outline" className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-2xl px-2 leading-tight" onClick={() => to("signup")}>Create account</Button><Button variant="ghost" className="h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-2xl px-2 leading-tight" onClick={() => to("login")}>I already have an account</Button></div>
       </div>
       <p className="mt-6 text-xs text-muted-foreground">You must be 16 or older. By continuing you agree to the <a href="/terms" className="underline">Terms</a> and <a href="/privacy" className="underline">Privacy</a> notes.</p>
       <p className="mt-2 text-xs text-muted-foreground">{tr("In India you must be 18 or older.")} <a href="/safety" className="underline">{tr("Safety and reporting")}</a></p>
