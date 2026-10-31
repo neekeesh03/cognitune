@@ -9,6 +9,7 @@ import { ROWS8 } from "./entries8";
 import { ROWS9 } from "./entries9";
 import { ROWS10 } from "./entries10";
 import { ROWS11 } from "./entries11";
+import { ROWS12 } from "./entries12";
 import * as SI from "./lang_si";
 import * as DZ from "./lang_dz";
 import * as NE from "./lang_ne";
@@ -32,7 +33,7 @@ const IDX = { zh: 1, fa: 2, id: 3 } as const;
 const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {}, si: SI.DICT, dz: DZ.DICT, ne: NE.DICT };
 const PATS: Record<New, Record<string, string>> = { si: SI.PAT, dz: DZ.PAT, ne: NE.PAT };
 const PID: (string | null)[] = ["greet","planned","plannedShort","buddyWorking","buddyFinished","buddyAway","buddyHere","waitingFor","roomState","activeMin","activeH","activeD","minAgo","hAgo","togetherDays","startedTogether","gettingStarted","moreMinutes","peopleToday","invitedYou","newMessages","hoppedIn","cheered","focusingWith","chatWith","report","remove","messageTo","checkinAvg","fromWriting","firstStep","dAgo",null,"openProfile","joined","plant","planFor","driveFalls","prevPart","nextPart","style","nowFriends","requestSent","sparksEarned","focusedFor","streakDays"];
-for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7, ...ROWS8, ...ROWS9, ...ROWS10, ...ROWS11]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
+for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7, ...ROWS8, ...ROWS9, ...ROWS10, ...ROWS11, ...ROWS12]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -104,6 +105,20 @@ const PATTERNS: Pattern[] = [
   [/^(\d+) days? in a row$/, { zh: m => `连续 ${m[1]} 天`, fa: m => `${m[1]} روز پشت سر هم`, id: m => `${m[1]} hari berturut-turut` }],
 ];
 
+
+/** Sentences with numbers or names in them, for zh, fa, id and ne. Written by AI, not yet checked by native speakers. */
+type Ex = Partial<Record<Lang, (m: RegExpExecArray) => string>>;
+const EXTRA: [RegExp, Ex][] = [
+  [/^Started (\d+) h ago$/, { zh: m => `${m[1]} 小时前开始`, fa: m => `${m[1]} ساعت پیش شروع کرد`, id: m => `Mulai ${m[1]} jam lalu`, ne: m => `${m[1]} घण्टा अघि सुरु गर्नुभयो` }],
+  [/^Started (\d+) min ago$/, { zh: m => `${m[1]} 分钟前开始`, fa: m => `${m[1]} دقیقه پیش شروع کرد`, id: m => `Mulai ${m[1]} menit lalu`, ne: m => `${m[1]} मिनेट अघि सुरु गर्नुभयो` }],
+  [/^(\d+) days? this week\. Every one counts\.$/, { zh: m => `本周 ${m[1]} 天。每一天都算数。`, fa: m => `${m[1]} روز در این هفته. هر کدام حساب می‌شود.`, id: m => `${m[1]} hari minggu ini. Setiap hari berarti.`, ne: m => `यो हप्ता ${m[1]} दिन। हरेक दिन गनिन्छ।` }],
+  [/^(\d+) of (\d+) tiny steps$/, { zh: m => `${m[2]} 个小步骤中的 ${m[1]} 个`, fa: m => `${m[1]} از ${m[2]} قدم کوچک`, id: m => `${m[1]} dari ${m[2]} langkah kecil`, ne: m => `${m[2]} मध्ये ${m[1]} सानो कदम` }],
+  [/^(\d+) sparks to the next stage$/, { zh: m => `距离下一阶段还差 ${m[1]} 火花`, fa: m => `${m[1]} جرقه تا مرحله بعد`, id: m => `${m[1]} percikan lagi ke tahap berikutnya`, ne: m => `अर्को चरणसम्म ${m[1]} स्पार्क` }],
+  [/^(\d+) days? showing up$/, { zh: m => `已出现 ${m[1]} 天`, fa: m => `${m[1]} روز حضور`, id: m => `Hadir ${m[1]} hari`, ne: m => `${m[1]} दिन उपस्थित` }],
+  [/^(\d+) days? started this week$/, { zh: m => `本周开始了 ${m[1]} 天`, fa: m => `${m[1]} روز شروع در این هفته`, id: m => `${m[1]} hari mulai minggu ini`, ne: m => `यो हप्ता ${m[1]} दिन सुरु गरियो` }],
+  [/^Open chat with (.+)$/, { zh: m => `与 ${m[1]} 打开聊天`, fa: m => `باز کردن گفتگو با ${m[1]}`, id: m => `Buka obrolan dengan ${m[1]}`, ne: m => `${m[1]} सँग च्याट खोल्नुहोस्` }],
+];
+
 let lang: Lang = "en";
 export const getLang = () => lang;
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -112,6 +127,7 @@ function lookup(s: string): string | null {
   const k = norm(s); if (!k) return null;
   const hit = entries[lang][k]; if (hit) return hit;
   const L = lang;
+  for (const [re, fns] of EXTRA) { const f = fns[L]; if (!f) continue; const m = re.exec(k); if (m) return f(m); }
   for (let i = 0; i < PATTERNS.length; i++) {
     const [re, fns] = PATTERNS[i]; const m = re.exec(k); if (!m) continue;
     if (L === "si" || L === "dz" || L === "ne") {
