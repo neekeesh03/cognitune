@@ -27,7 +27,7 @@ export function usePeople(active: boolean, onNew?: (f: Friend, delta: number) =>
   }, []);
   useEffect(() => {
     if (!active) return; refresh();
-    const t = setInterval(refresh, document.hidden ? 30000 : 15000); const v = () => { if (!document.hidden) refresh(); };
+    const t = setInterval(refresh, document.hidden ? 120000 : 30000); const v = () => { if (!document.hidden) refresh(); };
     document.addEventListener("visibilitychange", v); return () => { clearInterval(t); document.removeEventListener("visibilitychange", v); };
   }, [active, refresh]);
   const request = useCallback(async (username: string) => { const r = await api<{ status: string }>("friend-request", { body: { username } }); track("invite"); await refresh(); return r.status; }, [refresh]);

@@ -20,19 +20,26 @@ export function useChat(friendId: string | null, meId: string, friendPk: string 
     catch { return { id: m.id, ts: m.ts, from: m.from, kind: "text", text: "This message cannot be opened on this device." }; }
   }, [meId]);
   useEffect(() => { setMessages([]); last.current = 0; setError(""); }, [friendId, friendPk]);
+  const act = useRef(Date.now()); // last time anything happened in this chat; the slower we poll the longer it is quiet
   const pull = useCallback(async () => {
     const id = fid.current; if (!id) return;
     try {
       const r = await api<{ messages: Raw[]; online: boolean; typing: boolean }>(`messages?with=${id}&since=${last.current}`);
-      if (id !== fid.current) return; setOnline(r.online); setTyping(r.typing);
+      if (id !== fid.current) return; setOnline(r.online); setTyping(r.typing); if (r.messages.length || r.typing) act.current = Date.now();
       const got = await Promise.all(r.messages.map(decode));
       if (got.length) { last.current = Math.max(last.current, ...got.map(m => m.ts)); setMessages(prev => { const ids = new Set(prev.map(m => m.id)); const add = got.filter(m => !ids.has(m.id)); return add.length ? [...prev.filter(m => !m.pending), ...add].sort((a, b) => a.ts - b.ts) : prev; }); await api("read", { body: { with: id } }).catch(() => {}); }
     } catch (e) { setError((e as Error).message); }
   }, [decode]);
-  useEffect(() => { if (!friendId) return; pull(); const t = setInterval(() => { if (!document.hidden) pull(); }, 3000); return () => clearInterval(t); }, [friendId, pull]);
+  useEffect(() => {
+    if (!friendId) return; let stop = false; let tm = 0; act.current = Date.now();
+    const loop = async () => { if (stop) return; if (!document.hidden) await pull(); const idle = Date.now() - act.current; tm = window.setTimeout(loop, idle < 45e3 ? 3000 : idle < 180e3 ? 6000 : 12000); };
+    const wake = () => { if (!document.hidden) { act.current = Date.now(); window.clearTimeout(tm); loop(); } };
+    document.addEventListener("visibilitychange", wake); loop();
+    return () => { stop = true; window.clearTimeout(tm); document.removeEventListener("visibilitychange", wake); };
+  }, [friendId, pull]);
 
   const post = useCallback(async (kind: ChatMsg["kind"], content: Content, file?: { data: string }, short = false) => {
-    const id = fid.current; if (!id) return; setError("");
+    const id = fid.current; if (!id) return; setError(""); act.current = Date.now();
     try {
       if (!pkRef.current) throw new Error(NEEDS_PK);
       const enc = await sealJson(meId, pkRef.current, content);

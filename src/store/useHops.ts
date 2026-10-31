@@ -24,7 +24,7 @@ export function useHops(friends: Person[], active = true) {
   }, []);
   useEffect(() => {
     if (!active) return; poll();
-    const t = setInterval(poll, document.hidden ? 40000 : 20000);
+    const t = setInterval(poll, document.hidden ? 120000 : 45000);
     return () => clearInterval(t);
   }, [active, poll]);
   const hopIn = useCallback(() => { api("hop", { body: {} }).catch(() => undefined); }, []);
