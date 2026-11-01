@@ -8,6 +8,7 @@ import { loadLog } from "@/lib/startlog";
 import { proof } from "@/engine/proof";
 import { suggestSteps } from "@/engine/plan";
 import { usePet } from "@/lib/pet";
+import { whatWorked } from "@/engine/memory";
 import { tr } from "@/i18n";
 
 const LABEL: Record<string, string> = { ...Object.fromEntries(TACTICS.map(t => [t.id, t.label])), feeling: "I am feeling something", ready: "I am ready, just give me a step" };
@@ -46,7 +47,8 @@ export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: {
   const pet = usePet(); const [f, setF] = useState<Friction | null>(null); const [mood, setMood] = useState<Mood | null>(null); const [ans, setAns] = useState(""); const [phase, setPhase] = useState<Phase>("pick"); const [cue, setCue] = useState("Now"); const [resetDone, setResetDone] = useState(false);
   const [showAll, setShowAll] = useState(false); const [showMoods, setShowMoods] = useState(false); const [free, setFree] = useState(""); const [rd, setRd] = useState<Awaited<ReturnType<typeof read>> | null>(null); const [line, setLine] = useState("");
   const pr = (() => { try { return proof(loadLog(), loadCoach().events); } catch { return null; } })();
-  const usual = (() => { try { const ev = loadCoach().events; return [...TACTICS].map((t, i) => ({ t, i, n: ev.filter(e => e.friction === t.id).length })).sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.t); } catch { return TACTICS; } })();
+  const worked = (() => { try { return whatWorked(loadLog(), loadCoach().events); } catch { return null; } })();
+  const usual = (() => { try { const ev = loadCoach().events; return [...TACTICS].map((t, i) => ({ t, i, n: ev.filter(e => e.friction === t.id).length + (worked?.friction === t.id ? 1000 : 0) })).sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.t); } catch { return TACTICS; } })();
   const tac = f ? tacticFor(f) : null; const defaultStep = suggestSteps(task)[0]?.text ?? "Open it and look at it";
   const built = tac ? tac.build(task, ans) : { step: defaultStep, line: "Small and real." };
   const choose = (i: Intent) => {
@@ -74,7 +76,7 @@ export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: {
           {rd?.safety && <div className="mt-3 rounded-2xl border border-border bg-secondary/50 p-3 text-sm" role="alert">{SAFETY_TEXT}</div>}
           {rd && !rd.safety && rd.top.length > 0 && rd.top[0].intent !== "other" && <div className="mt-3 rounded-2xl bg-secondary/50 p-3 text-sm"><div className="mb-2 text-muted-foreground">{rd.confident ? "That sounds like:" : "That could be either of these:"}</div><div className="flex flex-col gap-2">{rd.top.slice(0, rd.confident ? 1 : 2).map(t => <button key={t.intent} onClick={() => choose(t.intent)} className="rounded-2xl border border-primary/40 bg-primary/10 px-3 py-2 text-start hover:bg-primary/20">{LABEL[t.intent]}</button>)}</div><div className="mt-2 text-xs text-muted-foreground">Not right? Tap another below.</div></div>}
           {line && !rd?.safety && <p className="mt-3 text-sm text-muted-foreground">{line}</p>}
-          <div className="mt-4 space-y-2">{(showAll ? usual : usual.slice(0, 3)).map(t => <button key={t.id} onClick={() => { setF(t.id); setAns(""); setResetDone(false); setLine(""); setRd(null); setPhase("do"); }} className="w-full rounded-2xl border border-border px-4 py-3 text-start text-[15px] transition hover:border-primary hover:bg-primary/5">{t.label}</button>)}</div>
+          <div className="mt-4 space-y-2">{(showAll ? usual : usual.slice(0, 3)).map(t => <button key={t.id} onClick={() => { setF(t.id); setAns(""); setResetDone(false); setLine(""); setRd(null); setPhase("do"); }} className="flex w-full items-center justify-between gap-2 rounded-2xl border border-border px-4 py-3 text-start text-[15px] transition hover:border-primary hover:bg-primary/5">{t.label}{worked?.friction === t.id && <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] text-primary">{tr("worked before")}</span>}</button>)}</div>
           {!showAll && <button onClick={() => setShowAll(true)} className="mt-2 text-sm text-primary underline-offset-4 hover:underline">{tr("Something else ({n} more)").replace("{n}", String(usual.length - 3))}</button>}
           {!showMoods ? <button onClick={() => setShowMoods(true)} className="mt-3 block text-sm text-muted-foreground underline-offset-4 hover:underline">Or name a feeling instead</button> : <><div className="mt-4 text-sm font-medium">How do you feel right now?</div>
           <div className="mt-2 flex flex-wrap gap-2">{MOODS.map(m => <button key={m.id} onClick={() => { setMood(m.id); setF(null); setResetDone(false); setRd(null); setLine(""); setPhase("mood"); }} className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">{m.label}</button>)}</div></>}

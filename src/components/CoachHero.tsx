@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Rabbit, type Mood } from "@/components/Rabbit";
@@ -7,6 +7,8 @@ import { ARMS } from "@/engine/pattern";
 import { saveCheck } from "@/lib/startlog";
 import type { DriveRead } from "@/lib/useDrive";
 import { usePet } from "@/lib/pet";
+import { WHY, HOW, taskMemory, whatWorked } from "@/engine/memory";
+import { loadCoach } from "@/engine/coach";
 import { tr } from "@/i18n";
 
 const ROWS: { k: "sleep" | "energy" | "dread"; q: string; o: [string, string, string] }[] = [
@@ -20,7 +22,11 @@ export function CoachHero({ suggestion, onStart, onCoach, mood, rabbitLine, quie
   const pet = usePet(); const [intro, setIntro] = useState(() => localStorage.getItem("lagomo.pet.intro") !== "1"); const [hop, setHop] = useState(false); const [openCheck, setOpenCheck] = useState(false); const [pick, setPick] = useState<{ sleep?: number; energy?: number; dread?: number }>({});
   const title = (what.trim() || suggestion).trim(); const step = title ? suggestSteps(title)[0]?.text ?? "Just open it" : "";
   const { pred, check, arm, startedToday, unsure, level, known } = drive;
-  const line = rabbitLine ?? (startedToday ? "You started today. Anything more is a bonus." : known >= 3 && !unsure && pred.why[0] ? pred.why[0] : known >= 3 && !unsure ? level + " today." : title ? "Two minutes. I will stay with you." : "What is one thing you have been putting off?");
+  const events = (() => { try { return loadCoach().events; } catch { return []; } })();
+  const worked = whatWorked(drive.log, events); const mem = title ? taskMemory(drive.log, title) : null;
+  const dayStamp = new Date().toDateString(); const showWorked = !!worked && !title && !startedToday && known >= 3 && localStorage.getItem("lagomo.worked.seen") !== dayStamp;
+  useEffect(() => { if (showWorked) { const t = window.setTimeout(() => localStorage.setItem("lagomo.worked.seen", dayStamp), 8000); return () => window.clearTimeout(t); } }, [showWorked, dayStamp]);
+  const line = rabbitLine ?? (mem && !startedToday ? (mem.count === 1 ? tr("I remember this one. You started it once.") : tr("I remember this one. You have started it {n} times.").replace("{n}", String(mem.count))) : showWorked && worked ? tr("Last time {why}, {how} worked. Want that again?").replace("{why}", tr(WHY[worked.friction])).replace("{how}", tr(HOW[worked.friction])) : null) ?? (startedToday ? "You started today. Anything more is a bonus." : known >= 3 && !unsure && pred.why[0] ? pred.why[0] : known >= 3 && !unsure ? level + " today." : title ? "Two minutes. I will stay with you." : "What is one thing you have been putting off?");
   const choose = (k: "sleep" | "energy" | "dread", v: number) => { const n = { ...pick, [k]: v }; setPick(n); if (n.sleep && n.energy && n.dread) { saveCheck({ sleep: n.sleep, energy: n.energy, dread: n.dread }); setOpenCheck(false); } };
   const idea = arm && arm !== "none" && !startedToday ? ARMS[arm] : null;
   return (
