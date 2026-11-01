@@ -1,22 +1,3 @@
-import { ROWS1 } from "./entries1";
-import { ROWS2 } from "./entries2";
-import { ROWS3 } from "./entries3";
-import { ROWS4 } from "./entries4";
-import { ROWS5 } from "./entries5";
-import { ROWS6 } from "./entries6";
-import { ROWS7 } from "./entries7";
-import { ROWS8 } from "./entries8";
-import { ROWS9 } from "./entries9";
-import { ROWS10 } from "./entries10";
-import { ROWS11 } from "./entries11";
-import { ROWS12 } from "./entries12";
-import { ROWS13 } from "./entries13";
-import { ROWS14, NE14 } from "./entries14";
-import { EXTRA14, ROWS15 } from "./patterns14";
-import * as NE2 from "./lang_ne2";
-import * as SI from "./lang_si";
-import * as DZ from "./lang_dz";
-import * as NE from "./lang_ne";
 
 export type Lang = "en" | "zh" | "fa" | "id" | "si" | "dz" | "ne";
 type Old = "zh" | "fa" | "id"; type New = "si" | "dz" | "ne";
@@ -30,16 +11,18 @@ export const LANGS: { code: Lang; label: string; dir: "ltr" | "rtl" }[] = [
   { code: "dz", label: "རྫོང་ཁ", dir: "ltr" },
 ];
 const KEY = "lagomo.lang";
+type Dicts = typeof import("./dicts");
+let dicts: Dicts | null = null; let loading: Promise<void> | null = null;
+/** Fetch the dictionaries once, then re-translate whatever is on screen. */
+function ensureDicts(): Promise<void> {
+  if (dicts) return Promise.resolve();
+  return (loading ??= import("./dicts").then(m => { dicts = m; refreshAll(); window.dispatchEvent(new Event("lagomo:lang")); }).catch(() => { loading = null; }));
+}
 type Tr = (s: string) => string;
 type Pattern = [RegExp, Record<Old, (m: RegExpExecArray, T: Tr) => string>];
-const IDX = { zh: 1, fa: 2, id: 3 } as const;
 
-const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh: {}, fa: {}, id: {}, si: SI.DICT, dz: DZ.DICT, ne: { ...NE.DICT, ...NE2.DICT, ...NE14 } };
-const PATS: Record<New, Record<string, string>> = { si: SI.PAT, dz: DZ.PAT, ne: NE.PAT };
 const PID: (string | null)[] = ["greet","planned","plannedShort","buddyWorking","buddyFinished","buddyAway","buddyHere","waitingFor","roomState","activeMin","activeH","activeD","minAgo","hAgo","togetherDays","startedTogether","gettingStarted","moreMinutes","peopleToday","invitedYou","newMessages","hoppedIn","cheered","focusingWith","chatWith","report","remove","messageTo","checkinAvg","fromWriting","firstStep","dAgo",null,"openProfile","joined","plant","planFor","driveFalls","prevPart","nextPart","style","nowFriends","requestSent","sparksEarned","focusedFor","streakDays"];
-for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7, ...ROWS8, ...ROWS9, ...ROWS10, ...ROWS11, ...ROWS12, ...ROWS13, ...ROWS14]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
-for (const r of ROWS15) { entries.zh[r[0]] = r[1]; entries.fa[r[0]] = r[2]; entries.id[r[0]] = r[3]; entries.ne[r[0]] = r[4]; }
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const GREET: Record<string, Record<Old, string>> = {
@@ -135,16 +118,16 @@ let lang: Lang = "en";
 export const getLang = () => lang;
 const norm = (s: string) => s.replace(/\s+/g, " ").trim();
 function lookup(s: string): string | null {
-  if (lang === "en") return null;
+  if (lang === "en" || !dicts) return null;
   const k = norm(s); if (!k) return null;
-  const hit = entries[lang][k]; if (hit) return hit;
+  const hit = dicts.entries[lang][k]; if (hit) return hit;
   const L = lang;
   for (const [re, fns] of EXTRA) { const f = fns[L]; if (!f) continue; const m = re.exec(k); if (m) return f(m); }
-  for (const [re, fns] of EXTRA14) { const f = fns[L]; if (!f) continue; const m = re.exec(k); if (m) return f(m, x => lookup(x) ?? x); }
+  for (const [re, fns] of dicts.EXTRA14) { const f = fns[L]; if (!f) continue; const m = re.exec(k); if (m) return f(m, x => lookup(x) ?? x); }
   for (let i = 0; i < PATTERNS.length; i++) {
     const [re, fns] = PATTERNS[i]; const m = re.exec(k); if (!m) continue;
     if (L === "si" || L === "dz" || L === "ne") {
-      const id = PID[i]; const tpl = id ? PATS[L][id] : undefined; if (!tpl) continue;
+      const id = PID[i]; const tpl = id ? dicts.PATS[L][id] : undefined; if (!tpl) continue;
       const T2 = (x: string) => lookup(x) ?? lookup(cap(x)) ?? x;
       return tpl.replace(/([$#])(\d)/g, (_s, kind: string, n: string) => { const v = m[+n] ?? ""; return kind === "#" ? T2(v) : v; });
     }
@@ -215,10 +198,10 @@ function detect(): Lang {
 }
 export function setLang(l: Lang) {
   lang = l; try { localStorage.setItem(KEY, l); } catch { /* ignore */ }
-  setHtml(); refreshAll(); window.dispatchEvent(new Event("lagomo:lang"));
+  setHtml(); refreshAll(); window.dispatchEvent(new Event("lagomo:lang")); if (l !== "en") void ensureDicts();
 }
 export function initI18n() {
-  lang = detect(); setHtml();
+  lang = detect(); setHtml(); if (lang !== "en") void ensureDicts();
   const obs = new MutationObserver(muts => {
     for (const m of muts) {
       if (m.type === "childList") m.addedNodes.forEach(walk);
