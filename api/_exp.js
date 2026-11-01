@@ -89,7 +89,8 @@ export async function experimentStats() {
   const others = users.filter(u => evSets.timer_start.has(u.id) && !rbUsers.has(u.id)); const othersN = others.length; const othersWith = others.filter(u => evSets.together_start.has(u.id) || evSets.invite.has(u.id) || evSets.invite_join.has(u.id)).length;
   const rabbit = { users: rbUsers.size, shownUsers: evSets.rabbit_handoff_show.size, tappedUsers: evSets.rabbit_handoff_tap.size, roamUsers: evSets.rabbit_roam_tap.size, week: { sessions: wk.rabbit_session, shown: wk.rabbit_handoff_show, taps: wk.rabbit_handoff_tap, roam: wk.rabbit_roam_tap }, tapRate7: pct(wk.rabbit_handoff_tap, wk.rabbit_handoff_show), friendActionAmongRabbitUsers: pct(rbWithFriend, rbUsers.size), others: { n: othersN, friendAction: pct(othersWith, othersN) } };
   const wlCount = await rd("LLEN", "wl");
-  const weeklyActive7 = new Set(); for (const d of lastDays(7)) (await rd("SMEMBERS", "dau:" + d)).forEach(x => weeklyActive7.add(x));
+  const liveIds = new Set(users.map(u => u.id)); // deleted accounts leave ids behind in the daily sets, so count only accounts that still exist
+  const weeklyActive7 = new Set(); for (const d of lastDays(7)) (await rd("SMEMBERS", "dau:" + d)).forEach(x => { if (liveIds.has(x)) weeklyActive7.add(x); });
   const gstv = await rdp(["guest_start", "guest_done", "guest_save"].map(k => ["GET", "gst:" + k]));
   return {
     users: total, weeklyActive: weeklyActive7.size,
