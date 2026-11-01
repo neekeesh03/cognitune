@@ -4,6 +4,7 @@
 import { MORE } from "./more.mjs";
 import { ACTS2, CORES2, GRAM2, MORE2 } from "./v2.mjs";
 import { ACTS3, CORES3, GRAM3, MORE3, FILLERS, CONTENT, JOIN } from "./v3.mjs";
+import { CORES4, GRAM4 } from "./v4.mjs";
 import fs from "fs";
 export const ACTS = ["greet","thanks","bye","howru","who_help","unclear","big","boring","scared","tired","distract","overwhelm","low","win","ask_start","ask_plan","ask_break","motivate","joke","chitchat","yes","no","task_say","progress","deadline","other",...ACTS2,...ACTS3];
 export const TASKS = ["essay","report","assignment","homework","thesis","project","presentation","revision","coding task","cv","application","taxes","lab report","reading","chemistry notes","maths problems","email","portfolio","exam prep","dissertation","slides","budget","cover letter","research paper","history essay","visa form","design brief","study plan"];
@@ -43,6 +44,8 @@ for (const k of Object.keys(CORES2)) CORES[k] = [...CORES2[k], ...(MORE2[k] || [
 
 for (const k of Object.keys(CORES3)) CORES[k] = [...CORES3[k], ...(MORE3[k] || [])];
 
+for (const k of Object.keys(CORES4)) CORES[k] = [...CORES[k], ...CORES4[k]];
+
 // Short replies whose meaning depends on what was just said. [text, previous acts -> label, default]
 export const AMBIG = [
   { t: ["lol","haha","hahaha","lmao","that's funny","good one"], map: { joke: "thanks", chitchat: "chitchat" }, def: "other" },
@@ -78,6 +81,7 @@ export const swap = s => s.split(" ").map(w => (SYN[w] && R() < 0.35 ? pick(SYN[
 
 for (const k of Object.keys(GRAM2)) GRAM[k] = GRAM2[k];
 for (const k of Object.keys(GRAM3)) GRAM[k] = GRAM3[k];
+for (const k of Object.keys(GRAM4)) GRAM[k] = GRAM4[k];
 export const OPEN = ["", "", "", "", "hey ", "um ", "honestly ", "ok so ", "hmm ", "idk but ", "ngl ", "so ", "well ", "pip ", "hey pip ", "uh "];
 export const TAIL = ["", "", "", "", " lol", " right now", " today", " tbh", " :(", " ugh", ".", "!", "...", " please", " honestly", " again"];
 
@@ -85,7 +89,8 @@ function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>>
 export const R = rng(1234);
 const pick = a => a[Math.floor(R() * a.length)];
 const typo = s => { if (s.length < 5 || R() > 0.22) return s; const i = 1 + Math.floor(R() * (s.length - 2)); const m = R(); if (m < 0.35) return s.slice(0, i) + s.slice(i + 1); if (m < 0.6) return s.slice(0, i) + s[i] + s[i] + s.slice(i + 1); if (m < 0.85) return s.slice(0, i) + s[i + 1] + s[i] + s.slice(i + 2); return s.replace(/ing\b/g, "in").replace(/you\b/g, "u"); };
-export const render = (core, syn = true) => { const base0 = core.replace(/\{T\}/g, () => pick(TASKS)); const base = syn ? swap(base0) : base0; let s = pick(OPEN) + base + pick(TAIL); if (R() < 0.3) s = s.toLowerCase(); s = typo(s); return s.trim(); };
+const GREETISH = new Set(["hey ", "hey pip ", "pip ", "hi "]);
+export const render = (core, syn = true, plain = false) => { const base0 = core.replace(/\{T\}/g, () => pick(TASKS)); const base = syn ? swap(base0) : base0; let op = plain ? "" : pick(OPEN); if (GREETISH.has(op) && R() < 0.85) op = ""; let s = op + base + pick(TAIL); if (R() < 0.3) s = s.toLowerCase(); s = typo(s); return s.trim(); };
 
 export function build() {
   const train = [], test = [];
@@ -94,7 +99,7 @@ export function build() {
   for (const act of ACTS) {
     const cores = [...CORES[act]]; for (let i = cores.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [cores[i], cores[j]] = [cores[j], cores[i]]; }
     const nt = Math.max(3, Math.round(cores.length * 0.25)); const te = cores.slice(0, nt), tr = cores.slice(nt);
-    for (let k = 0; k < 900; k++) train.push({ x: render(pick(tr)), prev: pick(prevs), y: act });
+    for (let k = 0; k < 900; k++) train.push({ x: render(pick(tr), true, act === "other"), prev: pick(prevs), y: act });
     for (let k = 0; k < 50; k++) test.push({ x: render(pick(te)), prev: pick(prevs), y: act });
     const g = GRAM[act]; if (g) { const bTrain = g.b.filter((_, i) => i % 4 !== 0), bTest = g.b.filter((_, i) => i % 4 === 0); for (let k = 0; k < 800; k++) train.push({ x: render(pick(g.a) + " " + pick(bTrain)), prev: pick(prevs), y: act }); for (let k = 0; k < 30; k++) test.push({ x: render(pick(g.a) + " " + pick(bTest)), prev: pick(prevs), y: act }); }
   }

@@ -7,8 +7,9 @@
 import fs from "fs";
 import { ACTS, build, R } from "./data.mjs";
 import { HAND } from "./hand.mjs";
+import { OOD } from "./ood.mjs";
 
-const B = 16000, D = 32, DC = 16, H1 = 256, H2 = 128, K = ACTS.length, NC = K + 1, IN = D + 2 * DC;
+const B = +(process.env.B || 16000), D = +(process.env.D || 32), DC = 16, H1 = +(process.env.H1 || 256), H2 = +(process.env.H2 || 128), K = ACTS.length, NC = K + 1, IN = D + 2 * DC;
 const P = B * D + 2 * NC * DC + IN * H1 + H1 + H1 * H2 + H2 + H2 * K + K;
 console.log("parameters:", P, "acts:", K);
 const EPOCHS = +(process.env.EPOCHS || 14), BATCH = 64;
@@ -38,11 +39,12 @@ function forward(w, f, p1, p2, drop) {
   const h2 = new Float32Array(H2); for (let j = 0; j < H2; j++) { let z = w.b2[j]; for (let i = 0; i < H1; i++) z += h1[i] * w.W2[i * H2 + j]; h2[j] = Math.tanh(z); }
   const z = new Float32Array(K); let mx = -1e9; for (let k = 0; k < K; k++) { let s = w.b3[k]; for (let j = 0; j < H2; j++) s += h2[j] * w.W3[j * K + k]; z[k] = s; if (s > mx) mx = s; }
   let sum = 0; const p = new Float32Array(K); for (let k = 0; k < K; k++) { p[k] = Math.exp(z[k] - mx); sum += p[k]; } for (let k = 0; k < K; k++) p[k] /= sum;
-  return { inp, h1, h2, p, used, sc, a, c };
+  return { inp, h1, h2, p, z, used, sc, a, c };
 }
 
 const { train, test } = build();
 const enc = e => ({ f: feats(e.x), p1: e.prev, p2: e.prev2 ?? "", y: ACTS.indexOf(e.y), x: e.x });
+const od = OOD.map(([x, prev, y]) => ({ f: feats(x), p1: prev, p2: "", y: ACTS.indexOf(y), x })); if (od.some(e => e.y < 0)) throw new Error("bad act in OOD");
 const tr = train.map(enc), te = test.map(enc), hd = HAND.map(([x, prev, y]) => ({ f: feats(x), p1: prev, p2: "", y: ACTS.indexOf(y), x }));
 if (hd.some(e => e.y < 0)) throw new Error("bad act in HAND");
 console.log("train", tr.length, "test", te.length, "hand", hd.length);
@@ -78,15 +80,24 @@ for (let ep = 0; ep < EPOCHS; ep++) {
   if (ep % 2 === 1 || ep === EPOCHS - 1) { const a = { ep: ep + 1, loss: +(loss / tr.length).toFixed(4), heldOutWording: +accOf(W, te).toFixed(3), handWritten: +accOf(W, hd).toFixed(3), minutes: +((Date.now() - t0) / 6e4).toFixed(1) }; hist.push(a); console.log(JSON.stringify(a)); }
 }
 
+// Buckets that no training message ever used still hold their random starting values. Zero them, so an unfamiliar phrase adds nothing instead of noise (this also makes the file much smaller).
+const usedRows = new Set(); for (const e of [...tr, ...te, ...hd]) for (const [b] of e.f) usedRows.add(b);
+for (let b = 0; b < B; b++) if (!usedRows.has(b)) for (let d = 0; d < D; d++) W.E[b * D + d] = 0;
+console.log("embedding rows used:", usedRows.size, "of", B);
 // int8 quantisation: each matrix keeps one scale; the shipped model is evaluated in its quantised form.
 const quant = {}; const Wq = {};
 for (const k of Object.keys(W)) { const w = W[k]; let mx = 0; for (const v of w) mx = Math.max(mx, Math.abs(v)); const s = mx / 127 || 1; const q = new Int8Array(w.length); for (let i = 0; i < w.length; i++) q[i] = Math.max(-127, Math.min(127, Math.round(w[i] / s))); quant[k] = { s: +s.toPrecision(6), b: Buffer.from(q.buffer).toString("base64") }; Wq[k] = Float32Array.from(q, v => v * s); }
+const softT = (z, T) => { let mx = -1e9; for (const v of z) if (v > mx) mx = v; let sum = 0; const p = Array.from(z, v => { const e = Math.exp((v - mx) / T); sum += e; return e; }); return p.map(v => v / sum); };
+let bestT = 1, bestNll = 1e9; for (let T = 0.8; T <= 4.01; T += 0.1) { let nll = 0; for (const e of te) { const z = forward(Wq, e.f, e.p1, e.p2, 0).z; nll -= Math.log(softT(z, T)[e.y] + 1e-9); } nll /= te.length; if (nll < bestNll) { bestNll = nll; bestT = +T.toFixed(1); } }
+console.log("temperature", bestT);
 const accQ = { held: +accOf(Wq, te).toFixed(3), hand: +accOf(Wq, hd).toFixed(3) }; console.log("quantised accuracy", JSON.stringify(accQ));
 const conf = {}, perClass = Object.fromEntries(ACTS.map(a => [a, { n: 0, ok: 0 }])); const wrong = [];
-const guess = (e) => { const p = forward(Wq, e.f, e.p1, e.p2, 0).p; let b = 0; for (let k = 1; k < K; k++) if (p[k] > p[b]) b = k; return [b, p[b]]; };
+const guess = (e) => { const p = softT(forward(Wq, e.f, e.p1, e.p2, 0).z, bestT); let b = 0; for (let k = 1; k < K; k++) if (p[k] > p[b]) b = k; return [b, p[b]]; };
 for (const e of [...te, ...hd]) { const [b, pb] = guess(e); perClass[ACTS[e.y]].n++; if (b === e.y) perClass[ACTS[e.y]].ok++; else { const key = ACTS[e.y] + "->" + ACTS[b]; conf[key] = (conf[key] || 0) + 1; if (hd.includes(e)) wrong.push([e.x, e.p1, ACTS[e.y], ACTS[b], +pb.toFixed(2)]); } }
 const cal = th => { let n = 0, ok = 0; const all = [...te, ...hd]; for (const e of all) { const [b, pb] = guess(e); if (pb >= th) { n++; if (b === e.y) ok++; } } return { threshold: th, answered: +(n / all.length).toFixed(3), accuracyWhenAnswering: +(ok / Math.max(1, n)).toFixed(3) }; };
-const model = { v: 3, labels: ACTS, B, D, DC, H1, H2, K, NC, params: P, threshold: 0.45, q: quant };
-fs.writeFileSync(new URL("../../src/engine/talkModel.json", import.meta.url), JSON.stringify(model));
-fs.writeFileSync(new URL("./report.json", import.meta.url), JSON.stringify({ parameters: P, trainExamples: tr.length, heldOutWordingExamples: te.length, handWrittenExamples: hd.length, history: hist, quantisedAccuracy: accQ, weakestActs: Object.entries(perClass).map(([a, v]) => [a, +(v.ok / Math.max(1, v.n)).toFixed(2)]).sort((x, y) => x[1] - y[1]).slice(0, 8), topConfusions: Object.entries(conf).sort((a, b) => b[1] - a[1]).slice(0, 10), calibration: [0.4, 0.5, 0.6, 0.7].map(cal), handWrittenMisses: wrong.slice(0, 30) }, null, 2));
-console.log("done", JSON.stringify(accQ), "model bytes", fs.statSync(new URL("../../src/engine/talkModel.json", import.meta.url)).size);
+const oodRows = od.map(e => { const [b, pb] = guess(e); return [e.x, ACTS[e.y], ACTS[b], +pb.toFixed(2), b === e.y]; });
+const oodAcc = +(oodRows.filter(r => r[4]).length / oodRows.length).toFixed(3); const oodConfidentWrong = oodRows.filter(r => !r[4] && r[3] >= 0.6).length; console.log("OOD challenge accuracy", oodAcc, "confident-wrong", oodConfidentWrong);
+const model = { v: 3, T: bestT, usedRows: usedRows.size, labels: ACTS, B, D, DC, H1, H2, K, NC, params: P, threshold: 0.45, q: quant };
+const OUT = process.env.OUT ? new URL(process.env.OUT, import.meta.url) : new URL("../../src/engine/talkModel.json", import.meta.url); fs.mkdirSync(new URL(".", OUT), { recursive: true }); fs.writeFileSync(OUT, JSON.stringify(model));
+fs.writeFileSync(process.env.REPORT ? new URL(process.env.REPORT, import.meta.url) : new URL("./report.json", import.meta.url), JSON.stringify({ parameters: P, temperature: bestT, oodAccuracy: oodAcc, oodConfidentWrong, oodMisses: oodRows.filter(r => !r[4]), trainExamples: tr.length, heldOutWordingExamples: te.length, handWrittenExamples: hd.length, history: hist, quantisedAccuracy: accQ, weakestActs: Object.entries(perClass).map(([a, v]) => [a, +(v.ok / Math.max(1, v.n)).toFixed(2)]).sort((x, y) => x[1] - y[1]).slice(0, 8), topConfusions: Object.entries(conf).sort((a, b) => b[1] - a[1]).slice(0, 10), calibration: [0.4, 0.5, 0.6, 0.7].map(cal), handWrittenMisses: wrong.slice(0, 30) }, null, 2));
+console.log("done", JSON.stringify(accQ), "model bytes", fs.statSync(OUT).size);

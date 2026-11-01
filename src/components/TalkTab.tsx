@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Send, Trash2 } from "lucide-react";
 import { RabbitFace } from "@/components/RabbitFace";
 import { usePet } from "@/lib/pet";
-import { emptyState, loadChat, respond, saveChat, setMyName, type Chip, type Ctx, type Msg, type TalkState } from "@/engine/talk";
+import { emptyState, loadChat, respond, saveChat, setMyName, upgradeTalk, type Chip, type Ctx, type Msg, type TalkState } from "@/engine/talk";
 import { tr } from "@/i18n";
 import { markNotice, noticeSeen, setSharing, sharingOn, shareTurn } from "@/lib/talkshare";
 
@@ -13,17 +13,27 @@ export interface TalkProps { myName: string; ctx: Ctx; onStart: (title: string, 
 export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: TalkProps) {
   const pet = usePet(); setMyName(myName);
   const init = useRef(loadChat()); const [msgs, setMsgs] = useState<Msg[]>(init.current.msgs); const [st, setSt] = useState<TalkState>(init.current.state);
-  const [text, setText] = useState(""); const [notice, setNotice] = useState(() => !noticeSeen() && sharingOn()); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
-  useEffect(() => { saveChat(msgs, st); }, [msgs, st]);
+  const [text, setText] = useState(""); const stRef = useRef<TalkState>(init.current.state); const queue = useRef<{ t: string; via: "typed" | "chip" }[]>([]); const running = useRef(false); const [notice, setNotice] = useState(() => !noticeSeen() && sharingOn()); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
+  useEffect(() => { saveChat(msgs, st); stRef.current = st; }, [msgs, st]);
   useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [msgs, busy]);
-  const send = async (raw: string, via: "typed" | "chip" = "typed") => {
-    const t = raw.trim().slice(0, 300); if (!t || busy) return; setText(""); setBusy(true);
-    const mine: Msg = { id: uid(), from: "me", text: t, ts: Date.now() }; setMsgs(m => [...m.map(x => ({ ...x, chips: undefined })), mine]);
+  const drain = async () => {
+    if (running.current) return; running.current = true; setBusy(true);
     try {
-      const turn = await respond(t, st, ctx); shareTurn({ x: t, prev: st.last, act: turn.act, conf: turn.conf, via, unsure: turn.unsure }, { sensitive: turn.sensitive, names: [myName, pet.name] }); await new Promise(r => setTimeout(r, 350 + Math.min(700, turn.reply.length * 6)));
-      setSt(turn.state); setMsgs(m => [...m, { id: uid(), from: "pip", text: turn.reply, ts: Date.now(), chips: turn.chips, act: turn.act, conf: turn.conf }]);
-    } catch { setMsgs(m => [...m, { id: uid(), from: "pip", text: "Something went wrong on my side. Try again in a moment.", ts: Date.now() }]); }
-    finally { setBusy(false); }
+      while (queue.current.length) {
+        const { t, via } = queue.current.shift()!; const st0 = stRef.current;
+        try {
+          const turn = await respond(t, st0, ctx); stRef.current = turn.state;
+          shareTurn({ x: t, prev: st0.last, act: turn.act, conf: turn.conf, via, unsure: turn.unsure }, { sensitive: turn.sensitive, names: [myName, pet.name] });
+          await new Promise(r => setTimeout(r, 300 + Math.min(600, turn.reply.length * 5)));
+          setSt(turn.state); setMsgs(m => [...m, { id: uid(), from: "pip", text: turn.reply, ts: Date.now(), chips: turn.chips, act: turn.act, conf: turn.conf }]);
+        } catch { setMsgs(m => [...m, { id: uid(), from: "pip", text: "Something went wrong on my side. Try again in a moment.", ts: Date.now() }]); }
+      }
+    } finally { running.current = false; setBusy(false); }
+  };
+  // Messages typed while the rabbit is still replying are queued, never dropped.
+  const send = (raw: string, via: "typed" | "chip" = "typed") => {
+    const t = raw.trim().slice(0, 300); if (!t) return; setText(""); window.setTimeout(() => void upgradeTalk(), 4000); // they use Talk, so fetch the larger model quietly
+    queue.current.push({ t, via }); setMsgs(m => [...m.map(x => ({ ...x, chips: undefined })), { id: uid(), from: "me", text: t, ts: Date.now() }]); void drain();
   };
   const chip = (c: Chip) => {
     if (c.act === "start") { onStart(c.task ?? "Something small", c.step ?? "Open it and look at it for two minutes."); return; }
@@ -57,7 +67,7 @@ export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: Tal
       </div>
       <form onSubmit={e => { e.preventDefault(); void send(text); }} className="glass mt-2 flex items-center gap-2 rounded-full py-1.5 pe-1.5 ps-4">
         <input value={text} onChange={e => setText(e.target.value)} maxLength={300} placeholder="Say something" aria-label="Message" className="h-10 min-w-0 flex-1 bg-transparent text-[15px] outline-none" />
-        <button type="submit" disabled={!text.trim() || busy} aria-label="Send" className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"><Send className="h-4 w-4" /></button>
+        <button type="submit" disabled={!text.trim()} aria-label="Send" className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"><Send className="h-4 w-4" /></button>
       </form>
     </div>);
 }

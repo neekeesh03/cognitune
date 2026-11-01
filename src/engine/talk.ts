@@ -16,16 +16,40 @@ export interface Chip { label: string; send?: string; act?: "start" | "coach" | 
 export interface Msg { id: string; from: "me" | "pip"; text: string; ts: number; chips?: Chip[]; act?: Act; conf?: number }
 export interface TalkState { last: Act | ""; task?: string; awaiting?: Act | null; pending?: "start" | "plan" | null; lowRun: number; used: Record<string, number>; turns: number; unsureRun: number; lastReply?: string; lastStep?: string; prev2?: Act | ""; mode?: "listen" | null; listenTurns?: number }
 export const emptyState = (): TalkState => ({ last: "", lowRun: 0, used: {}, turns: 0, unsureRun: 0 });
-export const MODEL_PARAMS = 566881;
+export const MODEL_PARAMS = 566881; // the small model; the large one has 10,240,097
 
 interface QMat { s: number; b: string }
-interface RawModel { labels: Act[]; B: number; D: number; DC: number; H1: number; H2: number; K: number; NC: number; threshold: number; params: number; q: Record<"E" | "C1" | "C2" | "W1" | "b1" | "W2" | "b2" | "W3" | "b3", QMat> }
-interface Model extends Omit<RawModel, "q"> { w: Record<string, Float32Array> }
-const unq = (m: QMat) => { const bin = atob(m.b); const out = new Float32Array(bin.length); for (let i = 0; i < bin.length; i++) { let v = bin.charCodeAt(i); if (v > 127) v -= 256; out[i] = v * m.s; } return out; };
+interface RawModel { T?: number; labels: Act[]; B: number; D: number; DC: number; H1: number; H2: number; K: number; NC: number; threshold: number; params: number; q: Record<"E" | "C1" | "C2" | "W1" | "b1" | "W2" | "b2" | "W3" | "b3", QMat> }
+/** E stays int8 (with one scale) so a 10-million-parameter table never has to be expanded in memory. */
+interface Model { T?: number; labels: Act[]; B: number; D: number; DC: number; H1: number; H2: number; K: number; NC: number; threshold: number; params: number; E: Int8Array; eS: number; w: Record<string, Float32Array> }
+const b64 = (m: QMat) => { const bin = atob(m.b); const out = new Int8Array(bin.length); for (let i = 0; i < bin.length; i++) { const v = bin.charCodeAt(i); out[i] = v > 127 ? v - 256 : v; } return out; };
 let cache: Promise<Model> | null = null;
-const load = () => (cache ??= import("@/engine/talkModel.json").then(x => { const r = (x.default ?? x) as unknown as RawModel; const w: Record<string, Float32Array> = {}; for (const k of Object.keys(r.q) as (keyof RawModel["q"])[]) w[k] = unq(r.q[k]); return { ...r, w } as Model; }));
+const load = () => (cache ??= import("@/engine/talkModel.json").then(x => { const r = (x.default ?? x) as unknown as RawModel; const w: Record<string, Float32Array> = {}; for (const k of Object.keys(r.q) as (keyof RawModel["q"])[]) { if (k === "E") continue; const i8 = b64(r.q[k]); const f = new Float32Array(i8.length); for (let i = 0; i < i8.length; i++) f[i] = i8[i] * r.q[k].s; w[k] = f; } const { q, ...rest } = r; return { ...rest, E: b64(q.E), eS: q.E.s, w } as Model; }));
 
-/** Fetch and decode the model quietly in the background, so the first message in Talk is instant. Skips slow or data-saver connections. */
+// The large model (about 10 million parameters) is a separate file. It is fetched in the background only after the person has
+// actually used Talk, on a fast, non-metered connection, and kept by the browser. Until then the small model answers.
+let big: Model | null = null; let bigTry: Promise<void> | null = null;
+export const BIG_URL = "/talk/lagomo-talk-10m-v1.bin";
+function parseBig(buf: ArrayBuffer): Model {
+  const dv = new DataView(buf); const hl = dv.getUint32(0, true); const h = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl)));
+  let off = 4 + hl; off = (off + 3) & ~3; const nRows = h.rows as number;
+  const idx = new Uint32Array(buf, off, nRows); off += nRows * 4;
+  const E = new Int8Array(h.B * h.D); const rows = new Int8Array(buf, off, nRows * h.D); off += nRows * h.D;
+  for (let r = 0; r < nRows; r++) E.set(rows.subarray(r * h.D, (r + 1) * h.D), idx[r] * h.D);
+  const w: Record<string, Float32Array> = {};
+  for (const k of ["C1", "C2", "W1", "b1", "W2", "b2", "W3", "b3"]) { const n = h.sizes[k] as number; const i8 = new Int8Array(buf, off, n); off += n; const f = new Float32Array(n); const s = h.scales[k] as number; for (let i = 0; i < n; i++) f[i] = i8[i] * s; w[k] = f; }
+  return { T: h.T, labels: h.labels, B: h.B, D: h.D, DC: h.DC, H1: h.H1, H2: h.H2, K: h.K, NC: h.NC, threshold: h.threshold, params: h.params, E, eS: h.scales.E, w };
+}
+/** Start the quiet upgrade to the large model, if this device and connection suit it. Safe to call many times. */
+export function upgradeTalk(): Promise<void> {
+  if (big || bigTry) return bigTry ?? Promise.resolve();
+  try { const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string; type?: string }; deviceMemory?: number }); const n = c.connection; if (n?.saveData || (n?.effectiveType && n.effectiveType !== "4g") || n?.type === "cellular" || (c.deviceMemory ?? 4) < 4) return Promise.resolve(); } catch { /* assume fine */ }
+  bigTry = fetch(BIG_URL).then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error("no big model")))).then(b => { big = parseBig(b); }).catch(() => { bigTry = null; });
+  return bigTry;
+}
+export const usingBigModel = () => !!big;
+
+/** Fetch and decode the small model quietly in the background, so the first message in Talk is instant. Skips slow or data-saver connections. */
 export function preloadTalk() {
   try { const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection; if (c?.saveData || /(^|-)2g$/.test(c?.effectiveType ?? "")) return; } catch { /* ignore */ }
   void load().catch(() => { cache = null; });
@@ -44,14 +68,14 @@ function feats(text: string, B: number): [number, number][] {
 export interface Reading { top: { act: Act; p: number }[]; confident: boolean }
 /** Run the network. `prev` and `prev2` are the acts of the last two turns. */
 export async function readAct(text: string, prev: Act | "", prev2: Act | "" = ""): Promise<Reading> {
-  const m = await load(); const { B, D, DC, H1, H2, K } = m; const w = m.w; const f = feats(text, B); const IN = D + 2 * DC;
-  const x = new Float32Array(D); for (const [b, sg] of f) for (let d = 0; d < D; d++) x[d] += sg * w.E[b * D + d];
+  const small = await load(); const m = big ?? small; const { B, D, DC, H1, H2, K } = m; const w = m.w; const f = feats(text, B); const IN = D + 2 * DC;
+  const x = new Float32Array(D); for (const [b, sg] of f) for (let d = 0; d < D; d++) x[d] += sg * m.E[b * D + d] * m.eS;
   const sc = f.length ? 1 / Math.sqrt(f.length) : 0; const a = prev === "" ? K : m.labels.indexOf(prev), c = prev2 === "" ? K : m.labels.indexOf(prev2);
   const inp = new Float32Array(IN); for (let d = 0; d < D; d++) inp[d] = x[d] * sc; for (let d = 0; d < DC; d++) { inp[D + d] = w.C1[a * DC + d]; inp[D + DC + d] = w.C2[c * DC + d]; }
   const h1 = new Float32Array(H1); for (let j = 0; j < H1; j++) { let z = w.b1[j]; for (let i = 0; i < IN; i++) z += inp[i] * w.W1[i * H1 + j]; h1[j] = Math.tanh(z); }
   const h2 = new Float32Array(H2); for (let j = 0; j < H2; j++) { let z = w.b2[j]; for (let i = 0; i < H1; i++) z += h1[i] * w.W2[i * H2 + j]; h2[j] = Math.tanh(z); }
   const z = new Float32Array(K); for (let k = 0; k < K; k++) { let sum = w.b3[k]; for (let j = 0; j < H2; j++) sum += h2[j] * w.W3[j * K + k]; z[k] = sum; }
-  const mx = Math.max(...z); const e = Array.from(z, v => Math.exp(v - mx)); const sm = e.reduce((p, q) => p + q, 0);
+  const T = m.T ?? 1; const mx = Math.max(...z); const e = Array.from(z, v => Math.exp((v - mx) / T)); const sm = e.reduce((p, q) => p + q, 0);
   const top = e.map((v, i) => ({ act: m.labels[i], p: v / sm })).sort((p, q) => q.p - p.p).slice(0, 3);
   return { top, confident: top[0].p >= m.threshold };
 }
@@ -61,11 +85,11 @@ function vary(st: TalkState, key: string, a: string[]): string {
   const last = st.used[key]; let i = Math.floor(Math.random() * a.length); if (a.length > 1 && i === last) i = (i + 1) % a.length; st.used[key] = i; return a[i];
 }
 const REPLY: Record<string, string[]> = {
-  greet: ["Hi {me}! I'm {pet}. What's on your mind today?", "Hey {me}. Good to see you. Want to start something small, or just talk?", "Hello! {pet} here. What would help right now?"],
+  greet: ["Hey again, {me}. What's going on?", "Hi! I'm here. What would you like to do?", "Hi {me}! I'm {pet}. What's on your mind today?", "Hey {me}. Good to see you. Want to start something small, or just talk?", "Hello! {pet} here. What would help right now?"],
   thanks: ["Any time. You did the hard part by showing up.", "Happy to. Want to keep going, or take a breather?", "You're welcome. I'm glad it helped."],
   bye: ["Take care, {me}. I'll be here whenever you want to start something.", "See you soon. Rest well.", "Bye for now. One small start tomorrow is plenty."],
   howru: ["I'm doing well, thanks for asking. I'm an AI, so my day is mostly waiting for you. How are you?", "Cheerful. I'm a rabbit made of maths, and I like it when you drop by. How about you?"],
-  who_help: ["I'm {pet}, a small AI that lives in this app. I can help you start things, break tasks down, plan your day, and keep you company. The model is about half a million numbers and runs on your device.", "I'm {pet}. I'm not a person. I'm a small model trained to help you get started, and I make mistakes, so tell me when I get it wrong."],
+  who_help: ["Still me, {pet}. I help you start things, plan your day, and keep you company. What would you like to do?", "I'm {pet}, your rabbit. Ask me for a tiny first step, a plan for the day, or just talk. I'm listening.", "I'm {pet}, a small AI that lives in this app. I can help you start things, break tasks down, plan your day, and keep you company. The model is {model} and runs on your device.", "I'm {pet}. I'm not a person. I'm a small model trained to help you get started, and I make mistakes, so tell me when I get it wrong."],
   unclear: ["Not knowing where to start is really common. Let's find just the first move.", "That fog is normal when something is vague. We only need one clear action."],
   big: ["That does sound like a lot. We can shrink it until it stops looking like a mountain.", "Big things feel impossible all at once. We only have to do the first small piece."],
   boring: ["Boring is real. Let's make it short and a bit more fun, like two minutes with a treat nearby.", "Tedious tasks are hard to start. A tiny timer makes them easier."],
@@ -89,7 +113,7 @@ const REPLY: Record<string, string[]> = {
   complain: ["You're right, that wasn't helpful. I'm a small model and I get things wrong. Tell me in a few words what's going on and I'll try again.", "Sorry about that. I didn't get it. Can you say it another way? Or pick what's closest below.", "Fair. I missed it. Let me try again: what is the hardest part right now?"],
 };
 const JOKES = ["Why did the rabbit start the task? It was tired of just hopping around it.", "What do you call a rabbit that finishes homework early? A hare ahead of the class.", "Why don't procrastinators ever get lost? They never leave.", "I told my to-do list a joke. It didn't finish it either.", "What's a rabbit's favorite exercise? Hip hop.", "Why did the student put the clock in the freezer? To save time."];
-const fill = (s: string, st: TalkState) => s.replace(/\{pet\}/g, petNow().name).replace(/\{me\}/g, myName()).replace(/\{task\}/g, st.task ?? "it");
+const fill = (s: string, st: TalkState) => s.replace(/\{model\}/g, big ? "about ten million numbers" : "about half a million numbers").replace(/\{pet\}/g, petNow().name).replace(/\{me\}/g, myName()).replace(/\{task\}/g, st.task ?? "it");
 let nameCache = ""; export const setMyName = (n: string) => { nameCache = n.split(" ")[0] || ""; };
 const myName = () => nameCache || "friend";
 
@@ -136,7 +160,18 @@ const OPENER: Partial<Record<Act, string[]>> = {
 };
 const FOLLOW = ["What part of it stayed with you the most?", "How did that leave you feeling?", "What would have made it a little better?", "What do you wish had gone differently?", "Is there anything about it you're still thinking about?", "What was the hardest moment?"];
 const LISTEN_STAY: Act[] = ["share", "vent", "low", "good_mood", "tired", "overwhelm", "dont_know", "other", "big", "scared", "unclear", "boring", "distract", "chitchat", "yes", "no", "want_to_talk", "task_say", "win"];
+/** A rough read of the feeling in a longer message, used when the network only knows it is "someone talking". */
+function toneOf(text: string): Act | null {
+  const t = text.toLowerCase();
+  if (/\b(yell\w*|angry|annoy\w*|furious|mad at|unfair|rude|blam\w*|ignor\w*|frustrat\w*|irritat\w*|fight|argu\w*|hate|fed up|sick of)\b/.test(t)) return "vent";
+  if (/\b(sad|lonely|empty|hopeless|cry\w*|hurt\w*|miserable|embarrass\w*|ashamed|awful|terrible|worthless)\b/.test(t)) return "low";
+  if (/\b(tired|exhaust\w*|sleepy|drained)\b/.test(t)) return "tired";
+  if (/\b(overwhelm\w*|too much|swamped|stress\w*)\b/.test(t)) return "overwhelm";
+  if (/\b(happy|excited|proud|glad|great day|good news|fun)\b/.test(t)) return "good_mood";
+  return null;
+}
 function listenReply(act: Act, text: string, st: TalkState, done: (t: Omit<Turn, "state">) => Turn, conf: number, fresh: boolean): Turn {
+  if ((act === "want_to_talk" || act === "other" || act === "clarify" || act === "complain" || act === "dont_know") && tok(text).length >= 5) { const tone = toneOf(text); if (tone) act = tone; else if (act === "want_to_talk" || act === "clarify" || act === "complain") act = "share"; }
   st.mode = "listen"; st.awaiting = null; st.listenTurns = fresh ? 1 : (st.listenTurns ?? 0) + 1; st.last = act; const n = st.listenTurns;
   const topic = TOPICS.find(([re]) => re.test(text.toLowerCase()))?.[1];
   if (act === "low") st.lowRun += 1;
@@ -189,7 +224,7 @@ export async function respond(text: string, prevState: TalkState, ctx: Ctx): Pro
       st.unsureRun += 1; st.last = "other"; st.awaiting = null;
       if (st.unsureRun === 1 && words <= 2) return done({ reply: vary(st, "nudge", ["I'm here. What's on your mind?", "Hey, I'm listening. What's up?", "Take your time. What would you like to talk about?"]), chips: [{ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I don't know where to start" }, { label: "Let's chat", send: "Let's chat" }], act: "other", conf, unsure: true });
       const opts = rd.top.map(t => t.act).filter(a => LABEL[a]).slice(0, 2) as Act[];
-      if (st.unsureRun === 1 && opts.length && rd.top[0].p >= 0.2) return done({ reply: vary(st, "unsure", ["I want to get this right. Which is closest?", "I'm not fully sure what you mean. Is it one of these?", "Let me check I understood. Is it something like this?"]), chips: [...opts.map(o => ({ label: LABEL[o]!, send: LABEL[o]! })), { label: "Something else", send: "Something else" }], act: "other", conf, unsure: true });
+      if (st.unsureRun === 1) return done({ reply: vary(st, "unsure", ["I want to make sure I follow. Can you tell me a bit more?", "Say a little more? I want to understand.", "I'm not sure I got that. What do you mean?"]), chips: [], act: "other", conf, unsure: true });
       return done({ reply: vary(st, "menu", ["No worries, we don't have to name it. What feels closest right now?", "That's okay. Let's find it together. Pick whatever is nearest.", "I may be missing it. Here are a few common ones. Tap the closest, or tell me more in your own words."]), chips: MENU, act: "other", conf, unsure: true });
     }
   }
@@ -216,7 +251,7 @@ export async function respond(text: string, prevState: TalkState, ctx: Ctx): Pro
       chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I don't know where to start" }); break;
     }
     case "complain": reply = fill(vary(st, "complain", REPLY.complain), st); chips.push(...MENU.slice(0, 3), { label: "Just chat", send: "Let's chat" }); break;
-    case "want_to_talk": st.mode = "listen"; st.listenTurns = 0; reply = fill(vary(st, "want_to_talk", REPLY.want_to_talk), st); break;
+    case "want_to_talk": st.mode = "listen"; st.listenTurns = 0; reply = words <= 4 ? vary(st, "wtt_short", ["Yes? I'm listening.", "Go on, I'm all ears.", "What is it?", "I'm here. Tell me."]) : fill(vary(st, "want_to_talk", REPLY.want_to_talk), st); break;
     case "vent": return listenReply("vent", text, st, done, conf, true);
     case "share": if (words >= 6) return listenReply("share", text, st, done, conf, true); reply = fill(vary(st, "share", REPLY.share), st); chips.push({ label: "Good", send: "I'm feeling good" }, { label: "Tired", send: "I'm tired" }, { label: "Stressed", send: "I'm overwhelmed" }); break;
     case "good_mood": reply = fill(vary(st, "good_mood", REPLY.good_mood), st); chips.push({ label: "Help me start", send: "Help me start" }, { label: "Plan my day", act: "plan" }); break;

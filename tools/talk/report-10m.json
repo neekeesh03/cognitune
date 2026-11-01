@@ -1,0 +1,341 @@
+{
+  "parameters": 10240097,
+  "temperature": 1,
+  "oodAccuracy": 0.814,
+  "oodConfidentWrong": 2,
+  "oodMisses": [
+    [
+      "hmm",
+      "other",
+      "share",
+      0.2,
+      false
+    ],
+    [
+      "right",
+      "other",
+      "yes",
+      0.57,
+      false
+    ],
+    [
+      "what's the capital of japan",
+      "other",
+      "share",
+      0.34,
+      false
+    ],
+    [
+      "set a timer for ten minutes",
+      "other",
+      "ask_break",
+      0.44,
+      false
+    ],
+    [
+      "how do i boil an egg",
+      "other",
+      "clarify",
+      0.88,
+      false
+    ],
+    [
+      "my cat just knocked over my cup",
+      "share",
+      "overwhelm",
+      0.54,
+      false
+    ],
+    [
+      "i can't get started on my report",
+      "unclear",
+      "win",
+      0.69,
+      false
+    ],
+    [
+      "i feel kind of empty today",
+      "low",
+      "good_mood",
+      0.55,
+      false
+    ]
+  ],
+  "trainExamples": 60800,
+  "heldOutWordingExamples": 3360,
+  "handWrittenExamples": 137,
+  "history": [
+    {
+      "ep": 2,
+      "loss": 0.1513,
+      "heldOutWording": 0.863,
+      "handWritten": 0.847,
+      "minutes": 1.5
+    },
+    {
+      "ep": 4,
+      "loss": 0.1481,
+      "heldOutWording": 0.844,
+      "handWritten": 0.832,
+      "minutes": 3.1
+    },
+    {
+      "ep": 6,
+      "loss": 0.144,
+      "heldOutWording": 0.841,
+      "handWritten": 0.854,
+      "minutes": 4.5
+    },
+    {
+      "ep": 8,
+      "loss": 0.1135,
+      "heldOutWording": 0.866,
+      "handWritten": 0.869,
+      "minutes": 6
+    },
+    {
+      "ep": 10,
+      "loss": 0.1129,
+      "heldOutWording": 0.865,
+      "handWritten": 0.861,
+      "minutes": 7.4
+    }
+  ],
+  "quantisedAccuracy": {
+    "held": 0.865,
+    "hand": 0.861
+  },
+  "weakestActs": [
+    [
+      "howru",
+      0.31
+    ],
+    [
+      "other",
+      0.35
+    ],
+    [
+      "bye",
+      0.56
+    ],
+    [
+      "thanks",
+      0.62
+    ],
+    [
+      "yes",
+      0.62
+    ],
+    [
+      "chitchat",
+      0.64
+    ],
+    [
+      "clarify",
+      0.66
+    ],
+    [
+      "no",
+      0.7
+    ]
+  ],
+  "topConfusions": [
+    [
+      "chitchat->who_help",
+      28
+    ],
+    [
+      "howru->who_help",
+      21
+    ],
+    [
+      "thanks->win",
+      19
+    ],
+    [
+      "overwhelm->big",
+      17
+    ],
+    [
+      "unclear->ask_start",
+      14
+    ],
+    [
+      "low->good_mood",
+      14
+    ],
+    [
+      "vent->complain",
+      13
+    ],
+    [
+      "distract->share",
+      11
+    ],
+    [
+      "howru->good_mood",
+      9
+    ],
+    [
+      "chitchat->share",
+      9
+    ]
+  ],
+  "calibration": [
+    {
+      "threshold": 0.4,
+      "answered": 0.935,
+      "accuracyWhenAnswering": 0.902
+    },
+    {
+      "threshold": 0.5,
+      "answered": 0.907,
+      "accuracyWhenAnswering": 0.916
+    },
+    {
+      "threshold": 0.6,
+      "answered": 0.876,
+      "accuracyWhenAnswering": 0.933
+    },
+    {
+      "threshold": 0.7,
+      "answered": 0.852,
+      "accuracyWhenAnswering": 0.944
+    }
+  ],
+  "handWrittenMisses": [
+    [
+      "hey pip how's it going",
+      "",
+      "greet",
+      "howru",
+      0.94
+    ],
+    [
+      "can you explain how this app works",
+      "",
+      "who_help",
+      "clarify",
+      0.89
+    ],
+    [
+      "i don't understand what step one is",
+      "",
+      "unclear",
+      "clarify",
+      0.95
+    ],
+    [
+      "there's just too much of it",
+      "",
+      "big",
+      "overwhelm",
+      0.56
+    ],
+    [
+      "didn't sleep at all last night",
+      "",
+      "tired",
+      "bye",
+      0.63
+    ],
+    [
+      "my body is just done",
+      "",
+      "tired",
+      "boring",
+      0.3
+    ],
+    [
+      "i zone out after two minutes",
+      "",
+      "distract",
+      "win",
+      0.95
+    ],
+    [
+      "i'm just bored, talk to me",
+      "",
+      "chitchat",
+      "share",
+      0.91
+    ],
+    [
+      "tell me something cool",
+      "",
+      "chitchat",
+      "joke",
+      0.32
+    ],
+    [
+      "what's the population of canada",
+      "",
+      "other",
+      "who_help",
+      0.41
+    ],
+    [
+      "purple monkey dishwasher",
+      "",
+      "other",
+      "who_help",
+      0.45
+    ],
+    [
+      "haha good one",
+      "joke",
+      "thanks",
+      "other",
+      0.8
+    ],
+    [
+      "too much to do and not enough time",
+      "",
+      "overwhelm",
+      "big",
+      0.84
+    ],
+    [
+      "i don't want to mess this up",
+      "",
+      "scared",
+      "no",
+      0.95
+    ],
+    [
+      "nothing special today",
+      "",
+      "share",
+      "no",
+      0.58
+    ],
+    [
+      "i don't know what to do with my life",
+      "",
+      "dont_know",
+      "unclear",
+      0.95
+    ],
+    [
+      "can we just talk for a bit",
+      "",
+      "want_to_talk",
+      "chitchat",
+      0.97
+    ],
+    [
+      "people at work keep dumping tasks on me and i'm sick of it",
+      "",
+      "vent",
+      "scared",
+      0.28
+    ],
+    [
+      "no, i just want to talk",
+      "",
+      "want_to_talk",
+      "chitchat",
+      0.65
+    ]
+  ]
+}
