@@ -12,6 +12,7 @@ import { ROWS11 } from "./entries11";
 import { ROWS12 } from "./entries12";
 import { ROWS13 } from "./entries13";
 import { ROWS14, NE14 } from "./entries14";
+import { EXTRA14, ROWS15 } from "./patterns14";
 import * as NE2 from "./lang_ne2";
 import * as SI from "./lang_si";
 import * as DZ from "./lang_dz";
@@ -38,6 +39,7 @@ const PATS: Record<New, Record<string, string>> = { si: SI.PAT, dz: DZ.PAT, ne: 
 const PID: (string | null)[] = ["greet","planned","plannedShort","buddyWorking","buddyFinished","buddyAway","buddyHere","waitingFor","roomState","activeMin","activeH","activeD","minAgo","hAgo","togetherDays","startedTogether","gettingStarted","moreMinutes","peopleToday","invitedYou","newMessages","hoppedIn","cheered","focusingWith","chatWith","report","remove","messageTo","checkinAvg","fromWriting","firstStep","dAgo",null,"openProfile","joined","plant","planFor","driveFalls","prevPart","nextPart","style","nowFriends","requestSent","sparksEarned","focusedFor","streakDays"];
 for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7, ...ROWS8, ...ROWS9, ...ROWS10, ...ROWS11, ...ROWS12, ...ROWS13, ...ROWS14]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 
+for (const r of ROWS15) { entries.zh[r[0]] = r[1]; entries.fa[r[0]] = r[2]; entries.id[r[0]] = r[3]; entries.ne[r[0]] = r[4]; }
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const GREET: Record<string, Record<Old, string>> = {
@@ -138,6 +140,7 @@ function lookup(s: string): string | null {
   const hit = entries[lang][k]; if (hit) return hit;
   const L = lang;
   for (const [re, fns] of EXTRA) { const f = fns[L]; if (!f) continue; const m = re.exec(k); if (m) return f(m); }
+  for (const [re, fns] of EXTRA14) { const f = fns[L]; if (!f) continue; const m = re.exec(k); if (m) return f(m, x => lookup(x) ?? x); }
   for (let i = 0; i < PATTERNS.length; i++) {
     const [re, fns] = PATTERNS[i]; const m = re.exec(k); if (!m) continue;
     if (L === "si" || L === "dz" || L === "ne") {
@@ -147,6 +150,7 @@ function lookup(s: string): string | null {
     }
     return fns[L](m, x => lookup(x) ?? x);
   }
+  const parts = k.split(/(?<=[.!?]["”]?)\s+/); if (parts.length > 1) { const out = parts.map(x => lookup(x)); if (out.every(Boolean)) return out.join(L === "zh" ? "" : " "); }
   return null;
 }
 /** Translate a string made in code (toasts, notifications). Unknown text stays as is. */
