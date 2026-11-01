@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Activity, CalendarCheck, Heart, Home, LogOut, MessageCircle, Moon, Sprout, Sun } from "lucide-react";
 import { TalkTab } from "@/components/TalkTab";
+import { preloadTalk } from "@/engine/talk";
 import { CheckInTab } from "@/components/CheckInTab";
 import { MeetRabbit } from "@/components/MeetRabbit";
 import { savePetLocal, usePet } from "@/lib/pet";
@@ -146,6 +147,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const lastTask = history[history.length - 1]?.task && history[history.length - 1].task !== "Untitled" ? history[history.length - 1].task : plan.tasks.find(t => !t.doneAt)?.title ?? "";
   void lastTask;
   const startNow = (title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, taskName: title, dur: 2, solo: true }); };
+  useEffect(() => { const run = () => preloadTalk(); const id = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback; if (id) id(run, { timeout: 6000 }); else setTimeout(run, 3000); }, []);
   const [coachOpen, setCoachOpen] = useState(false); const [coachTask, setCoachTask] = useState("something I am putting off"); const pet = usePet();
   return (
     <div className="min-h-screen pb-28 lg:pb-12 lg:pl-56">

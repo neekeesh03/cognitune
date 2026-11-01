@@ -25,6 +25,12 @@ const unq = (m: QMat) => { const bin = atob(m.b); const out = new Float32Array(b
 let cache: Promise<Model> | null = null;
 const load = () => (cache ??= import("@/engine/talkModel.json").then(x => { const r = (x.default ?? x) as unknown as RawModel; const w: Record<string, Float32Array> = {}; for (const k of Object.keys(r.q) as (keyof RawModel["q"])[]) w[k] = unq(r.q[k]); return { ...r, w } as Model; }));
 
+/** Fetch and decode the model quietly in the background, so the first message in Talk is instant. Skips slow or data-saver connections. */
+export function preloadTalk() {
+  try { const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection; if (c?.saveData || /(^|-)2g$/.test(c?.effectiveType ?? "")) return; } catch { /* ignore */ }
+  void load().catch(() => { cache = null; });
+}
+
 function hash(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 const tok = (t: string) => t.toLowerCase().replace(/['\u2019]/g, "").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
 function feats(text: string, B: number): [number, number][] {
