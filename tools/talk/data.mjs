@@ -3,8 +3,9 @@
 // score measures wording the model never saw, not just noise on wording it did.
 import { MORE } from "./more.mjs";
 import { ACTS2, CORES2, GRAM2, MORE2 } from "./v2.mjs";
+import { ACTS3, CORES3, GRAM3, MORE3, FILLERS, CONTENT, JOIN } from "./v3.mjs";
 import fs from "fs";
-export const ACTS = ["greet","thanks","bye","howru","who_help","unclear","big","boring","scared","tired","distract","overwhelm","low","win","ask_start","ask_plan","ask_break","motivate","joke","chitchat","yes","no","task_say","progress","deadline","other",...ACTS2];
+export const ACTS = ["greet","thanks","bye","howru","who_help","unclear","big","boring","scared","tired","distract","overwhelm","low","win","ask_start","ask_plan","ask_break","motivate","joke","chitchat","yes","no","task_say","progress","deadline","other",...ACTS2,...ACTS3];
 export const TASKS = ["essay","report","assignment","homework","thesis","project","presentation","revision","coding task","cv","application","taxes","lab report","reading","chemistry notes","maths problems","email","portfolio","exam prep","dissertation","slides","budget","cover letter","research paper","history essay","visa form","design brief","study plan"];
 
 export const CORES = {
@@ -40,6 +41,8 @@ for (const k of Object.keys(MORE)) CORES[k] = [...CORES[k], ...MORE[k]];
 
 for (const k of Object.keys(CORES2)) CORES[k] = [...CORES2[k], ...(MORE2[k] || [])];
 
+for (const k of Object.keys(CORES3)) CORES[k] = [...CORES3[k], ...(MORE3[k] || [])];
+
 // Short replies whose meaning depends on what was just said. [text, previous acts -> label, default]
 export const AMBIG = [
   { t: ["lol","haha","hahaha","lmao","that's funny","good one"], map: { joke: "thanks", chitchat: "chitchat" }, def: "other" },
@@ -74,6 +77,7 @@ const SYN = { tired: ["exhausted","sleepy","drained","wiped","beat"], big: ["hug
 export const swap = s => s.split(" ").map(w => (SYN[w] && R() < 0.35 ? pick(SYN[w]) : w)).join(" ");
 
 for (const k of Object.keys(GRAM2)) GRAM[k] = GRAM2[k];
+for (const k of Object.keys(GRAM3)) GRAM[k] = GRAM3[k];
 export const OPEN = ["", "", "", "", "hey ", "um ", "honestly ", "ok so ", "hmm ", "idk but ", "ngl ", "so ", "well ", "pip ", "hey pip ", "uh "];
 export const TAIL = ["", "", "", "", " lol", " right now", " today", " tbh", " :(", " ugh", ".", "!", "...", " please", " honestly", " again"];
 
@@ -90,15 +94,19 @@ export function build() {
   for (const act of ACTS) {
     const cores = [...CORES[act]]; for (let i = cores.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [cores[i], cores[j]] = [cores[j], cores[i]]; }
     const nt = Math.max(3, Math.round(cores.length * 0.25)); const te = cores.slice(0, nt), tr = cores.slice(nt);
-    for (let k = 0; k < 700; k++) train.push({ x: render(pick(tr)), prev: pick(prevs), y: act });
+    for (let k = 0; k < 900; k++) train.push({ x: render(pick(tr)), prev: pick(prevs), y: act });
     for (let k = 0; k < 50; k++) test.push({ x: render(pick(te)), prev: pick(prevs), y: act });
-    const g = GRAM[act]; if (g) { const bTrain = g.b.filter((_, i) => i % 4 !== 0), bTest = g.b.filter((_, i) => i % 4 === 0); for (let k = 0; k < 600; k++) train.push({ x: render(pick(g.a) + " " + pick(bTrain)), prev: pick(prevs), y: act }); for (let k = 0; k < 30; k++) test.push({ x: render(pick(g.a) + " " + pick(bTest)), prev: pick(prevs), y: act }); }
+    const g = GRAM[act]; if (g) { const bTrain = g.b.filter((_, i) => i % 4 !== 0), bTest = g.b.filter((_, i) => i % 4 === 0); for (let k = 0; k < 800; k++) train.push({ x: render(pick(g.a) + " " + pick(bTrain)), prev: pick(prevs), y: act }); for (let k = 0; k < 30; k++) test.push({ x: render(pick(g.a) + " " + pick(bTest)), prev: pick(prevs), y: act }); }
   }
   for (const a of AMBIG) {
     const heldOut = a.t.slice(-1);
     for (let k = 0; k < 300; k++) { const prev = pick(prevs); const tx = pick(a.t.slice(0, -1)); train.push({ x: render(tx), prev, y: a.map[prev] ?? a.def }); }
     for (let k = 0; k < 20; k++) { const prev = pick(prevs); test.push({ x: render(heldOut[0]), prev, y: a.map[prev] ?? a.def }); }
   }
+  // compound messages: filler + content, labelled with the content
+  const contentCores = a => { const c = CORES[a]; return c.slice(Math.max(3, Math.round(c.length * 0.25))); };
+  for (const a of CONTENT) { const pool = contentCores(a); const g = GRAM[a]; for (let k = 0; k < 450; k++) { const [f, fa] = pick(FILLERS); const core = g && R() < 0.5 ? pick(g.a) + " " + pick(g.b.filter((_, i) => i % 4 !== 0)) : pick(pool); void fa; train.push({ x: render(f + pick(JOIN) + core), prev: pick(prevs), y: a }); } for (let k = 0; k < 40; k++) { const [f] = pick(FILLERS); const te = CORES[a].slice(0, Math.max(3, Math.round(CORES[a].length * 0.25))); test.push({ x: render(f + pick(JOIN) + pick(te)), prev: pick(prevs), y: a }); } }
+  for (const e of [...train, ...test]) e.prev2 = pick(prevs);
   void stuck;
   try { const f = new URL("./real.jsonl", import.meta.url); if (fs.existsSync(f)) for (const l of fs.readFileSync(f, "utf8").split("\n")) { if (!l.trim()) continue; const e = JSON.parse(l); if (ACTS.includes(e.y)) for (let k = 0; k < 6; k++) train.push({ x: e.x, prev: e.prev || "", y: e.y }); } } catch { /* no real data yet */ }
   return { train, test };

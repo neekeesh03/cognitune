@@ -40,4 +40,9 @@ export const HAND = [
   ["i just got back from the gym", "", "share"], ["my day was pretty normal", "", "share"], ["i'm sitting in a cafe", "", "share"], ["nothing special today", "", "share"], ["had a long day at work", "", "share"],
   ["i'm doing well thanks", "", "good_mood"], ["feeling pretty good today", "", "good_mood"], ["i feel happy", "", "good_mood"], ["all good here", "", "good_mood"],
   ["i don't know what to do with my life", "", "dont_know"], ["yeah i'm good", "howru", "good_mood"],
+  // v3: wanting to talk, venting, and compound messages
+  ["i need to talk about today", "", "want_to_talk"], ["can we just talk for a bit", "", "want_to_talk"], ["i want to vent", "", "want_to_talk"], ["i have something on my mind", "", "want_to_talk"], ["can you listen to me", "", "want_to_talk"],
+  ["i don't know, i need to talk about today", "greet", "want_to_talk"], ["hmm, can we talk about my week", "", "want_to_talk"], ["yeah i want to tell you what happened", "", "want_to_talk"],
+  ["my boss really annoyed me today", "", "vent"], ["i'm so frustrated with my roommate", "", "vent"], ["i got blamed for something i didn't do", "", "vent"], ["people at work keep dumping tasks on me and i'm sick of it", "", "vent"],
+  ["i don't know, i just feel so tired", "", "tired"], ["ok, help me plan tomorrow", "", "ask_plan"], ["no, i just want to talk", "", "want_to_talk"], ["hey, what should i start with", "", "ask_start"],
 ];
