@@ -14,6 +14,7 @@
 //  - Kind restarts: after a gap the offer gets smaller, not louder (Sirois 2014; Fogg 2009).
 import { loadLog } from "@/lib/startlog";
 import { dayKeyOf } from "@/engine/pattern";
+import { directorOn } from "@/lib/arm";
 
 const K = "lagomo.director.v1";
 export interface Tomorrow { task: string; step?: string; hour: number; ts: number }
@@ -38,6 +39,7 @@ const P: Record<Stage, number> = { new: 0.4, build: 0.25, steady: 0.12 };
 const PITY: Record<Stage, number> = { new: 3, build: 4, steady: 7 }; // longest dry spell before one is guaranteed
 /** After a finished session: sometimes a bonus. A guaranteed one after a dry spell (shorter early, longer once the habit is steady). */
 export function surprise(): { sparks: number; line: string } | null {
+  if (!directorOn()) return null;
   const d = load(); const st = stage(); const p = P[st]; const forced = d.miss >= PITY[st];
   if (!forced && Math.random() > p) { save({ ...d, miss: d.miss + 1 }); return null; }
   const rare = Math.random() < 0.1; save({ ...d, miss: 0 });
@@ -48,6 +50,7 @@ export function surprise(): { sparks: number; line: string } | null {
 const MILESTONES = [3, 5, 10, 25, 50, 100, 200];
 /** The ending line of a finish moment: specific, true, and about who you are becoming. */
 export function finishLine(now = Date.now()): string | null {
+  if (!directorOn()) return null;
   const S = loadLog().starts.filter(s => s.ts <= now + 36e5).sort((a, b) => a.ts - b.ts); const n = S.length; if (!n) return null;
   const last = S[n - 1], prev = S[n - 2]; const gap = prev ? Math.floor((dayKeyNum(last.ts) - dayKeyNum(prev.ts))) : 0;
   const today = dayKeyOf(last.ts); const todayCount = S.filter(s => dayKeyOf(s.ts) === today).length;
@@ -70,16 +73,18 @@ export function usualHour(now = Date.now()): number {
 
 /** Keep the first step for tomorrow, with your usual hour as the cue. */
 export function saveTomorrow(task: string, step?: string, now = Date.now()) {
-  if (!task.trim()) return; const d = load(); save({ ...d, tomorrow: { task: task.trim().slice(0, 120), step, hour: usualHour(now), ts: now } });
+  if (!directorOn() || !task.trim()) return; const d = load(); save({ ...d, tomorrow: { task: task.trim().slice(0, 120), step, hour: usualHour(now), ts: now } });
 }
 export function clearTomorrow() { const d = load(); save({ ...d, tomorrow: null }); }
 /** Waiting for you from an earlier day, kept up to three days. */
 export function tomorrowStep(now = Date.now()): Tomorrow | null {
+  if (!directorOn()) return null;
   const t = load().tomorrow; if (!t) return null;
   if (dayKeyOf(t.ts) === dayKeyOf(now) || now - t.ts > 3 * DAY) return null; return t;
 }
 /** After a gap of 2 to 14 days, the offer shrinks to one minute. */
 export function comeback(now = Date.now()): { task: string; days: number } | null {
+  if (!directorOn()) return null;
   const S = loadLog().starts.filter(s => s.ts <= now); const last = S[S.length - 1]; if (!last) return null;
   const days = dayKeyNum(now) - dayKeyNum(last.ts); return days >= 2 && days <= 14 ? { task: last.task || "one small thing", days } : null;
 }

@@ -4,6 +4,7 @@ import { rd, rdp, setJ, getJ, err, dayStr, lastDays } from "./_core.js";
 
 export const EVENTS = ["rabbit_handoff_show", "rabbit_handoff_tap", "rabbit_roam_tap", "rabbit_session", "app_open", "plan_send", "pinky_photo", "pinky_photo_report", "pinky_hop", "pinky_make", "pinky_join", "pinky_done", "pinky_kept_together", "pinky_roll", "pinky_door", "block_undo", "block_start_today", "photo_add", "block_start_from_reminder", "week_open", "plan_accept", "block_repeat", "checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "tab_checkin", "plus_open", "plus_price", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer", "invite_share", "invite_join", "alerts_prime_yes", "alerts_prime_no", "keep_going", "nexthop_set", "cue_set", "install_tap", "reminder_set", "post_create", "post_react", "profile_view"];
 const PRICES = ["3", "5", "8", "none"];
+const holdout = id => { let h = 5381; for (let i = 0; i < id.length; i++) h = ((h * 33) ^ id.charCodeAt(i)) >>> 0; return h % 10 === 0; }; // same rule as the app: 10% get the plain app
 export const weekId = (t = Date.now()) => { const d = new Date(t); const day = (d.getUTCDay() + 6) % 7; return dayStr(t - day * 864e5); }; // Monday of the week
 const cl = (v, n) => String(v == null ? "" : v).replace(/[<>]/g, "").trim().slice(0, n);
 
@@ -61,6 +62,8 @@ export async function experimentStats() {
   const res = checks.length ? await rdp(checks) : [];
   const ret = { 1: { n: 0, hit: 0 }, 7: { n: 0, hit: 0 }, 30: { n: 0, hit: 0 } }; const retByFriend = { with: { n: 0, hit: 0 }, without: { n: 0, hit: 0 } };
   meta.forEach((m, k) => { ret[m.n].n++; if (res[k]) ret[m.n].hit++; if (m.n === 7) { const g = fcount[m.i] > 0 ? retByFriend.with : retByFriend.without; g.n++; if (res[k]) g.hit++; } });
+  const armStat = { on: { n1: 0, h1: 0, n7: 0, h7: 0, users: 0, starters: 0 }, off: { n1: 0, h1: 0, n7: 0, h7: 0, users: 0, starters: 0 } };
+  meta.forEach((m, k) => { const a = holdout(users[m.i].id) ? armStat.off : armStat.on; if (m.n === 1) { a.n1++; if (res[k]) a.h1++; } if (m.n === 7) { a.n7++; if (res[k]) a.h7++; } });
   // activation: first timer within 24h of signup
   const first = await rdp(users.map(u => ["GET", `evt:timer_start:${u.id}`]));
   const eligible = users.filter(u => now - (u.created || 0) > 864e5);
@@ -68,6 +71,7 @@ export async function experimentStats() {
   // weekly starters (3+ timers in a week), last 4 weeks
   const weeks = [0, 1, 2, 3].map(k => weekId(now - k * 7 * 864e5)); const wkc = []; weeks.forEach(w => users.forEach(u => wkc.push(["GET", `wk:${w}:${u.id}`])));
   const wkr = wkc.length ? await rdp(wkc) : []; const weekly = weeks.map((w, k) => ({ week: w, starters: wkr.slice(k * total, (k + 1) * total).filter(x => +x >= 3).length, anyStart: wkr.slice(k * total, (k + 1) * total).filter(x => +x >= 1).length }));
+  users.forEach((u, i) => { const a = holdout(u.id) ? armStat.off : armStat.on; a.users++; if (+wkr[i] >= 3) a.starters++; });
   const invitedAmongActivated = users.filter(u => evSets.invite.has(u.id) && evSets.timer_start.has(u.id)).length, activatedEver = users.filter(u => evSets.timer_start.has(u.id)).length;
   // pulse
   const pr = (await rd("LRANGE", "pulse", 0, -1)).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean);
@@ -95,6 +99,7 @@ export async function experimentStats() {
     friendEffect: { withFriend: pct(retByFriend.with.hit, retByFriend.with.n), without: pct(retByFriend.without.hit, retByFriend.without.n), nWith: retByFriend.with.n, nWithout: retByFriend.without.n },
     invite: { rate: pct(invitedAmongActivated, activatedEver), n: activatedEver },
     weekly,
+    director: { on: { users: armStat.on.users, d1: pct(armStat.on.h1, armStat.on.n1), n1: armStat.on.n1, d7: pct(armStat.on.h7, armStat.on.n7), n7: armStat.on.n7, starters: pct(armStat.on.starters, armStat.on.users) }, off: { users: armStat.off.users, d1: pct(armStat.off.h1, armStat.off.n1), n1: armStat.off.n1, d7: pct(armStat.off.h7, armStat.off.n7), n7: armStat.off.n7, starters: pct(armStat.off.starters, armStat.off.users) } },
     pulse: { counts: pc, n: pr.length, veryPct: pct(pc.very, pr.length), comments: pr.filter(p => p.benefit || p.alt || p.improve).slice(-30).reverse().map(p => ({ ts: p.ts, answer: p.answer, benefit: p.benefit, alt: p.alt, improve: p.improve })) },
     plus: { counts: plus, total: pl.length, opened: opens, ofActive: pct(pl.filter(p => p.price !== "none").length, weeklyActive7.size || 0) },
     rabbit, landing: Object.values(landing), waitlist: wlCount,

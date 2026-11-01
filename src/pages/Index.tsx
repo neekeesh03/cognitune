@@ -47,6 +47,7 @@ import { logStart } from "@/lib/startlog";
 import { dueDays } from "@/engine/plan";
 import { MyPattern } from "@/components/MyPattern";
 import { saveTomorrow } from "@/engine/director";
+import { setArm } from "@/lib/arm";
 import { usePresence } from "@/lib/presence";
 import { wornNow } from "@/components/Rabbit";
 
@@ -70,6 +71,7 @@ const Index = () => {
   // A rabbit named on this account follows you here. Keep this device in step with it.
   useEffect(() => { if (auth.user?.pet) savePetLocal(auth.user.pet); }, [auth.user?.pet?.name, auth.user?.pet?.coat]); // eslint-disable-line react-hooks/exhaustive-deps
   if (auth.loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-12 w-12 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} /></div>;
+  if (auth.user) setArm(auth.user.id);
   if (!auth.user || new URLSearchParams(window.location.search).get("reset")) return <><FxHost /><AuthScreen auth={auth} /></>;
   if (auth.locked) return <UnlockScreen auth={auth} />;
   if (auth.needsAvatar) return <><FxHost /><MeetFriend auth={auth} /></>;
