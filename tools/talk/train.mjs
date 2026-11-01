@@ -6,7 +6,7 @@ import fs from "fs";
 import { ACTS, build, R } from "./data.mjs";
 import { HAND } from "./hand.mjs";
 
-const B = 456, D = 16, DC = 8, H = 48, K = ACTS.length, NC = K + 1; // previous act: one slot per act plus "none"
+const B = 1400, D = 32, DC = 12, H = 96, K = ACTS.length, NC = K + 1; // previous act: one slot per act plus "none"
 const P = B * D + NC * DC + (D + DC) * H + H + H * K + K;
 console.log("parameters:", P);
 
@@ -45,12 +45,12 @@ const hdF = HAND.map(([x, prev, y]) => ({ f: feats(x), prev, y: ACTS.indexOf(y),
 if (hdF.some(e => e.y < 0)) throw new Error("bad act in HAND");
 const acc = set => { let ok = 0; for (const e of set) { const p = forward(e.f, e.prev, 0).p; let b = 0; for (let k = 1; k < K; k++) if (p[k] > p[b]) b = k; if (b === e.y) ok++; } return ok / set.length; };
 
-const EPOCHS = 40, BATCH = 64; let step = 0;
+const EPOCHS = 30, BATCH = 64; let step = 0;
 function adam(name, grad, lr, wd = 0) { const o = opt[name], w = params[name]; const t = step; const b1_ = 0.9, b2_ = 0.999; for (const i of grad.keys()) { const g = grad.get(i) + wd * w[i]; o.m[i] = b1_ * o.m[i] + (1 - b1_) * g; o.v[i] = b2_ * o.v[i] + (1 - b2_) * g * g; const mh = o.m[i] / (1 - Math.pow(b1_, t)), vh = o.v[i] / (1 - Math.pow(b2_, t)); w[i] -= lr * mh / (Math.sqrt(vh) + 1e-8); } }
 const hist = [];
 for (let ep = 0; ep < EPOCHS; ep++) {
   const idx = trF.map((_, i) => i); for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
-  const lr = 0.02 * (ep < EPOCHS - 10 ? 1 : 0.3); let loss = 0;
+  const lr = 0.015 * (ep < EPOCHS - 8 ? 1 : 0.3); let loss = 0;
   for (let s = 0; s < idx.length; s += BATCH) {
     step++; const g = { E: new Map(), C: new Map(), W1: new Map(), b1: new Map(), W2: new Map(), b2: new Map() }; const add = (m, i, v) => m.set(i, (m.get(i) || 0) + v);
     const bs = idx.slice(s, s + BATCH);

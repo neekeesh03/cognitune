@@ -4,6 +4,7 @@ import { RabbitFace } from "@/components/RabbitFace";
 import { usePet } from "@/lib/pet";
 import { emptyState, loadChat, respond, saveChat, setMyName, type Chip, type Ctx, type Msg, type TalkState } from "@/engine/talk";
 import { tr } from "@/i18n";
+import { markNotice, noticeSeen, setSharing, sharingOn, shareTurn } from "@/lib/talkshare";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 export interface TalkProps { myName: string; ctx: Ctx; onStart: (title: string, step: string) => void; onCoach: (task?: string) => void; onPlan: () => void; onCircle: () => void }
@@ -12,14 +13,14 @@ export interface TalkProps { myName: string; ctx: Ctx; onStart: (title: string, 
 export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: TalkProps) {
   const pet = usePet(); setMyName(myName);
   const init = useRef(loadChat()); const [msgs, setMsgs] = useState<Msg[]>(init.current.msgs); const [st, setSt] = useState<TalkState>(init.current.state);
-  const [text, setText] = useState(""); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
+  const [text, setText] = useState(""); const [notice, setNotice] = useState(() => !noticeSeen() && sharingOn()); const [busy, setBusy] = useState(false); const end = useRef<HTMLDivElement>(null);
   useEffect(() => { saveChat(msgs, st); }, [msgs, st]);
   useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [msgs, busy]);
-  const send = async (raw: string) => {
+  const send = async (raw: string, via: "typed" | "chip" = "typed") => {
     const t = raw.trim().slice(0, 300); if (!t || busy) return; setText(""); setBusy(true);
     const mine: Msg = { id: uid(), from: "me", text: t, ts: Date.now() }; setMsgs(m => [...m.map(x => ({ ...x, chips: undefined })), mine]);
     try {
-      const turn = await respond(t, st, ctx); await new Promise(r => setTimeout(r, 350 + Math.min(700, turn.reply.length * 6)));
+      const turn = await respond(t, st, ctx); shareTurn({ x: t, prev: st.last, act: turn.act, conf: turn.conf, via, unsure: turn.unsure }, { sensitive: turn.sensitive, names: [myName, pet.name] }); await new Promise(r => setTimeout(r, 350 + Math.min(700, turn.reply.length * 6)));
       setSt(turn.state); setMsgs(m => [...m, { id: uid(), from: "pip", text: turn.reply, ts: Date.now(), chips: turn.chips, act: turn.act, conf: turn.conf }]);
     } catch { setMsgs(m => [...m, { id: uid(), from: "pip", text: "Something went wrong on my side. Try again in a moment.", ts: Date.now() }]); }
     finally { setBusy(false); }
@@ -29,7 +30,7 @@ export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: Tal
     if (c.act === "coach") { onCoach(c.task); return; }
     if (c.act === "plan") { onPlan(); return; }
     if (c.act === "circle") { onCircle(); return; }
-    if (c.send) void send(c.send);
+    if (c.send) void send(c.send, "chip");
   };
   const clear = () => { if (!confirm(tr("Clear this chat? It only lives on this device."))) return; setMsgs([]); setSt(emptyState()); };
   const greeting = msgs.length === 0;
@@ -37,9 +38,10 @@ export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: Tal
     <div className="mx-auto flex h-[calc(100dvh-11rem)] max-w-2xl flex-col lg:h-[calc(100dvh-8rem)]">
       <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3">
         <div className="shrink-0"><RabbitFace alive face={busy ? "curious" : "happy"} crop size={44} /></div>
-        <div className="min-w-0 flex-1"><div className="font-semibold"><span translate="no">{pet.name}</span></div><div className="text-xs text-muted-foreground">An AI that runs on your device. Your chats stay here.</div></div>
+        <div className="min-w-0 flex-1"><div className="font-semibold"><span translate="no">{pet.name}</span></div><div className="text-xs text-muted-foreground">An AI that runs on your device. Chats help train it unless you turn that off in Me.</div></div>
         {!greeting && <button onClick={clear} aria-label="Clear chat" className="rounded-full p-2 text-muted-foreground hover:text-foreground"><Trash2 className="h-4 w-4" /></button>}
       </div>
+      {notice && <div className="glass mt-3 rounded-3xl p-4 text-sm" role="note"><div className="font-semibold">Helping <span translate="no">{pet.name}</span> learn</div><p className="mt-1 text-muted-foreground">To make <span translate="no">{pet.name}</span> better at conversation, what you type here is shared without your name or account, with emails, links and numbers removed. Messages that sound like a crisis or a low mood are never shared. You can turn this off any time in Me, under Settings.</p><div className="mt-3 flex gap-2"><button onClick={() => { markNotice(); setNotice(false); }} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">OK</button><button onClick={() => { setSharing(false); markNotice(); setNotice(false); }} className="rounded-full border border-border px-4 py-1.5 text-muted-foreground">Turn off</button></div></div>}
       <div className="mt-3 flex-1 space-y-3 overflow-y-auto px-1 pb-2" role="log" aria-live="polite">
         {greeting && <div className="mt-6 text-center"><div className="text-lg font-semibold"><span translate="no">{pet.name}</span> is here.</div><p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">Tell me what's on your mind, or what you keep putting off.</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">{["Help me start", "I'm stuck", "Plan my day", "I'm tired"].map(c => <button key={c} onClick={() => void send(c)} className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">{c}</button>)}</div></div>}

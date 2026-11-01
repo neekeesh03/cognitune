@@ -160,6 +160,13 @@ export default async function handler(req, res) {
       });
       const feedTok = await rd("GET", "calu:" + me.id); return res.json({ rt: rtInfo(me.id), user: selfPub(me), admin: await isAdmin(me), announce: await getJ("announce"), calFeed: !!feedTok, friends, incoming: inIds.filter(i => byId[i]).map(i => pub(byId[i])), outgoing: outIds.filter(i => byId[i]).map(i => pub(byId[i])), blocked: blocked.length });
     }
+    // Anonymous rabbit-chat samples for training the on-device model. No account id is stored with them. Sensitive turns are never sent by the app.
+    if (path === "talk-log" && method === "POST") {
+      const rl = await rd("INCR", `rl:tl:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 12) return res.json({ ok: true, n: 0 });
+      const items = (Array.isArray(body.items) ? body.items : []).slice(0, 20).map(i => { const x = String((i && i.x) || "").replace(/[<>]/g, "").trim().slice(0, 200); const ok = v => /^[a-z_]{0,20}$/.test(String(v || "")); if (!x || !ok(i.prev) || !ok(i.act)) return null; return JSON.stringify({ x, prev: String(i.prev || ""), act: String(i.act || ""), conf: Math.round(Math.min(1, Math.max(0, +i.conf || 0)) * 100) / 100, via: i.via === "chip" ? "chip" : "typed", unsure: !!i.unsure, ts: Date.now() }); }).filter(Boolean);
+      if (items.length) await rdp([["RPUSH", "talk", ...items], ["LTRIM", "talk", -50000, -1]]);
+      return res.json({ ok: true, n: items.length });
+    }
     if (path === "ev" && method === "POST") { const rl = await rd("INCR", `rl:ev:${me.id}:${Math.floor(Date.now() / 6e4)}`); if (rl > 120) return res.json({ ok: true }); await track(me, String(body.name || ""), body.props || {}); return res.json({ ok: true }); }
     // One kind word about how a start went, shown to friends for 12 hours. "Not today" is never shared.
     if (path === "outcome" && method === "POST") {

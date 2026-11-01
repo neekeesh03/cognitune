@@ -89,6 +89,7 @@ async function adminInner(path, method, ctx) {
   }
 
   if (path === "admin-exp" && method === "GET") return res.json(await experimentStats());
+  if (path === "admin-talk" && method === "GET") { const rows = (await rd("LRANGE", "talk", 0, -1)).map(v => { try { return JSON.parse(v); } catch { return null; } }).filter(Boolean); return res.json({ count: rows.length, items: rows.slice(-3000) }); }
   if (path === "admin-waitlist" && method === "GET") return res.json({ items: await waitlistList() });
   if (path === "admin-waitlist-export" && method === "GET") { const items = await waitlistList(); await audit(me, "export-waitlist", `${items.length} rows`); res.setHeader("Content-Type", "text/csv"); res.setHeader("Content-Disposition", 'attachment; filename="waitlist.csv"'); return res.send("email,variant,segment,source,joined\n" + items.map(i => [i.email, i.v, i.s, i.src || "", new Date(i.ts).toISOString()].join(",")).join("\n")); }
 

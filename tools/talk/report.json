@@ -1,73 +1,55 @@
 {
-  "parameters": 9986,
-  "trainExamples": 8460,
-  "heldOutWordingExamples": 1680,
-  "handWrittenExamples": 93,
+  "parameters": 52511,
+  "trainExamples": 36700,
+  "heldOutWordingExamples": 2320,
+  "handWrittenExamples": 121,
   "history": [
     {
       "ep": 5,
-      "loss": 0.3563,
-      "train": 0.985,
-      "heldOutWording": 0.647,
-      "handWritten": 0.774
+      "loss": 0.1892,
+      "train": 0.994,
+      "heldOutWording": 0.711,
+      "handWritten": 0.769
     },
     {
       "ep": 10,
-      "loss": 0.3217,
-      "train": 0.994,
-      "heldOutWording": 0.663,
-      "handWritten": 0.763
+      "loss": 0.1821,
+      "train": 0.995,
+      "heldOutWording": 0.701,
+      "handWritten": 0.793
     },
     {
       "ep": 15,
-      "loss": 0.3072,
-      "train": 0.993,
-      "heldOutWording": 0.621,
-      "handWritten": 0.763
+      "loss": 0.1807,
+      "train": 0.991,
+      "heldOutWording": 0.702,
+      "handWritten": 0.802
     },
     {
       "ep": 20,
-      "loss": 0.3032,
-      "train": 0.992,
-      "heldOutWording": 0.639,
-      "handWritten": 0.763
+      "loss": 0.177,
+      "train": 0.993,
+      "heldOutWording": 0.711,
+      "handWritten": 0.81
     },
     {
       "ep": 25,
-      "loss": 0.3094,
-      "train": 0.993,
-      "heldOutWording": 0.624,
-      "handWritten": 0.774
+      "loss": 0.1339,
+      "train": 0.999,
+      "heldOutWording": 0.721,
+      "handWritten": 0.826
     },
     {
       "ep": 30,
-      "loss": 0.2928,
-      "train": 0.991,
-      "heldOutWording": 0.623,
-      "handWritten": 0.742
-    },
-    {
-      "ep": 35,
-      "loss": 0.2268,
+      "loss": 0.1338,
       "train": 0.999,
-      "heldOutWording": 0.647,
+      "heldOutWording": 0.712,
       "handWritten": 0.785
-    },
-    {
-      "ep": 40,
-      "loss": 0.2246,
-      "train": 1,
-      "heldOutWording": 0.652,
-      "handWritten": 0.763
     }
   ],
   "weakestActs": [
     [
-      "distract",
-      0.2
-    ],
-    [
-      "no",
+      "yes",
       0.35
     ],
     [
@@ -76,71 +58,75 @@
     ],
     [
       "bye",
-      0.43
+      0.44
     ],
     [
-      "overwhelm",
-      0.45
+      "howru",
+      0.48
+    ],
+    [
+      "share",
+      0.48
     ],
     [
       "chitchat",
-      0.45
+      0.52
     ]
   ],
   "topConfusions": [
     [
-      "overwhelm->big",
-      24
+      "motivate->ask_start",
+      30
     ],
     [
-      "distract->task_say",
-      19
+      "yes->good_mood",
+      23
     ],
     [
-      "other->greet",
+      "thanks->win",
+      17
+    ],
+    [
+      "low->tired",
       16
     ],
     [
-      "chitchat->boring",
+      "ask_start->clarify",
       15
     ],
     [
-      "chitchat->who_help",
-      15
+      "distract->win",
+      14
     ],
     [
-      "joke->chitchat",
-      13
+      "task_say->distract",
+      14
     ],
     [
-      "ask_plan->progress",
-      12
-    ],
-    [
-      "low->big",
-      11
+      "clarify->who_help",
+      14
     ]
   ],
   "calibration": [
     {
       "threshold": 0.4,
-      "answered": 0.86,
-      "accuracyWhenAnswering": 0.738
+      "answered": 0.87,
+      "accuracyWhenAnswering": 0.796
     },
     {
       "threshold": 0.5,
-      "answered": 0.779,
-      "accuracyWhenAnswering": 0.776
+      "answered": 0.812,
+      "accuracyWhenAnswering": 0.824
     },
     {
       "threshold": 0.6,
-      "answered": 0.688,
-      "accuracyWhenAnswering": 0.82
+      "answered": 0.755,
+      "accuracyWhenAnswering": 0.852
     },
     {
       "threshold": 0.7,
-      "answered": 0.589,
-      "accuracyWhenAnswering": 0.865
+      "answered": 0.703,
+      "accuracyWhenAnswering": 0.871
     }
   ],
   "handWrittenMisses": [
@@ -148,155 +134,176 @@
       "heyyy",
       "",
       "greet",
-      "yes",
-      0.33
-    ],
-    [
-      "nice one, cheers",
-      "",
       "thanks",
-      "deadline",
       0.6
-    ],
-    [
-      "ok i'm heading to bed, night",
-      "",
-      "bye",
-      "overwhelm",
-      0.57
-    ],
-    [
-      "are you doing okay?",
-      "",
-      "howru",
-      "who_help",
-      0.41
     ],
     [
       "is there a real human behind this",
       "",
       "who_help",
-      "deadline",
-      0.72
+      "big",
+      0.25
     ],
     [
       "i don't understand what step one is",
       "",
       "unclear",
-      "win",
-      0.23
+      "clarify",
+      0.93
+    ],
+    [
+      "where would you begin with a thesis?",
+      "",
+      "unclear",
+      "who_help",
+      0.38
+    ],
+    [
+      "it's such a massive project i freeze",
+      "",
+      "big",
+      "overwhelm",
+      0.29
     ],
     [
       "there's just too much of it",
       "",
       "big",
       "overwhelm",
-      0.93
-    ],
-    [
-      "this assignment is gigantic",
-      "",
-      "big",
-      "motivate",
-      0.21
+      0.6
     ],
     [
       "didn't sleep at all last night",
       "",
       "tired",
       "bye",
-      0.66
+      0.71
     ],
     [
       "my body is just done",
       "",
       "tired",
       "boring",
-      0.48
+      0.44
     ],
     [
       "i zone out after two minutes",
       "",
       "distract",
       "win",
-      0.84
+      0.69
     ],
     [
-      "honestly i'm just sad",
+      "ok what can i start right now",
       "",
-      "low",
-      "tired",
-      0.42
+      "ask_start",
+      "who_help",
+      0.28
+    ],
+    [
+      "say something to get me moving",
+      "",
+      "motivate",
+      "ask_start",
+      0.73
     ],
     [
       "why am i even doing this, convince me",
       "",
       "motivate",
       "progress",
-      0.34
+      0.29
     ],
     [
       "tell me something cool",
       "",
       "chitchat",
-      "task_say",
-      0.77
+      "joke",
+      0.49
     ],
     [
-      "nah skip it",
+      "what's my streak looking like",
       "",
-      "no",
-      "greet",
-      0.55
+      "progress",
+      "chitchat",
+      0.23
+    ],
+    [
+      "what's the population of canada",
+      "",
+      "other",
+      "who_help",
+      0.31
     ],
     [
       "asdf",
       "",
       "other",
-      "who_help",
-      0.88
+      "boring",
+      0.42
     ],
     [
       "purple monkey dishwasher",
       "",
       "other",
-      "big",
-      0.49
+      "bye",
+      0.35
+    ],
+    [
+      "idk",
+      "ask_start",
+      "unclear",
+      "dont_know",
+      0.98
     ],
     [
       "i don't know",
       "overwhelm",
       "unclear",
+      "dont_know",
+      0.96
+    ],
+    [
+      "not sure",
+      "",
       "other",
-      0.52
+      "dont_know",
+      0.97
     ],
     [
       "haha good one",
       "joke",
       "thanks",
-      "win",
-      0.16
-    ],
-    [
-      "okay night",
-      "bye",
-      "bye",
       "joke",
-      0.29
+      0.54
     ],
     [
       "another one",
       "joke",
       "joke",
       "other",
-      0.69
+      0.38
     ],
     [
       "too much to do and not enough time",
       "",
       "overwhelm",
       "big",
-      0.38
+      0.67
+    ],
+    [
+      "why would that help",
+      "",
+      "clarify",
+      "who_help",
+      0.42
+    ],
+    [
+      "nothing special today",
+      "",
+      "share",
+      "other",
+      0.41
     ]
   ]
 }

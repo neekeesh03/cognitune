@@ -33,6 +33,7 @@ export function Privacy() {
         <li>A copy of your private chat key, locked with your password or chat passcode, so you can read your chats on a new device. We cannot open it.</li>
         <li>If you turn it on: your planned time blocks, to publish a private calendar link for you. You can turn it off any time.</li>
         <li>If you set a reminder on a planned block and turn on alerts: only the time to send the alert, with no title, note, link or file. The alert says only that a planned block is starting. Notes, links and files you add to a block stay on your device.</li>
+        <li>Chat with your rabbit (Talk): the words you type there are kept on your device. Unless you turn it off in Me, under Settings, we also store a copy of each message to train the rabbit's model, without your name or account, with emails, links, handles and long numbers removed. Messages that look like a crisis or a low mood are never copied. These copies are not linked to you, so we cannot find or delete yours individually. Turning the switch off stops anything further from being sent.</li>
         <li>Simple counts such as sign-ups and messages per day, and the time you were last active.</li>
       </ul>
       <h2>Who handles it</h2>

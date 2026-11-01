@@ -27,10 +27,17 @@ export const HAND = [
   ["how has my week been", "", "progress"], ["what's my streak looking like", "", "progress"], ["show me how consistent i've been", "", "progress"],
   ["my paper is due tomorrow morning", "", "deadline"], ["i have a test on wednesday", "", "deadline"], ["the application closes tonight", "", "deadline"],
   ["what's the population of canada", "", "other"], ["order me a pizza", "", "other"], ["asdf", "", "other"], ["purple monkey dishwasher", "", "other"],
-  ["idk", "ask_start", "unclear"], ["i don't know", "overwhelm", "unclear"], ["not sure", "", "other"],
+  ["idk", "ask_start", "dont_know"], ["i don't know", "overwhelm", "dont_know"], ["not sure", "", "dont_know"],
   ["haha good one", "joke", "thanks"], ["lol", "", "other"],
   ["okay night", "bye", "bye"], ["another one", "joke", "joke"],
   ["can't focus at all today", "", "distract"], ["too much to do and not enough time", "", "overwhelm"], ["i don't want to mess this up", "", "scared"],
   ["everything feels pointless lately", "", "low"], ["so sleepy i can't think", "", "tired"], ["what should i work on first", "", "ask_start"],
   ["i did it, i submitted it", "", "win"], ["thanks pip", "", "thanks"], ["see you tomorrow", "", "bye"], ["hello there", "", "greet"],
+  // v2: repair, sharing and mood
+  ["i don't know", "", "dont_know"], ["i don't know", "other", "dont_know"], ["honestly no idea", "", "dont_know"], ["hmm not really sure", "ask_start", "dont_know"], ["i can't tell what's wrong", "", "dont_know"], ["dunno", "other", "dont_know"],
+  ["what do you mean by that", "", "clarify"], ["huh? i don't get it", "unclear", "clarify"], ["can you explain that more simply", "", "clarify"], ["why would that help", "", "clarify"], ["how do i do that", "", "clarify"],
+  ["that's not helpful at all", "", "complain"], ["you keep repeating yourself", "other", "complain"], ["this chatbot is useless", "", "complain"], ["you're not listening to me", "", "complain"], ["that makes no sense", "", "complain"], ["wrong answer", "", "complain"],
+  ["i just got back from the gym", "", "share"], ["my day was pretty normal", "", "share"], ["i'm sitting in a cafe", "", "share"], ["nothing special today", "", "share"], ["had a long day at work", "", "share"],
+  ["i'm doing well thanks", "", "good_mood"], ["feeling pretty good today", "", "good_mood"], ["i feel happy", "", "good_mood"], ["all good here", "", "good_mood"],
+  ["i don't know what to do with my life", "", "dont_know"], ["yeah i'm good", "howru", "good_mood"],
 ];

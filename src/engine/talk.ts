@@ -1,7 +1,7 @@
-// Talk: the rabbit's own conversation engine. No outside AI, no internet call.
-// A 9,986-parameter neural network (tools/talk/train.mjs) reads each message together with what was said before and picks
-// one of 26 conversation acts. A small dialogue manager then answers from written replies, fills in your task, and offers
-// next steps. Below 50% sure it asks instead of guessing. Chats stay on this device.
+// Talk: the rabbit's own conversation engine. No outside AI, no internet call to a model.
+// A 52,511-parameter neural network (tools/talk/train.mjs) reads each message together with what was said before and picks
+// one of 31 conversation acts. A dialogue manager then answers from written replies, remembers your task, repairs the
+// conversation when it is lost, and offers next steps. When it is not sure it asks, and it never leaves you at a dead end.
 import { analyze } from "@/engine/text";
 import { SAFETY_TEXT, looksUnsafe } from "@/engine/coachNlu";
 import { suggestSteps } from "@/engine/plan";
@@ -11,16 +11,16 @@ import { petNow } from "@/lib/pet";
 import { tomorrowStep } from "@/engine/director";
 import { directorOn } from "@/lib/arm";
 
-export type Act = "greet" | "thanks" | "bye" | "howru" | "who_help" | "unclear" | "big" | "boring" | "scared" | "tired" | "distract" | "overwhelm" | "low" | "win" | "ask_start" | "ask_plan" | "ask_break" | "motivate" | "joke" | "chitchat" | "yes" | "no" | "task_say" | "progress" | "deadline" | "other";
+export type Act = "greet" | "thanks" | "bye" | "howru" | "who_help" | "unclear" | "big" | "boring" | "scared" | "tired" | "distract" | "overwhelm" | "low" | "win" | "ask_start" | "ask_plan" | "ask_break" | "motivate" | "joke" | "chitchat" | "yes" | "no" | "task_say" | "progress" | "deadline" | "other" | "dont_know" | "clarify" | "complain" | "share" | "good_mood";
 export interface Chip { label: string; send?: string; act?: "start" | "coach" | "plan" | "circle"; task?: string; step?: string }
 export interface Msg { id: string; from: "me" | "pip"; text: string; ts: number; chips?: Chip[]; act?: Act; conf?: number }
-export interface TalkState { last: Act | ""; task?: string; awaiting?: Act | null; pending?: "start" | "plan" | null; lowRun: number; used: Record<string, number>; turns: number }
-export const emptyState = (): TalkState => ({ last: "", lowRun: 0, used: {}, turns: 0 });
+export interface TalkState { last: Act | ""; task?: string; awaiting?: Act | null; pending?: "start" | "plan" | null; lowRun: number; used: Record<string, number>; turns: number; unsureRun: number; lastReply?: string; lastStep?: string }
+export const emptyState = (): TalkState => ({ last: "", lowRun: 0, used: {}, turns: 0, unsureRun: 0 });
+export const MODEL_PARAMS = 52511;
 
 interface Model { labels: Act[]; B: number; D: number; DC: number; H: number; K: number; E: number[]; C: number[]; W1: number[]; b1: number[]; W2: number[]; b2: number[]; threshold: number; params: number }
 let cache: Promise<Model> | null = null;
 const load = () => (cache ??= import("@/engine/talkModel.json").then(x => (x.default ?? x) as unknown as Model));
-export const MODEL_PARAMS = 9986;
 
 function hash(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 const tok = (t: string) => t.toLowerCase().replace(/['\u2019]/g, "").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
@@ -45,7 +45,6 @@ export async function readAct(text: string, prev: Act | ""): Promise<Reading> {
   return { top, confident: top[0].p >= m.threshold };
 }
 
-const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 /** A variant not used recently for this act. */
 function vary(st: TalkState, key: string, a: string[]): string {
   const last = st.used[key]; let i = Math.floor(Math.random() * a.length); if (a.length > 1 && i === last) i = (i + 1) % a.length; st.used[key] = i; return a[i];
@@ -55,7 +54,7 @@ const REPLY: Record<string, string[]> = {
   thanks: ["Any time. You did the hard part by showing up.", "Happy to. Want to keep going, or take a breather?", "You're welcome. I'm glad it helped."],
   bye: ["Take care, {me}. I'll be here whenever you want to start something.", "See you soon. Rest well.", "Bye for now. One small start tomorrow is plenty."],
   howru: ["I'm doing well, thanks for asking. I'm an AI, so my day is mostly waiting for you. How are you?", "Cheerful. I'm a rabbit made of maths, and I like it when you drop by. How about you?"],
-  who_help: ["I'm {pet}, a small AI that lives in this app. I can help you start things, break tasks down, plan your day, and keep you company. I run on your device and what you tell me stays here.", "I'm {pet}. I'm not a person. I'm a tiny model, about ten thousand numbers, trained to help you get started. Chats stay on this device."],
+  who_help: ["I'm {pet}, a small AI that lives in this app. I can help you start things, break tasks down, plan your day, and keep you company. The model is about fifty thousand numbers and runs on your device.", "I'm {pet}. I'm not a person. I'm a small model trained to help you get started, and I make mistakes, so tell me when I get it wrong."],
   unclear: ["Not knowing where to start is really common. Let's find just the first move.", "That fog is normal when something is vague. We only need one clear action."],
   big: ["That does sound like a lot. We can shrink it until it stops looking like a mountain.", "Big things feel impossible all at once. We only have to do the first small piece."],
   boring: ["Boring is real. Let's make it short and a bit more fun, like two minutes with a treat nearby.", "Tedious tasks are hard to start. A tiny timer makes them easier."],
@@ -71,9 +70,12 @@ const REPLY: Record<string, string[]> = {
   motivate: ["You don't need motivation to start, only two minutes. Motivation usually arrives after you begin.", "You have started before, and you can again. One tiny step is enough."],
   chitchat: ["I like carrots, but I've never had one. I'm software. I do like it when you tell me about your day.", "I'm a rabbit made of maths who lives on your device. It's a quiet life. What about you?", "Fun fact: rabbits do a little jump called a binky when they're happy. That is my entire personality.", "I don't sleep, but I do enjoy a good quiet moment. What's something small you enjoyed today?"],
   no: ["Okay, no pressure.", "That's fine. I'm here if you change your mind.", "No problem."],
-  other: ["I'm not sure I can help with that. I'm best at helping you start things and keeping you company. Want to try one of these?", "That one is outside what I know. I'm good at starting things, breaking tasks down and keeping you company. Want to try one?", "I can't help with that, but I can help you get going on something. Pick one?"],
+  other: ["I'm not sure how to help with that one. I'm best at helping you start things and keeping you company.", "That one is outside what I can do. I'm good at starting things, breaking tasks down and keeping you company.", "I can't help with that, but I can help you get going on something."],
+  good_mood: ["I'm glad to hear it. Good energy is perfect for a tiny start. Want to use it?", "That's lovely, {me}. A good mood makes starting easier. Anything small you'd like to get going on?", "Nice. Let's make the most of it with one small thing."],
+  share: ["Thanks for telling me. How's your energy right now?", "I like hearing about your day. Is there anything you've been putting off?", "Got it. Sounds like a regular kind of day. How are you feeling about it?", "Thanks for sharing that. Want to do one small thing while you're here?"],
+  complain: ["You're right, that wasn't helpful. I'm a small model and I get things wrong. Tell me in a few words what's going on and I'll try again.", "Sorry about that. I didn't get it. Can you say it another way? Or pick what's closest below.", "Fair. I missed it. Let me try again: what is the hardest part right now?"],
 };
-const JOKES = ["Why did the rabbit start the task? It was tired of just hopping around it.", "What do you call a rabbit that finishes homework early? A hare of the dog... no, a hare ahead.", "Why don't procrastinators ever get lost? They never leave.", "I told my to-do list a joke. It didn't finish it either.", "What's a rabbit's favorite exercise? Hip hop.", "Why did the student put the clock in the freezer? To save time."];
+const JOKES = ["Why did the rabbit start the task? It was tired of just hopping around it.", "What do you call a rabbit that finishes homework early? A hare ahead of the class.", "Why don't procrastinators ever get lost? They never leave.", "I told my to-do list a joke. It didn't finish it either.", "What's a rabbit's favorite exercise? Hip hop.", "Why did the student put the clock in the freezer? To save time."];
 const fill = (s: string, st: TalkState) => s.replace(/\{pet\}/g, petNow().name).replace(/\{me\}/g, myName()).replace(/\{task\}/g, st.task ?? "it");
 let nameCache = ""; export const setMyName = (n: string) => { nameCache = n.split(" ")[0] || ""; };
 const myName = () => nameCache || "friend";
@@ -94,38 +96,73 @@ function dueWord(text: string): string | undefined {
   const t = text.toLowerCase(); const m = t.match(/\b(tomorrow|tonight|today|this weekend|next week|on (?:mon|tues|wednes|thurs|fri|satur|sun)day|in (?:\d+|two|three|four|five|a few) days|(?:mon|tues|wednes|thurs|fri|satur|sun)day)\b/); return m?.[1];
 }
 const stepFor = (task?: string) => suggestSteps(task || "it")[0]?.text ?? "Open it and look at it for two minutes.";
-const LABEL: Partial<Record<Act, string>> = { unclear: "I don't know where to start", big: "It feels too big", boring: "It's boring", scared: "I'm afraid of doing it badly", tired: "I'm tired", distract: "I keep getting distracted", overwhelm: "I'm overwhelmed", low: "I'm feeling low", ask_start: "Help me start", ask_plan: "Plan my day", motivate: "I need a push", joke: "Tell me a joke", progress: "How am I doing?", win: "I did something", chitchat: "Let's chat", who_help: "What can you do?", task_say: "I'm avoiding something", deadline: "I have a deadline" };
+const LABEL: Partial<Record<Act, string>> = { unclear: "I don't know where to start", big: "It feels too big", boring: "It's boring", scared: "I'm afraid of doing it badly", tired: "I'm tired", distract: "I keep getting distracted", overwhelm: "I'm overwhelmed", low: "I'm feeling low", ask_start: "Help me start", ask_plan: "Plan my day", motivate: "I need a push", joke: "Tell me a joke", progress: "How am I doing?", win: "I did something", chitchat: "Let's chat", who_help: "What can you do?", task_say: "I'm avoiding something", deadline: "I have a deadline", share: "I'll tell you about my day", good_mood: "I'm feeling good" };
+/** The guided menu: shown when the conversation is lost, so it never ends at a dead end. */
+const MENU: Chip[] = [{ label: "Too much to do", send: "I'm overwhelmed" }, { label: "Can't get started", send: "I don't know where to start" }, { label: "I'm tired", send: "I'm tired" }, { label: "Feeling low", send: "I'm feeling low" }, { label: "Just chatting", send: "Let's chat" }];
+const dedupe = (cs: Chip[]) => { const seen = new Set<string>(); return cs.filter(c => (seen.has(c.label) ? false : (seen.add(c.label), true))); };
 
 function weekStats() {
   const now = Date.now(); const S = loadLog().starts.filter(s => s.ts <= now); const wk = S.filter(s => now - s.ts < 7 * 864e5);
   return { total: S.length, week: wk.length, days: new Set(wk.map(s => dayKeyOf(s.ts))).size };
 }
 export interface Ctx { tasks: { title: string; step?: string }[]; streak: number }
-export interface Turn { reply: string; chips: Chip[]; act: Act; conf: number; state: TalkState }
+export interface Turn { reply: string; chips: Chip[]; act: Act; conf: number; state: TalkState; sensitive?: boolean; unsure?: boolean }
+
+// A short lexicon as a safety net for one-word replies, used only when the network is unsure.
+const LEX: [RegExp, Act][] = [[/^(yes|yeah|yep|yup|sure|ok|okay|ya|yea|y)\b/, "yes"], [/^(no|nope|nah|n)\b/, "no"], [/^(hi|hey|hello|hiya|yo|hola)\b/, "greet"], [/^(thanks|thank you|thx|ty)\b/, "thanks"], [/^(bye|goodbye|cya|goodnight|good night)\b/, "bye"], [/^(idk|dunno|i dont know|not sure|no idea)\b/, "dont_know"], [/^(what|huh|why|how)\??$/, "clarify"]];
+const lexicon = (t: string): Act | null => { const s = tok(t).join(" "); for (const [re, a] of LEX) if (re.test(s)) return a; return null; };
 
 /** One turn of conversation. Pure apart from reading the start log. */
 export async function respond(text: string, prevState: TalkState, ctx: Ctx): Promise<Turn> {
   const st: TalkState = { ...prevState, used: { ...prevState.used }, turns: prevState.turns + 1 };
-  if (looksUnsafe(text) || analyze(text).crisis) { st.last = "low"; st.awaiting = null; return { reply: SAFETY_TEXT, chips: [{ label: "Talk to a friend", act: "circle" }], act: "low", conf: 1, state: st }; }
-  const rd = await readAct(text, prevState.last); let act = rd.top[0].act; const conf = rd.top[0].p;
+  const done = (t: Omit<Turn, "state">): Turn => { st.lastReply = t.reply; const sc = t.chips.find(c => c.act === "start"); if (sc) st.lastStep = sc.step; return { ...t, chips: dedupe(t.chips), state: st }; };
+  if (looksUnsafe(text) || analyze(text).crisis) { st.last = "low"; st.awaiting = null; st.unsureRun = 0; return done({ reply: SAFETY_TEXT, chips: [{ label: "Talk to a friend", act: "circle" }], act: "low", conf: 1, sensitive: true }); }
+  const rd = await readAct(text, prevState.last); let act = rd.top[0].act; let conf = rd.top[0].p;
   // after we asked "which thing is it?", a short answer is the task
-  if (prevState.awaiting && text.trim().length <= 70 && !(rd.confident && ["greet", "bye", "no", "thanks", "low"].includes(act))) {
-    const task = extractTask(text) ?? text.trim().replace(/[.!?]+$/g, "").slice(0, 40); st.task = task; const a = prevState.awaiting; st.awaiting = null; return coach(a, st, text, conf);
+  if (prevState.awaiting && text.trim().length <= 70 && !(rd.confident && ["greet", "bye", "no", "thanks", "low", "dont_know", "complain", "clarify"].includes(act))) {
+    const task = extractTask(text) ?? text.trim().replace(/[.!?]+$/g, "").slice(0, 40); st.task = task; const a = prevState.awaiting; st.awaiting = null; st.unsureRun = 0;
+    if (a === "task_say") { const step = stepFor(task); st.last = "task_say"; st.pending = "start"; return done({ reply: `Got it: ${task}. A tiny first step: ${step}`, chips: [{ label: "Start 2 min", act: "start", task, step }, { label: "Make it smaller", act: "coach", task }], act: "task_say", conf }); }
+    return coach(a, st, conf, done);
   }
-  if (!rd.confident && !(act === "yes" || act === "no")) {
-    const [a, b] = rd.top; const opts = [a.act, b.act].filter(x => LABEL[x]) as Act[]; st.last = "other";
-    if (opts.length && a.p >= 0.25) return { reply: vary(st, "unsure", ["I want to get this right. Which is closest?", "I'm not fully sure what you mean. Is it one of these?"]), chips: opts.slice(0, 2).map(o => ({ label: LABEL[o]!, send: LABEL[o]! })), act: "other", conf, state: st };
-    act = "other";
+  const words = tok(text).length;
+  // not sure: ask once, then offer the guided menu, and never leave a dead end
+  if (!rd.confident || (act === "other" && (conf < 0.6 || words <= 2))) {
+    const lx = lexicon(text);
+    if (lx && words <= 3) { act = lx; conf = Math.max(conf, 0.55); }
+    else {
+      st.unsureRun += 1; st.last = "other"; st.awaiting = null;
+      const opts = rd.top.map(t => t.act).filter(a => LABEL[a]).slice(0, 2) as Act[];
+      if (st.unsureRun === 1 && opts.length && rd.top[0].p >= 0.2) return done({ reply: vary(st, "unsure", ["I want to get this right. Which is closest?", "I'm not fully sure what you mean. Is it one of these?", "Let me check I understood. Is it something like this?"]), chips: [...opts.map(o => ({ label: LABEL[o]!, send: LABEL[o]! })), { label: "Something else", send: "Something else" }], act: "other", conf, unsure: true });
+      return done({ reply: vary(st, "menu", ["No worries, we don't have to name it. What feels closest right now?", "That's okay. Let's find it together. Pick whatever is nearest.", "I may be missing it. Here are a few common ones. Tap the closest, or tell me more in your own words."]), chips: MENU, act: "other", conf, unsure: true });
+    }
   }
+  st.unsureRun = 0;
   if (act !== "low") st.lowRun = 0;
-  if (["unclear", "big", "boring", "scared"].includes(act)) { const t = extractTask(text); if (t) st.task = t; if (!st.task) { st.awaiting = act; st.last = act; return { reply: fill(vary(st, act, REPLY[act]), st) + " Which thing is it?", chips: ctx.tasks.slice(0, 2).map(t => ({ label: t.title, send: t.title })), act, conf, state: st }; } return coach(act, st, text, conf); }
-  if (["tired", "distract", "overwhelm"].includes(act)) { const t = extractTask(text); if (t) st.task = t; return coach(act, st, text, conf); }
+  if (["unclear", "big", "boring", "scared"].includes(act)) { const t = extractTask(text); if (t) st.task = t; if (!st.task) { st.awaiting = act; st.last = act; return done({ reply: fill(vary(st, act, REPLY[act]), st) + " Which thing is it?", chips: ctx.tasks.slice(0, 2).map(t => ({ label: t.title, send: t.title })), act, conf }); } return coach(act, st, conf, done); }
+  if (["tired", "distract", "overwhelm"].includes(act)) { const t = extractTask(text); if (t) st.task = t; return coach(act, st, conf, done); }
   st.awaiting = null;
   const chips: Chip[] = []; let reply = "";
   switch (act) {
-    case "low": { st.lowRun += 1; reply = fill(vary(st, "low", REPLY.low), st) + (st.lowRun >= 2 ? " If it keeps feeling this heavy, talking to someone you trust can help. findahelpline.com lists free lines by country." : " Do you want to talk about it, or just sit for a minute?"); chips.push({ label: "Talk to a friend", act: "circle" }, { label: "Just sit for a minute", send: "I just want to sit for a minute" }); break; }
+    case "low": { st.lowRun += 1; reply = fill(vary(st, "low", REPLY.low), st) + (st.lowRun >= 2 ? " If it keeps feeling this heavy, talking to someone you trust can help. findahelpline.com lists free lines by country." : " Do you want to talk about it, or just sit for a minute?"); chips.push({ label: "Talk to a friend", act: "circle" }, { label: "Just sit for a minute", send: "I just want to sit for a minute" }); st.last = act; return done({ reply, chips, act, conf, sensitive: true }); }
+    case "dont_know": {
+      const prev = prevState.last;
+      if (prev === "ask_start" || prev === "task_say" || prev === "deadline") reply = vary(st, "dk1", ["That's okay, you don't need to know yet. Is it more that you can't get going, or that it feels like too much?", "No problem. Let's narrow it down. What feels hardest about starting?"]);
+      else if (prev === "low") { reply = "That's okay. You don't have to explain it. I'm here. We can just sit for a bit, or I can help with one tiny thing."; chips.push({ label: "Just sit for a minute", send: "I just want to sit for a minute" }, { label: "Talk to a friend", act: "circle" }); }
+      else reply = vary(st, "dk2", ["That's okay, not knowing is a fine place to start. Let's find it together. What feels closest?", "No pressure. We can figure it out as we go. Which of these feels nearest?"]);
+      if (!chips.length) chips.push(...MENU);
+      break;
+    }
+    case "clarify": {
+      if (st.lastStep) reply = `Sorry, let me say it simply. I'm suggesting one tiny step for two minutes: ${st.lastStep} Nothing more than that.`;
+      else if (prevState.last === "other" || prevState.last === "") reply = "Sorry, I wasn't clear. I help you get started on things: I can break a task into a tiny first step, help you plan your day, or just keep you company. What would help?";
+      else reply = "Let me say that more simply: we make the first move so small that it's easy to begin. Which part is unclear?";
+      chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I don't know where to start" }); break;
+    }
+    case "complain": reply = fill(vary(st, "complain", REPLY.complain), st); chips.push(...MENU.slice(0, 3), { label: "Just chat", send: "Let's chat" }); break;
+    case "share": reply = fill(vary(st, "share", REPLY.share), st); chips.push({ label: "Good", send: "I'm feeling good" }, { label: "Tired", send: "I'm tired" }, { label: "Stressed", send: "I'm overwhelmed" }); break;
+    case "good_mood": reply = fill(vary(st, "good_mood", REPLY.good_mood), st); chips.push({ label: "Help me start", send: "Help me start" }, { label: "Plan my day", act: "plan" }); break;
     case "win": reply = fill(vary(st, "win", REPLY.win), st); chips.push({ label: "Start another small one", send: "Help me start" }, { label: "Plan my day", act: "plan" }); break;
-    case "ask_start": { const tm = directorOn() ? tomorrowStep() : null; const t = tm?.task ?? ctx.tasks[0]?.title ?? st.task; if (t) { st.task = t; const step = tm ? tm.step ?? stepFor(t) : ctx.tasks[0]?.step ?? stepFor(t); reply = `${fill(vary(st, "ask_start", REPLY.ask_start), st)} How about "${t}"? First step: ${step}`; chips.push({ label: "Start 2 min", act: "start", task: t, step }, { label: "Something else", send: "Something else" }); st.pending = "start"; } else { st.awaiting = "task_say"; reply = fill(vary(st, "ask_start", REPLY.ask_start), st) + " What's one thing you've been putting off?"; } break; }
+    case "ask_start": { const tm = directorOn() ? tomorrowStep() : null; const t = tm?.task ?? ctx.tasks[0]?.title ?? st.task; if (t) { st.task = t; const step = tm ? tm.step ?? stepFor(t) : ctx.tasks[0]?.step ?? stepFor(t); reply = `${fill(vary(st, "ask_start", REPLY.ask_start), st)} How about "${t}"? First step: ${step}`; chips.push({ label: "Start 2 min", act: "start", task: t, step }, { label: "Something else", send: "Something else" }); st.pending = "start"; } else { st.awaiting = "task_say"; reply = fill(vary(st, "ask_start", REPLY.ask_start), st) + " What's one thing you've been putting off?"; chips.push({ label: "Reply to an email", send: "I need to reply to an email" }, { label: "Tidy my desk", send: "I need to tidy my desk" }, { label: "Start my essay", send: "I need to start my essay" }); } break; }
     case "ask_plan": reply = fill(vary(st, "ask_plan", REPLY.ask_plan), st); chips.push({ label: "Open the calendar", act: "plan" }); st.pending = "plan"; break;
     case "ask_break": reply = fill(vary(st, "ask_break", REPLY.ask_break), st); chips.push({ label: "I'm ready, start small", send: "Help me start" }); break;
     case "motivate": { const w = weekStats(); reply = fill(vary(st, "motivate", REPLY.motivate), st) + (w.total > 0 ? ` You've started ${w.total} ${w.total === 1 ? "time" : "times"} so far.` : ""); chips.push({ label: "Start 2 min", send: "Help me start" }); break; }
@@ -136,21 +173,21 @@ export async function respond(text: string, prevState: TalkState, ctx: Ctx): Pro
     case "deadline": { const t = extractTask(text); if (t) st.task = t; const when = dueWord(text); const step = stepFor(st.task); reply = `${when ? `That's ${when}. ` : ""}Short and steady beats one big push. ${st.task ? `For ${st.task}, a` : "A"} tiny first step: ${step}`; chips.push({ label: "Start 2 min", act: "start", task: st.task ?? "My deadline", step }, { label: "Plan it", act: "plan" }); break; }
     case "yes": if (prevState.pending === "start" && st.task) { reply = "Great. Starting a two-minute timer."; chips.push({ label: "Start 2 min", act: "start", task: st.task, step: stepFor(st.task) }); } else if (prevState.pending === "plan") { reply = "Opening your plan."; chips.push({ label: "Open the calendar", act: "plan" }); } else { reply = "Good. What would you like to start?"; chips.push({ label: "Help me start", send: "Help me start" }, { label: "Plan my day", act: "plan" }); } st.pending = null; break;
     case "no": reply = fill(vary(st, "no", REPLY.no), st); st.pending = null; break;
-    case "other": reply = fill(vary(st, "other", REPLY.other), st); chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I'm stuck" }, { label: "Tell me a joke", send: "Tell me a joke" }); break;
-    default: reply = fill(vary(st, act, REPLY[act] ?? REPLY.other), st); if (act === "greet") chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I'm stuck" }, { label: "Plan my day", act: "plan" });
+    case "other": reply = fill(vary(st, "other", REPLY.other), st); chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I don't know where to start" }, { label: "Tell me a joke", send: "Tell me a joke" }); break;
+    default: reply = fill(vary(st, act, REPLY[act] ?? REPLY.other), st); if (act === "greet") chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I don't know where to start" }, { label: "Plan my day", act: "plan" });
   }
-  st.last = act; return { reply, chips, act, conf, state: st };
+  st.last = act; return done({ reply, chips, act, conf });
 }
 
 /** Replies for the "this is hard" acts, with a concrete first step and a way to act on it. */
-function coach(act: Act, st: TalkState, text: string, conf: number): Turn {
+function coach(act: Act, st: TalkState, conf: number, done: (t: Omit<Turn, "state">) => Turn): Turn {
   const step = stepFor(st.task); const base = fill(vary(st, act, REPLY[act]), st);
   const extra = act === "tired" ? " If you can, keep it to two minutes." : act === "distract" ? " Put your phone in another room first." : act === "overwhelm" ? " Pick just one thing." : "";
   const reply = `${base}${extra} ${st.task ? `For ${st.task}, a` : "A"} tiny first step: ${step}`;
   st.last = act; st.pending = "start";
   const chips: Chip[] = [{ label: "Start 2 min", act: "start", task: st.task ?? "Something small", step }, { label: "Get unstuck", act: "coach", task: st.task }];
   if (act === "tired") chips.push({ label: "I need a rest", send: "Can I take a break?" });
-  void text; return { reply, chips, act, conf, state: st };
+  return done({ reply, chips, act, conf });
 }
 
 export const STORE = "lagomo.talk.v1";
