@@ -13,6 +13,8 @@ import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
 import { dueDays, dueText, fmtTime, hasResources, type Block } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
+import { FreshStart } from "@/components/FreshStart";
+import { freshToday } from "@/engine/fresh";
 import { CoachSheet } from "@/components/CoachSheet";
 import { clearParked, coachEvent, loadCoach } from "@/engine/coach";
 import { DriveCard } from "@/components/DriveCard";
@@ -68,7 +70,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const hr1 = new Date().getHours();
   const mood: Mood = cheerNow ? "cheering" : game.g.todayActive ? "proud" : idle >= 2 ? "cosy" : hr1 >= 22 || hr1 < 5 ? "sleepy" : waiting ? "curious" : "ready";
   const rabbitLine = cheerNow ? `${(cheerer?.name ?? "A friend").split(" ")[0]} sent you ${cheerNow.e}` : mood === "curious" && waiting ? `${waiting.name.split(" ")[0]} started. Join them?` : undefined;
-  const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first) && !freshGone ? "fresh" : "";
+  const freshLabel = freshToday(nowD); const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first || !!freshLabel) && !freshGone ? "fresh" : "";
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
   const dueSoon = plan.tasks.filter(t => !t.doneAt && t.due && dueDays(t.due) <= 7).sort((x, y) => dueDays(x.due) - dueDays(y.due)).slice(0, 3);
@@ -83,14 +85,14 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
           {!calm && streak > 0 && <button onClick={() => go("me")} className="rounded-full bg-secondary/70 px-3 py-1 text-foreground hover:bg-secondary" aria-label={`${streak} days showing up`}>{streak} {streak === 1 ? "day" : "days"} in a row</button>}
           {deep && boxReady && <button onClick={game.openBox} className="flex animate-breathe items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-primary"><Gift className="h-3.5 w-3.5" />Open spark box</button>}</div></div>
       <div className="space-y-5 lg:col-span-3">
-        {banner && <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-4 text-sm" role="status"><div className="min-w-0 flex-1">{banner === "back" ? <><b>Welcome back, {name.split(" ")[0]}.</b> <span className="text-muted-foreground">Nothing is lost and nothing withered. One tiny start?</span></> : <><b>{first ? "New month." : "New week."}</b> <span className="text-muted-foreground">A fresh page. What will you start first?</span></>}</div><div className="flex shrink-0 items-center gap-2"><button onClick={focusStart} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Pick one</button><button onClick={dismissBanner} className="text-xs text-muted-foreground hover:text-foreground">Not now</button></div></div>}
+        {banner && <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-4 text-sm" role="status"><div className="min-w-0 flex-1">{banner === "back" ? <><b>Welcome back, {name.split(" ")[0]}.</b> <span className="text-muted-foreground">Nothing is lost and nothing withered. One tiny start?</span></> : <><b>{freshLabel || (first ? "New month." : "New week.")}</b> <span className="text-muted-foreground">A fresh page. What will you start first?</span></>}</div><div className="flex shrink-0 items-center gap-2"><button onClick={focusStart} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Pick one</button><button onClick={dismissBanner} className="text-xs text-muted-foreground hover:text-foreground">Not now</button></div></div>}
         {waiting && <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3 text-sm lg:hidden" role="status"><Avatar spec={waiting.avatar} size={36} /><div className="min-w-0 flex-1"><b translate="no">{waiting.name}</b> started {agoMin(hops.hops[waiting.id])}. <span className="text-muted-foreground">Start something small too?</span></div></div>}
         <StartHero onCoach={t => setCoach(t)} suggestion={nextStep?.t.title ?? ""} onStart={onStart} mood={mood} rabbitLine={rabbitLine} quiet={quietRabbit} />
         <div className="grid grid-cols-3 gap-2" role="group" aria-label={tr("Quick links")}>
           {([["circle", "Start together", Users], ["plan", "Plan my day", CalendarCheck], ["me", "Write a line", PenLine]] as const).map(([id, label, I]) => (
             <button key={id} onClick={() => go(id)} className="glass flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-xs text-foreground transition hover:scale-[1.03]"><I className="h-5 w-5 text-primary" />{tr(label)}</button>))}
         </div>
-        {coach && <CoachSheet task={coach} onStart={onStart} onClose={() => setCoach(null)} />}
+        {coach && <CoachSheet task={coach} onStart={onStart} onClose={() => setCoach(null)} friends={friends.map(f => ({ id: f.id, name: f.name }))} onPledge={onPinky} />}
         {(myPlan || parked) && (
           <div className="glass space-y-3 rounded-3xl p-4">
             {myPlan && <div className="flex items-center gap-3"><div className="min-w-0 flex-1"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Your plan</div><div className="text-sm">When <b>{myPlan.cue}</b>, I will <b>{myPlan.step.toLowerCase()}</b>.</div></div><button onClick={() => onStart(myPlan.task, myPlan.step)} className="shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground">Do it now</button></div>}
@@ -125,6 +127,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
         <button onClick={() => setMore(m => !m)} aria-expanded={more} className="mx-auto flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">{more ? "Less" : "More for today"}<ChevronDown className={`h-4 w-4 transition ${more ? "rotate-180" : ""}`} /></button>
         {more && <div className="space-y-5">
           <WeeklyLetter j={j} game={game} name={name} />
+          <FreshStart />
           <GetStarted username={username} friends={friends.length} started={started} />
           {showDoor && <PinkyDoor friends={friends} when={doorWhen} setWhen={w => { setDoorWhen(w); localStorage.setItem("lagomo.pinky.when", w); }} onHide={() => { localStorage.setItem("lagomo.pinky.hide", dkey()); setDoorHidden(true); }} onPick={id => onPinky!(id)} />}
         {/* The journal prompt stays folded until you want it */}

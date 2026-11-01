@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ProofCard } from "@/components/ProofCard";
 import { useStartLog } from "@/lib/startlog";
 import { ARMS, accuracy, analyse, armStats } from "@/engine/pattern";
 import { TACTICS, coachEvent, loadCoach } from "@/engine/coach";
@@ -24,6 +25,7 @@ export function MyPattern() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 lg:grid lg:max-w-5xl lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
       <div className="space-y-4">
+        <ProofCard />
         <div className="glass rounded-3xl p-6 text-center">
           <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Your starter type</div>
           {p.type ? <><div className="mt-1 font-display text-3xl">{p.type.name}</div><p className="mt-1 text-sm">{p.type.blurb}</p><p className="mt-3 rounded-2xl bg-primary/10 px-4 py-2 text-sm text-primary">Try: {p.type.tip}</p><p className="mt-2 text-xs text-muted-foreground">Based on your last {p.n} starts. It can change as you do.</p></>

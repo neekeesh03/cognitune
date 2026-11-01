@@ -56,3 +56,13 @@ export function logCoach(e: CoachEvent, step: string) { const s = loadCoach(); s
 export function parkNote(task: string, note: string) { if (!note.trim()) return; const s = loadCoach(); s.parked = [...s.parked.filter(p => p.task !== task), { task, note: note.trim().slice(0, 160), ts: Date.now() }]; save(s); }
 export function clearParked(task: string) { const s = loadCoach(); s.parked = s.parked.filter(p => p.task !== task); save(s); }
 export const coachEvent = EV;
+
+// ---------- feelings: name it, then a one-minute reset ----------
+export type Mood = "anxious" | "flat" | "frustrated" | "restless" | "sad";
+export const MOODS: { id: Mood; label: string; idea: string; steps: { at: number; text: string }[] }[] = [
+  { id: "anxious", label: "Anxious or worried", idea: "Slow breathing with a longer breath out can settle the body a little. It will not fix the worry, it just takes the edge off.", steps: [{ at: 0, text: "Breathe in for 4, then out slowly for 6." }] },
+  { id: "flat", label: "Flat or numb", idea: "A little movement and a sip of water can nudge a flat mood. It is small, and small is the point.", steps: [{ at: 0, text: "Stand up if you can. Roll your shoulders slowly." }, { at: 15, text: "Take a few sips of water." }, { at: 30, text: "Look out of a window, or at something far away." }, { at: 45, text: "Say one thing you can see, out loud." }] },
+  { id: "frustrated", label: "Frustrated or irritated", idea: "Putting a feeling into words is linked with calmer reactions. Say it, then breathe out long.", steps: [{ at: 0, text: "Shake out your hands for ten seconds." }, { at: 12, text: "Say it out loud: \"I feel frustrated.\"" }, { at: 30, text: "Breathe out long, like fogging a mirror. Three times." }, { at: 48, text: "Unclench your jaw and drop your shoulders." }] },
+  { id: "restless", label: "Restless", idea: "If your body is buzzing, let it move first. Settling is easier after a little movement.", steps: [{ at: 0, text: "Stand and stretch up high." }, { at: 15, text: "Do ten slow squats or toe raises." }, { at: 35, text: "Roll your neck gently each way." }, { at: 50, text: "Sit down. Feet flat on the floor." }] },
+  { id: "sad", label: "Sad or low", idea: "Being kind to yourself, not harsh, goes with less putting off. You do not have to feel better to begin something small.", steps: [{ at: 0, text: "Put a hand on your chest." }, { at: 12, text: "Tell yourself: \"This is hard, and I can still start small.\"" }, { at: 32, text: "Breathe in for 4, out for 6, slowly." }, { at: 50, text: "You are allowed to go gently today." }] },
+];

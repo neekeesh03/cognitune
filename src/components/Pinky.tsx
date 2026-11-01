@@ -17,7 +17,8 @@ const WINDOWS: [WindowChoice, string][] = [["tonight", "Tonight"], ["day", "With
 
 /** Builds the if-then promise. Tiny on purpose: the hint asks if it could start in 2 minutes. */
 export function PinkyForm({ first, onSend, onClose }: { first: string; onSend: (e: PinkyEvt, remind: boolean) => Promise<void>; onClose: () => void }) {
-  const [cue, setCue] = useState(""); const [act, setAct] = useState(""); const [win, setWin] = useState<WindowChoice>("day"); const [mode, setMode] = useState<PinkyMode>("side"); const [remind, setRemind] = useState(true); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const pre = (() => { try { const p = JSON.parse(sessionStorage.getItem("lagomo.pinky.prefill") || "null"); sessionStorage.removeItem("lagomo.pinky.prefill"); return p as { cue?: string; act?: string } | null; } catch { return null; } })();
+  const [cue, setCue] = useState(pre?.cue ?? ""); const [act, setAct] = useState(pre?.act ?? ""); const [win, setWin] = useState<WindowChoice>("day"); const [mode, setMode] = useState<PinkyMode>("side"); const [remind, setRemind] = useState(true); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
   const ready = clean(cue).length > 1 && clean(act).length > 1;
   const send = async () => { if (!ready || busy) return; setBusy(true); setErr(""); try { await onSend({ id: crypto.randomUUID(), op: "make", mode, text: tr("When {cue}, I will {act}.").replace("{cue}", lc(clean(cue))).replace("{act}", lc(clean(act))).slice(0, 160), end: windowEnd(win) }, remind); onClose(); } catch (e) { setErr((e as Error).message); } finally { setBusy(false); } };
   return (
