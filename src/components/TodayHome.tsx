@@ -22,7 +22,7 @@ import { MomentumRing } from "@/components/MomentumRing";
 import { useDrive } from "@/lib/useDrive";
 import { CoachSheet } from "@/components/CoachSheet";
 import { clearParked, coachEvent, loadCoach } from "@/engine/coach";
-import { clearTomorrow, comeback, stage, tomorrowStep } from "@/engine/director";
+import { armLine, clearTomorrow, comeback, pickArm, stage, tapArm, tomorrowStep } from "@/engine/director";
 import { directorOn } from "@/lib/arm";
 import { DriveCard } from "@/components/DriveCard";
 import type { Inputs } from "@/engine/model";
@@ -95,7 +95,7 @@ export function TodayHome({ j, name, avatar, go, game, plan, agenda, onStart, on
   const tmr = tomorrowStep(); const cb = comeback();
   // Temptation bundling (Milkman 2014): tie a treat you chose to the start. Rotates daily because the effect fades if it never changes.
   const rw = game.g.rewards; const pair = rw.length ? ` Pair it with ${rw[new Date().getDate() % rw.length].name.replace(/^./, c => c.toLowerCase())}.` : "";
-  if (tmr) moves.push({ key: "tmr", kicker: "Saved for you", title: tmr.task, sub: `Your first step is ready. You usually start around ${tmr.hour % 12 || 12}${tmr.hour < 12 ? "am" : "pm"}.${pair}`, cta: "Start 2 min", onClick: () => { clearTomorrow(); onStart(tmr.task, tmr.step ?? "Open it and look at it for two minutes."); } });
+  if (tmr) moves.push({ key: "tmr", kicker: "Saved for you", title: tmr.task, sub: armLine(pickArm(), tmr.hour, pair), cta: "Start 2 min", onClick: () => { tapArm(); clearTomorrow(); onStart(tmr.task, tmr.step ?? "Open it and look at it for two minutes."); } });
   else if (cb) moves.push({ key: "cb", kicker: "Welcome back", title: cb.task, sub: `No catching up. Just one small minute.${pair}`, cta: "Start", onClick: () => onStart(cb.task, "Open it and look at it for one minute.") });
   if (dateNow && onStartBlock) moves.push({ key: "date", kicker: "Study date", title: dateNow.b.title, sub: `With ${dateNow.b.date!.name.split(" ")[0]} · ${dateNow.mins > 0 ? `starts in ${dateNow.mins} min` : "happening now"}`, cta: "Open quiet room", onClick: () => onStartBlock(dateNow.b) });
   if (myPlan) moves.push({ key: "plan", kicker: "Your plan", title: `When ${myPlan.cue}, I will ${myPlan.step.toLowerCase()}`, cta: "Do it now", onClick: () => onStart(myPlan.task, myPlan.step) });
