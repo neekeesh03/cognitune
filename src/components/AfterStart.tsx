@@ -3,11 +3,13 @@ import { parkNote } from "@/engine/coach";
 import { alertState, turnOnAlerts, type AlertState } from "@/lib/push";
 import { shareInvite } from "@/lib/invite";
 import { track } from "@/lib/track";
+import { tr } from "@/i18n";
 import { api } from "@/lib/api";
 
 const CUES = [{ label: "After breakfast", time: "08:30" }, { label: "After class", time: "15:30" }, { label: "After dinner", time: "19:30" }, { label: "Before bed", time: "21:30" }];
 /** The end of a start. Peak-end: finish warm, offer one more step, then ask for the one thing that helps you come back. */
-export function AfterStart({ onMore, hasFriends, username, task }: { onMore: (min: number) => void; hasFriends: boolean; username: string; task?: string }) {
+export function AfterStart({ onMore, hasFriends, username, task, onlineFriend, onFriend }: { onMore: (min: number) => void; hasFriends: boolean; username: string; task?: string; onlineFriend?: { id: string; name: string } | null; onFriend?: (id: string) => void }) {
+  useEffect(() => { if (onlineFriend) track("rabbit_handoff_show"); }, [onlineFriend?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const [note, setNote] = useState(""); const [noted, setNoted] = useState(false);
   const [when, setWhen] = useState<string | null>(null); const [al, setAl] = useState<AlertState | null>(null); const [asked, setAsked] = useState(false); const [msg, setMsg] = useState("");
   useEffect(() => { alertState().then(setAl); }, []);
@@ -21,6 +23,7 @@ export function AfterStart({ onMore, hasFriends, username, task }: { onMore: (mi
   const nudge = async () => { try { setAl(await turnOnAlerts()); track("alerts_prime_yes"); await setReminder(time); setMsg("Done. One gentle nudge a day."); } catch { setMsg("Could not turn alerts on."); } };
   return (
     <div className="mt-5 w-full max-w-sm space-y-4 px-6 text-center">
+      {onlineFriend && onFriend && <div className="rounded-2xl bg-primary/10 p-4 text-left"><div className="font-semibold"><span translate="no">{tr("{name} is online right now.").replace("{name}", onlineFriend.name.split(" ")[0])}</span></div><div className="text-sm text-muted-foreground">{tr("Want to start something together next?")}</div><button onClick={() => { track("rabbit_handoff_tap"); onFriend(onlineFriend.id); }} className="mt-2 rounded-full bg-primary px-4 py-1.5 text-sm text-primary-foreground">{tr("Say hi")}</button></div>}
       {task && <div><p className="mb-2 text-sm text-muted-foreground">{noted ? "Saved. Future you will thank you." : "Where will you pick up next time? One line is plenty."}</p>
         {!noted && <div className="flex gap-2"><input value={note} onChange={e => setNote(e.target.value)} maxLength={120} placeholder="e.g. start with the second paragraph" aria-label="Where you will pick up" className="h-10 min-w-0 flex-1 rounded-2xl border border-border bg-secondary/40 px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" /><button disabled={!note.trim()} onClick={() => { parkNote(task, note); setNoted(true); }} className="rounded-full bg-primary px-4 text-sm text-primary-foreground disabled:opacity-40">Save</button></div>}</div>}
       <div><p className="mb-2 text-sm text-muted-foreground">Want to keep the momentum?</p>

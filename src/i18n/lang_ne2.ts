@@ -169,4 +169,7 @@ export const DICT: Record<string, string> = {
  "the reset and the smallest version": "रिसेट र सबैभन्दा सानो संस्करण",
  "parking the other thing": "अर्को कुरा थन्काउनु",
  "finding your own reason": "आफ्नै कारण खोज्नु",
+ "{name} is online right now.": "{name} अहिले अनलाइन छ।",
+ "Want to start something together next?": "अब सँगै केही सुरु गर्ने हो?",
+ "Say hi": "नमस्ते भन्नुहोस्",
 };

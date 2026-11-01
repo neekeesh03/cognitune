@@ -171,4 +171,7 @@ export const ROWS13: Row[] = [
 ["the reset and the smallest version","重置加最小版本","ریست و کوچک‌ترین نسخه","atur ulang dan versi terkecil"],
 ["parking the other thing","先把另一件事放一放","کنار گذاشتن آن کار دیگر","memarkir hal yang lain"],
 ["finding your own reason","找到你自己的理由","پیدا کردن دلیل خودت","menemukan alasanmu sendiri"],
+["{name} is online right now.","{name}现在在线。","{name} همین الان آنلاین است.","{name} sedang online sekarang."],
+["Want to start something together next?","接下来想一起开始点什么吗？","می‌خواهید بعدش با هم چیزی را شروع کنید؟","Mau mulai sesuatu bersama berikutnya?"],
+["Say hi","打个招呼","سلام کن","Sapa"],
 ];

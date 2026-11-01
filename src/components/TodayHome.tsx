@@ -15,6 +15,7 @@ import { dueDays, dueText, fmtTime, hasResources, type Block } from "@/engine/pl
 import { fmtClock, type CalItem } from "@/engine/calendar";
 import { FreshStart } from "@/components/FreshStart";
 import { freshToday } from "@/engine/fresh";
+import { RabbitRoamer } from "@/components/RabbitRoamer";
 import { CoachHero } from "@/components/CoachHero";
 import { NextMove, type Move } from "@/components/NextMove";
 import { MomentumRing } from "@/components/MomentumRing";
@@ -171,6 +172,7 @@ export function TodayHome({ j, name, avatar, go, game, plan, agenda, onStart, on
           </>}
         </>}
       </div>
+      <RabbitRoamer />
     </div>
   );
 }
