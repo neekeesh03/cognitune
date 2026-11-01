@@ -13,6 +13,8 @@ import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
 import { dueDays, dueText, fmtTime, hasResources, type Block } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
+import { CoachSheet } from "@/components/CoachSheet";
+import { clearParked, coachEvent, loadCoach } from "@/engine/coach";
 import { DriveCard } from "@/components/DriveCard";
 import type { Inputs } from "@/engine/model";
 import { StartHero } from "@/components/StartHero";
@@ -70,6 +72,9 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
   const dueSoon = plan.tasks.filter(t => !t.doneAt && t.due && dueDays(t.due) <= 7).sort((x, y) => dueDays(x.due) - dueDays(y.due)).slice(0, 3);
+  const [coach, setCoach] = useState<string | null>(null); const [cs, setCs] = useState(loadCoach);
+  useEffect(() => { const f = () => setCs(loadCoach()); window.addEventListener(coachEvent, f); return () => window.removeEventListener(coachEvent, f); }, []);
+  const parked = cs.parked.filter(p => Date.now() - p.ts < 4 * 864e5).sort((a, b) => b.ts - a.ts)[0]; const myPlan = cs.plan && Date.now() - cs.plan.ts < 36e5 * 36 && cs.plan.cue !== "Now" ? cs.plan : null;
   const firstRun = !started; const deep = started; const [more, setMore] = useState(false); const streak = game.g.streak.current;
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-6 lg:grid lg:max-w-6xl lg:grid-cols-5 lg:items-start lg:gap-x-8 lg:gap-y-6 lg:space-y-0">
@@ -80,11 +85,17 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
       <div className="space-y-5 lg:col-span-3">
         {banner && <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-3xl px-5 py-4 text-sm" role="status"><div className="min-w-0 flex-1">{banner === "back" ? <><b>Welcome back, {name.split(" ")[0]}.</b> <span className="text-muted-foreground">Nothing is lost and nothing withered. One tiny start?</span></> : <><b>{first ? "New month." : "New week."}</b> <span className="text-muted-foreground">A fresh page. What will you start first?</span></>}</div><div className="flex shrink-0 items-center gap-2"><button onClick={focusStart} className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground">Pick one</button><button onClick={dismissBanner} className="text-xs text-muted-foreground hover:text-foreground">Not now</button></div></div>}
         {waiting && <div className="glass flex items-center gap-3 rounded-3xl px-4 py-3 text-sm lg:hidden" role="status"><Avatar spec={waiting.avatar} size={36} /><div className="min-w-0 flex-1"><b translate="no">{waiting.name}</b> started {agoMin(hops.hops[waiting.id])}. <span className="text-muted-foreground">Start something small too?</span></div></div>}
-        <StartHero suggestion={nextStep?.t.title ?? ""} onStart={onStart} mood={mood} rabbitLine={rabbitLine} quiet={quietRabbit} />
+        <StartHero onCoach={t => setCoach(t)} suggestion={nextStep?.t.title ?? ""} onStart={onStart} mood={mood} rabbitLine={rabbitLine} quiet={quietRabbit} />
         <div className="grid grid-cols-3 gap-2" role="group" aria-label={tr("Quick links")}>
           {([["circle", "Start together", Users], ["plan", "Plan my day", CalendarCheck], ["me", "Write a line", PenLine]] as const).map(([id, label, I]) => (
             <button key={id} onClick={() => go(id)} className="glass flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-xs text-foreground transition hover:scale-[1.03]"><I className="h-5 w-5 text-primary" />{tr(label)}</button>))}
         </div>
+        {coach && <CoachSheet task={coach} onStart={onStart} onClose={() => setCoach(null)} />}
+        {(myPlan || parked) && (
+          <div className="glass space-y-3 rounded-3xl p-4">
+            {myPlan && <div className="flex items-center gap-3"><div className="min-w-0 flex-1"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Your plan</div><div className="text-sm">When <b>{myPlan.cue}</b>, I will <b>{myPlan.step.toLowerCase()}</b>.</div></div><button onClick={() => onStart(myPlan.task, myPlan.step)} className="shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground">Do it now</button></div>}
+            {parked && <div className="flex items-center gap-3"><div className="min-w-0 flex-1"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Pick up where you left off</div><div className="truncate text-sm font-medium">{parked.task}</div><div className="truncate text-xs text-muted-foreground">{parked.note}</div></div><button onClick={() => { clearParked(parked.task); onStart(parked.task, parked.note); }} className="shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground">Start 2 min</button></div>}
+          </div>)}
         {deep && <DriveCard tasks={plan.tasks} friendsStarted={friends.filter(f => hops.hops[f.id] && new Date(hops.hops[f.id]).toDateString() === new Date().toDateString()).length} hasFriends={friends.length > 0} sliders={sliders ?? null} onStart={onStart} openPattern={() => go("pattern")} />}
         {dueSoon.length > 0 && (
           <div className="glass rounded-3xl p-4">

@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useStartLog } from "@/lib/startlog";
 import { ARMS, accuracy, analyse, armStats } from "@/engine/pattern";
+import { TACTICS, coachEvent, loadCoach } from "@/engine/coach";
+import { useEffect, useState } from "react";
 
 const Tag = ({ t }: { t: "Established" | "Exploratory" | "Experimental" }) => (
   <span className={`rounded-full px-2 py-0.5 text-[10px] ${t === "Established" ? "bg-primary/15 text-primary" : t === "Exploratory" ? "bg-accent/25 text-foreground" : "bg-foreground/[.08] text-muted-foreground"}`}>{t}</span>);
@@ -10,7 +12,9 @@ const DOW = ["S", "M", "T", "W", "T", "F", "S"];
 
 /** Your Start Map: what your own starts say about you. Every card says how solid it is. */
 export function MyPattern() {
-  const { log } = useStartLog(); const now = Date.now();
+  const { log } = useStartLog(); const now = Date.now(); const [cs, setCs] = useState(loadCoach);
+  useEffect(() => { const f = () => setCs(loadCoach()); window.addEventListener(coachEvent, f); return () => window.removeEventListener(coachEvent, f); }, []);
+  const fr = TACTICS.map(t => ({ t, n: cs.events.filter(e => e.friction === t.id).length })).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
   const p = useMemo(() => analyse(log, now), [log]); // eslint-disable-line react-hooks/exhaustive-deps
   const acc = useMemo(() => accuracy(log), [log]); const arms = useMemo(() => armStats(log, now), [log]); // eslint-disable-line react-hooks/exhaustive-deps
   const max = Math.max(1, ...p.hours.map(h => h.k)), wmax = Math.max(1, ...p.weekdays), kmax = Math.max(1, ...p.weeks);
@@ -45,6 +49,10 @@ export function MyPattern() {
             <li><b>Other people.</b> {p.friend ? `With a friend you finished ${Math.round(100 * p.friend.dTogether)}% of starts, alone ${Math.round(100 * p.friend.dSolo)}% (${p.friend.together} and ${p.friend.solo} starts).` : "Start with a friend a few times, and alone a few times, and I will compare."}</li>
             <li><b>Waiting time.</b> {p.latency ? `You usually begin a task about ${p.latency.medHrs < 1 ? "within the hour" : p.latency.medHrs < 48 ? Math.round(p.latency.medHrs) + " hours" : Math.round(p.latency.medHrs / 24) + " days"} after adding it.` : "Add a task, then start it, and I will time how long it sits."}</li>
           </ul>
+        </Card>
+        <Card title="What gets in your way" tag="Exploratory" note="From the times you tapped Get unstuck. The same reason showing up again and again is worth a smaller first step.">
+          {fr.length === 0 ? <p className="text-sm text-muted-foreground">When something feels hard, tap "Get unstuck" on Today. I will learn your usual blockers.</p> :
+            <ul className="space-y-2 text-sm">{fr.slice(0, 4).map(({ t, n }) => <li key={t.id}><div className="flex justify-between gap-3"><span>{t.label}</span><span className="text-muted-foreground">{n}x</span></div>{t === fr[0].t && <div className="mt-0.5 text-xs text-primary">Your usual move: {t.name.toLowerCase()}.</div>}</li>)}</ul>}
         </Card>
         <Card title="What works for you" tag="Exploratory" note="Each day I try a small idea, sometimes none, and see whether you started. It takes a few weeks to mean anything.">
           {armRows.length === 0 ? <p className="text-sm text-muted-foreground">Nothing to compare yet. Come back after a few days.</p> :

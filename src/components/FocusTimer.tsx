@@ -18,11 +18,11 @@ import { useBuddy, useRoom, roomCheer, type Buddy } from "@/net/useBuddy";
 import { CHEER_EMOJI } from "@/store/useHops";
 import type { AvatarSpec } from "@/engine/avatar";
 
-interface Props { color: string; task: string; onStarted: () => void; onClose: () => void; onDone?: () => void; minutes?: number; autoStart?: boolean; buddy?: Buddy & { avatar: AvatarSpec }; hasFriends?: boolean; username?: string; guest?: { onSave: () => void }; extra?: ReactNode; cele?: { sparks?: number; streak?: number; me?: AvatarSpec }; resources?: Block }
+interface Props { taskName?: string; color: string; task: string; onStarted: () => void; onClose: () => void; onDone?: () => void; minutes?: number; autoStart?: boolean; buddy?: Buddy & { avatar: AvatarSpec }; hasFriends?: boolean; username?: string; guest?: { onSave: () => void }; extra?: ReactNode; cele?: { sparks?: number; streak?: number; me?: AvatarSpec }; resources?: Block }
 const PRESETS = [{ m: 2, label: "2 min entry" }, { m: 10, label: "10 min sprint" }, { m: 25, label: "25 min block" }];
 /** Shown on top of everything, so the nav bar and header never overlap the timer. */
 export function FocusTimer(p: Props) { return createPortal(<FocusTimerInner {...p} />, document.body); }
-function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, autoStart, buddy, hasFriends, username, guest, extra, cele, resources }: Props) {
+function FocusTimerInner({ taskName, color, task, onStarted, onClose, onDone, minutes, autoStart, buddy, hasFriends, username, guest, extra, cele, resources }: Props) {
   const start = (minutes ?? 2) * 60;
   const [total, setTotal] = useState(start);
   const [left, setLeft] = useState(start);
@@ -93,7 +93,7 @@ function FocusTimerInner({ color, task, onStarted, onClose, onDone, minutes, aut
       {done && how && <p className="mt-6 max-w-xs text-center text-sm" role="status">{how}</p>}
       {done && guest && <GuestSave onSave={guest.onSave} onLater={onClose} />}
       {done && !guest && extra && how && <div className="mt-4">{extra}</div>}
-      {done && !isRoom && !guest && <AfterStart onMore={more} hasFriends={!!hasFriends} username={username ?? ""} />}
+      {done && !isRoom && !guest && <AfterStart task={taskName ?? task} onMore={more} hasFriends={!!hasFriends} username={username ?? ""} />}
       <div className="order-1 mt-8 flex gap-3 lg:order-none">
         {!done && !(buddy && run) && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={() => setRun(r => !r)}>{run ? <><Pause className="mr-2 h-4 w-4" />Pause</> : <><Play className="mr-2 h-4 w-4" />{left === total ? "Start" : "Resume"}</>}</Button>}
         {done && !guest && <Button variant="hero" size="lg" className="rounded-full px-10" onClick={onClose}>Back</Button>}

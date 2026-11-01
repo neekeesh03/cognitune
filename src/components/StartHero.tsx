@@ -8,7 +8,7 @@ import { tr } from "@/i18n";
 const EXAMPLES = ["Reply to that email", "Start my essay", "Tidy my desk"];
 
 /** The one thing Lagomo is for: press Start on something you have been putting off. */
-export function StartHero({ suggestion, onStart, mood = "ready", rabbitLine, quiet }: { suggestion: string; onStart: (title: string, firstStep: string) => void; mood?: Mood; rabbitLine?: string; quiet?: boolean }) {
+export function StartHero({ suggestion, onStart, mood = "ready", rabbitLine, quiet, onCoach }: { onCoach?: (title: string) => void; suggestion: string; onStart: (title: string, firstStep: string) => void; mood?: Mood; rabbitLine?: string; quiet?: boolean }) {
   const [what, setWhat] = useState(() => { const p = sessionStorage.getItem("lagomo.prefill") || ""; if (p) sessionStorage.removeItem("lagomo.prefill"); return p; }); const [hop, setHop] = useState(false);
   const title = (what.trim() || suggestion).trim();
   const step = title ? suggestSteps(title)[0]?.text ?? "Just open it" : "";
@@ -21,6 +21,7 @@ export function StartHero({ suggestion, onStart, mood = "ready", rabbitLine, qui
       {!what.trim() && !suggestion && <div className="mx-auto mt-3 flex max-w-md flex-wrap justify-center gap-2" aria-label="Examples">{EXAMPLES.map(x => <button key={x} onClick={() => setWhat(tr(x))} className="rounded-full border border-border bg-background/60 px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">{tr(x)}</button>)}</div>}
       {title && <p className="mt-3 text-sm text-muted-foreground">First tiny step: <span className="font-medium text-foreground">{step}</span>. Two minutes. That is all.</p>}
       <Button variant="hero" size="lg" className="mt-4 h-14 w-full max-w-md rounded-2xl text-lg" disabled={!title} onClick={() => { setHop(true); setTimeout(() => setHop(false), 800); setTimeout(() => { onStart(title, step); setWhat(""); }, 450); }}><Play className="mr-2 h-5 w-5" />Start</Button>
+      {title && onCoach && <button onClick={() => onCoach(title)} className="mt-3 text-sm text-primary underline-offset-4 hover:underline">Feels hard? Get unstuck</button>}
       <p className="mt-3 text-xs text-muted-foreground">No shame if you stop. Starting counts.</p>
     </div>
   );
