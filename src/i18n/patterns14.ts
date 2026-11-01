@@ -84,6 +84,7 @@ export const EXTRA14: [RegExp, Ex][] = [
 
 /** Plain sentences (no numbers) that the lens builds from parts. [English, zh, fa, id, ne] */
 export const ROWS15: [string, string, string, string, string][] = [
+  ["Showed up", "已到场", "آمدی", "Sudah hadir", "उपस्थित भयो"],
   ["No steady window yet, which is normal early on.", "还没有稳定的时段，这在早期很正常。", "هنوز بازهٔ ثابتی نیست و این در ابتدا طبیعی است.", "Belum ada jendela yang stabil, itu wajar di awal.", "अहिलेसम्म स्थिर समय छैन, सुरुमा यो सामान्य हो।"],
   ["People in the habit study took a median of 66 days (18 to 254).", "习惯研究中的人们平均用了 66 天（18 到 254 天）。", "در پژوهش عادت، میانهٔ زمان ۶۶ روز بود (از ۱۸ تا ۲۵۴).", "Orang dalam studi kebiasaan membutuhkan median 66 hari (18 sampai 254).", "बानी अध्ययनमा मानिसहरूलाई औसत ६६ दिन लाग्यो (१८ देखि २५४)।"],
   ["Start a few times and I will check how often it fires.", "多开始几次，我会检查它多久触发一次。", "چند بار شروع کن تا ببینم چند وقت یک‌بار فعال می‌شود.", "Mulailah beberapa kali dan aku akan memeriksa seberapa sering ia berhasil.", "केही पटक सुरु गर्नुहोस्, म यो कति पटक काम गर्छ जाँच गर्छु।"],

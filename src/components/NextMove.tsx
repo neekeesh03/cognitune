@@ -9,7 +9,7 @@ export function NextMove({ moves }: { moves: Move[] }) {
   return (
     <div className="glass rounded-3xl p-4">
       <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1"><div className="text-xs uppercase tracking-[0.2em] text-primary">{first.kicker}</div><div className="truncate text-lg font-semibold">{first.title}</div>{first.sub && <div className="truncate text-sm text-muted-foreground">{first.sub}</div>}</div>
+        <div className="min-w-0 flex-1"><div className="text-xs uppercase tracking-[0.2em] text-primary">{first.kicker}</div><div className="truncate text-lg font-semibold">{first.title}</div>{first.sub && <div className="line-clamp-2 text-sm text-muted-foreground">{first.sub}</div>}</div>
         <button onClick={first.onClick} className="shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm">{first.cta}</button>
       </div>
       {rest.length > 0 && <>

@@ -22,7 +22,8 @@ import { MomentumRing } from "@/components/MomentumRing";
 import { useDrive } from "@/lib/useDrive";
 import { CoachSheet } from "@/components/CoachSheet";
 import { clearParked, coachEvent, loadCoach } from "@/engine/coach";
-import { clearTomorrow, comeback, tomorrowStep } from "@/engine/director";
+import { clearTomorrow, comeback, stage, tomorrowStep } from "@/engine/director";
+import { directorOn } from "@/lib/arm";
 import { DriveCard } from "@/components/DriveCard";
 import type { Inputs } from "@/engine/model";
 import { StartHero } from "@/components/StartHero";
@@ -104,7 +105,9 @@ export function TodayHome({ j, name, avatar, go, game, plan, agenda, onStart, on
   dueSoon.slice(0, 2).forEach(t => moves.push({ key: "due" + t.id, kicker: "Due soon", title: t.title, sub: dueText(t.due), cta: "Start 2 min", onClick: () => onStart(t.title, t.steps.find(x => !x.done)?.text ?? "Open it and look at it for two minutes.") }));
   if (nextBlock && onStartBlock) moves.push({ key: "block", kicker: "Up next", title: nextBlock.title, sub: `${fmtTime(nextBlock.start)} · ${nextBlock.dur} min`, cta: "Start now", onClick: () => onStartBlock(nextBlock) });
   else if (nextStep) moves.push({ key: "step", kicker: "Up next", title: nextStep.s.text, sub: nextStep.t.title, cta: "Start 2 min", onClick: () => onStart(nextStep.t.title, nextStep.s.text) });
-  const ringSteps = [{ label: "Check in", done: !!drive.check }, { label: "Start", done: drive.startedToday || game.g.todayActive }, { label: "Wrap up", done: drive.wrappedToday || doneToday }];
+  // Endowed progress (Nunes & Dreze 2006): in the first week the ring starts with one step already earned, and the reason is honest: you showed up.
+  const endow = directorOn() && stage() === "new";
+  const ringSteps = [endow ? { label: "Showed up", done: true } : { label: "Check in", done: !!drive.check }, { label: "Start", done: drive.startedToday || game.g.todayActive }, { label: "Wrap up", done: drive.wrappedToday || doneToday }];
   return (
     <div className="animate-rise mx-auto max-w-2xl space-y-4 lg:grid lg:max-w-5xl lg:grid-cols-5 lg:items-start lg:gap-x-6 lg:gap-y-4 lg:space-y-0">
       <div className="flex flex-wrap items-end justify-between gap-2 lg:col-span-5">
