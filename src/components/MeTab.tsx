@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Flame, Gift, Lock, Snowflake, Sparkles, Trash2, Upload, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RabbitSettings } from "@/components/RabbitSettings";
 import { Garden } from "@/components/Garden";
 import { Avatar } from "@/components/Avatar";
 import { AvatarEditor } from "@/components/AvatarEditor";
@@ -45,7 +46,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
         <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
           <div className="space-y-5">
           <div className="glass rounded-3xl p-6 text-center">
-            <Garden lifetime={g.lifetime} />
+            <Garden lifetime={g.lifetime} size={150} />
             <div className="mt-2 text-3xl font-semibold">{lv.name}</div>
             <div className="text-sm text-muted-foreground">Level {lv.level + 1} · {g.lifetime} sparks earned</div>
             <div className="mx-auto mt-3 h-2.5 max-w-xs rounded-full bg-foreground/10"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${lv.pct * 100}%` }} /></div>
@@ -98,6 +99,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
       {view === "data" && (
         <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
         <div className="space-y-5">
+          <RabbitSettings auth={auth} />
           <FeelToggles />
           <div className="glass space-y-4 rounded-3xl p-5">
             <div className="flex items-center gap-3"><Avatar spec={user.avatar} size={48} /><div><div className="text-lg font-semibold">{user.name}</div><div className="text-sm text-muted-foreground">@{user.username}</div></div></div>

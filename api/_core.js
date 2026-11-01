@@ -75,7 +75,7 @@ export async function claimAvatar(userId, av) { const k = "av:" + avKey(av); con
 
 // ---------- misc helpers ----------
 export const pub = u => ({ id: u.id, username: u.username, name: u.name, avatar: u.avatar, pk: u.pk || null, bio: u.bio || "" });
-export const selfPub = u => ({ ...pub(u), g: !!u.gsub });
+export const selfPub = u => ({ ...pub(u), g: !!u.gsub, pet: u.pet || null });
 export const okPk = s => typeof s === "string" && s.length < 400 && /^\{"kty":"EC","crv":"P-256","x":"[\w-]{43}","y":"[\w-]{43}"\}$/.test(s);
 export const okWk = w => w && typeof w === "object" && ["salt", "iv", "ct"].every(k => typeof w[k] === "string" && w[k].length < 3000 && /^[\w+/=]+$/.test(w[k]));
 export const okSealed = s => typeof s === "string" && s.length < 12000 && /^1\.[\w+/=]+\.[\w+/=]+$/.test(s);

@@ -197,3 +197,14 @@ html[lang="dz"] body { font-family: "Inter Tight", "Noto Serif Tibetan", "Noto S
 @keyframes cheerUp { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px) scale(1.25); } }
 .cheer-up { animation: cheerUp 2.4s ease-out forwards; }
 @media (prefers-reduced-motion: reduce) { .cheer-up { animation: none; opacity: 1; } }
+
+/* Rabbit signs of life. Transform and opacity only. */
+@keyframes rb-breathe { 0%,100% { transform: scale(1, 1); } 50% { transform: scale(1.012, 1.02); } }
+@keyframes rb-twitch { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-7deg); } 55% { transform: rotate(4deg); } 80% { transform: rotate(-2deg); } }
+.rb-body { transform-box: fill-box; transform-origin: 50% 100%; }
+.rb-live .rb-body { animation: rb-breathe 4.4s ease-in-out infinite; }
+.rb-ear { transform-box: fill-box; transform-origin: 50% 90%; }
+.rb-ear.rb-twitch { animation: rb-twitch .7s ease-in-out; }
+.rb-eyes { transform-box: fill-box; transform-origin: 50% 50%; transition: transform .12s ease-out; }
+.rb-eyes.rb-blink { transform: scaleY(.08); }
+@media (prefers-reduced-motion: reduce) { .rb-live .rb-body, .rb-ear.rb-twitch { animation: none; } .rb-eyes { transition: none; } }

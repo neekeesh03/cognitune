@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Activity, CalendarCheck, Heart, Home, LogOut, Moon, Sprout, Sun } from "lucide-react";
 import { CheckInTab } from "@/components/CheckInTab";
+import { MeetRabbit } from "@/components/MeetRabbit";
+import { savePetLocal, usePet } from "@/lib/pet";
 import { TodayHome } from "@/components/TodayHome";
 import { CoachSheet } from "@/components/CoachSheet";
 import { Sparkles } from "lucide-react";
@@ -63,11 +65,14 @@ const useTheme = () => {
 };
 
 const Index = () => {
-  const auth = useAuth(); useTheme();
+  const auth = useAuth(); useTheme(); const [rabbitMet, setRabbitMet] = useState(false);
+  // A rabbit named on this account follows you here. Keep this device in step with it.
+  useEffect(() => { if (auth.user?.pet) savePetLocal(auth.user.pet); }, [auth.user?.pet?.name, auth.user?.pet?.coat]); // eslint-disable-line react-hooks/exhaustive-deps
   if (auth.loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-12 w-12 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} /></div>;
   if (!auth.user || new URLSearchParams(window.location.search).get("reset")) return <><FxHost /><AuthScreen auth={auth} /></>;
   if (auth.locked) return <UnlockScreen auth={auth} />;
   if (auth.needsAvatar) return <><FxHost /><MeetFriend auth={auth} /></>;
+  if (!auth.user.pet && !rabbitMet) return <><FxHost /><MeetRabbit auth={auth} onDone={() => setRabbitMet(true)} /></>;
   return <Shell auth={auth} user={auth.user} />;
 };
 
@@ -136,11 +141,11 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const lastTask = history[history.length - 1]?.task && history[history.length - 1].task !== "Untitled" ? history[history.length - 1].task : plan.tasks.find(t => !t.doneAt)?.title ?? "";
   void lastTask;
   const startNow = (title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, taskName: title, dur: 2, solo: true }); };
-  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false); const pet = usePet();
   return (
     <div className="min-h-screen pb-28 lg:pb-12 lg:pl-56">
       <FxHost />
-      {!live && tab !== "today" && <button onClick={() => setCoachOpen(true)} aria-label="Ask your coach" className="fixed bottom-24 right-4 z-30 flex h-12 w-12 items-center justify-center gap-1.5 rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 sm:h-auto sm:w-auto sm:px-4 sm:py-3 lg:bottom-8 lg:right-8"><Sparkles className="h-5 w-5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Coach</span></button>}
+      {!live && tab !== "today" && <button onClick={() => setCoachOpen(true)} aria-label={`Ask ${pet.name}`} className="fixed bottom-24 right-4 z-30 flex h-12 w-12 items-center justify-center gap-1.5 rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 sm:h-auto sm:w-auto sm:px-4 sm:py-3 lg:bottom-8 lg:right-8"><Sparkles className="h-5 w-5 sm:h-4 sm:w-4" /><span className="hidden sm:inline" translate="no">{pet.name}</span></button>}
       {coachOpen && <CoachSheet task="something I am putting off" onStart={startNow} onClose={() => setCoachOpen(false)} friends={people.friends.map(f => ({ id: f.id, name: f.name }))} onPledge={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} />}
       <AnnounceBanner />
       <PulseCard />

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { usePet } from "@/lib/pet";
 import { RabbitFace, type Face, type Wear } from "@/components/RabbitFace";
 import { tr } from "@/i18n";
 import { feel } from "@/lib/feel";
@@ -19,13 +20,13 @@ const LINES: Record<Mood, string[]> = {
 
 /** The rabbit with one speech bubble. It shows for a few seconds, then rests. Tap it for another line. Quiet mode keeps the face but drops the words. */
 export function Rabbit({ size = 52, mood, line, quiet }: { size?: number; mood: Mood; line?: string; quiet?: boolean }) {
-  const [i, setI] = useState(0); const [show, setShow] = useState(true); const [hop, setHop] = useState(false); const [play, setPlay] = useState<Face | null>(null); const t = useRef(0);
+  const pet = usePet(); const [i, setI] = useState(0); const [show, setShow] = useState(true); const [hop, setHop] = useState(false); const [play, setPlay] = useState<Face | null>(null); const t = useRef(0);
   const lines = LINES[mood]; const text = line ?? tr(lines[i % lines.length]);
   const poke = () => { feel("tap"); setHop(true); setPlay(PLAY[Math.floor(Math.random() * PLAY.length)]); window.setTimeout(() => { setHop(false); setPlay(null); }, 1600); setI(n => n + 1); setShow(true); };
   useEffect(() => { setShow(true); window.clearTimeout(t.current); t.current = window.setTimeout(() => setShow(false), 6000); return () => window.clearTimeout(t.current); }, [mood, i, line]);
   return (
     <div className="flex flex-col items-center">
-      <button onClick={poke} aria-label="Lagomo the rabbit. Tap for another thought." className={`rounded-full ${hop ? "animate-hop" : ""}`}><RabbitFace crop face={play ?? MOOD_FACE[mood]} wear={wornNow()} size={size * 1.15} /></button>
+      <button onClick={poke} aria-label={`${pet.name} the rabbit. Tap for another thought.`} className={`rounded-full ${hop ? "animate-hop" : ""}`}><RabbitFace alive crop face={play ?? MOOD_FACE[mood]} wear={wornNow()} size={size * 1.15} /></button>
       {!quiet && <div role="status" className={`mt-2 max-w-[16rem] rounded-full bg-background/70 px-3 py-1 text-center text-xs text-muted-foreground transition-opacity duration-700 ${show ? "opacity-100" : "opacity-0"}`}>{text}</div>}
     </div>);
 }

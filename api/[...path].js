@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       const user = { id, username, name, avatar: av, pw: hashPw(pw), created: Date.now() };
       if (okPk(body.pk) && okWk(body.wk)) { user.pk = body.pk; user.wk = body.wk; }
       await setJ("user:" + id, user); await rd("ZADD", "users:z", 0, username); bump("signups");
-      return res.json({ token: tokenFor(user), user: pub(user) });
+      return res.json({ token: tokenFor(user), user: selfPub(user) });
     }
     if (path === "login" && method === "POST") {
       const rl = await rd("INCR", `rl:login:${ip}:${Math.floor(Date.now() / 6e4)}`); if (rl > 15) throw err(429, "Too many tries. Wait a minute.");
@@ -258,6 +258,11 @@ export default async function handler(req, res) {
       if (!okPk(body.pk) || !okWk(body.wk)) throw err(400, "Bad keys."); me.pk = body.pk; me.wk = body.wk; await setJ("user:" + me.id, me); return res.json({ ok: true });
     }
     if (path === "profile" && method === "POST") {
+      if (body.pet && typeof body.pet === "object") {
+        const n = String(body.pet.name || "").replace(/[<>\u0000-\u001f]/g, "").replace(/\s+/g, " ").trim().slice(0, 20);
+        if (!n || /@|https?:|www\./i.test(n) || /\d{6,}/.test(n.replace(/[\s-]/g, ""))) throw err(400, "Pick a name without links, emails or long numbers.");
+        me.pet = { name: n, coat: ["lavender", "sage", "honey", "sky", "rose", "mist"].includes(body.pet.coat) ? body.pet.coat : "lavender" };
+      }
       if (body.name != null) me.name = cleanName(body.name) || me.name;
       if (body.bio != null) me.bio = String(body.bio).replace(/[<>]/g, "").replace(/\s+/g, " ").trim().slice(0, 160);
       if (body.avatar) {

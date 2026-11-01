@@ -7,6 +7,7 @@ import { SAFETY_TEXT, openingLine, read, type Intent } from "@/engine/coachNlu";
 import { loadLog } from "@/lib/startlog";
 import { proof } from "@/engine/proof";
 import { suggestSteps } from "@/engine/plan";
+import { usePet } from "@/lib/pet";
 
 const LABEL: Record<string, string> = { ...Object.fromEntries(TACTICS.map(t => [t.id, t.label])), feeling: "I am feeling something", ready: "I am ready, just give me a step" };
 
@@ -41,7 +42,7 @@ function MoodReset({ mood, onDone }: { mood: Mood; onDone: () => void }) {
 type Phase = "pick" | "do" | "mood" | "plan";
 /** "Why is this hard?" in a few taps: say it or tap it, one small move that fits, then an if-then plan and an optional friend pledge. */
 export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: { task: string; onStart: (title: string, step: string) => void; onClose: () => void; friends?: { id: string; name: string }[]; onPledge?: (friendId: string) => void }) {
-  const [f, setF] = useState<Friction | null>(null); const [mood, setMood] = useState<Mood | null>(null); const [ans, setAns] = useState(""); const [phase, setPhase] = useState<Phase>("pick"); const [cue, setCue] = useState("Now"); const [resetDone, setResetDone] = useState(false);
+  const pet = usePet(); const [f, setF] = useState<Friction | null>(null); const [mood, setMood] = useState<Mood | null>(null); const [ans, setAns] = useState(""); const [phase, setPhase] = useState<Phase>("pick"); const [cue, setCue] = useState("Now"); const [resetDone, setResetDone] = useState(false);
   const [showAll, setShowAll] = useState(false); const [showMoods, setShowMoods] = useState(false); const [free, setFree] = useState(""); const [rd, setRd] = useState<Awaited<ReturnType<typeof read>> | null>(null); const [line, setLine] = useState("");
   const pr = (() => { try { return proof(loadLog(), loadCoach().events); } catch { return null; } })();
   const usual = (() => { try { const ev = loadCoach().events; return [...TACTICS].map((t, i) => ({ t, i, n: ev.filter(e => e.friction === t.id).length })).sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.t); } catch { return TACTICS; } })();
@@ -60,7 +61,7 @@ export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: {
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-background/80 p-3 backdrop-blur sm:items-center" role="dialog" aria-label="Get unstuck">
       <div className="glass max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl p-5 shadow-xl">
         <div className="mb-2 flex items-center justify-between">
-          {phase !== "pick" ? <button aria-label="Back" onClick={back} className="rounded-full p-1.5 text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button> : <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Get unstuck</span>}
+          {phase !== "pick" ? <button aria-label="Back" onClick={back} className="rounded-full p-1.5 text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button> : <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground"><span translate="no">{pet.name}</span> · get unstuck</span>}
           <button aria-label="Close" onClick={onClose} className="rounded-full p-1.5 text-muted-foreground"><X className="h-5 w-5" /></button>
         </div>
         <div className="mb-3 truncate text-sm text-muted-foreground">{task}</div>

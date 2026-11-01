@@ -1,3 +1,5 @@
+import { useAlive } from "@/lib/useAlive";
+import { coatFilter, petNow } from "@/lib/pet";
 /** Lagomo the rabbit with many faces, like a friend whose mood you can read at a glance. Brand colours only. */
 export type Face = "calm" | "happy" | "proud" | "sleepy" | "curious" | "cheer" | "cosy" | "love" | "wink" | "gentle" | "sparkle" | "sleep";
 export type Wear = "none" | "scarf" | "glasses" | "flower" | "cap" | "crown";
@@ -45,23 +47,25 @@ function outfit(w: Wear) {
   }
 }
 /** `crop` shows just the head and ears, for small spots like the Today card or a widget. */
-export function RabbitFace({ face = "calm", wear = "none", size = 120, crop = false, title }: { face?: Face; wear?: Wear; size?: number; crop?: boolean; title?: string }) {
-  const up = face === "cheer" || face === "proud";
+export function RabbitFace({ face = "calm", wear = "none", size = 120, crop = false, title, alive = false }: { face?: Face; wear?: Wear; size?: number; crop?: boolean; title?: string; alive?: boolean }) {
+  const up = face === "cheer" || face === "proud"; const asleep = face === "sleepy" || face === "sleep"; const a = useAlive(alive, asleep); const earT = (side: "l" | "r") => `rb-ear${a.ear === side ? " rb-twitch" : ""}`;
   return (
-    <svg viewBox={crop ? "40 -4 120 160" : "0 0 200 230"} width={size} height={crop ? size * 1.33 : size * 1.15} role="img" aria-label={title ?? "Lagomo the rabbit"} className="overflow-visible">
-      <ellipse cx="80" cy="34" rx="15" ry="38" fill={lav} /><ellipse cx="80" cy="38" rx="7" ry="26" fill="hsl(var(--warning) / .35)" />
-      <ellipse cx="120" cy="34" rx="15" ry="38" fill={lav} transform={face === "curious" ? "rotate(10 120 70)" : face === "sleepy" || face === "sleep" ? "rotate(18 120 70)" : undefined} /><ellipse cx="120" cy="38" rx="7" ry="26" fill="hsl(var(--warning) / .35)" transform={face === "curious" ? "rotate(10 120 70)" : face === "sleepy" || face === "sleep" ? "rotate(18 120 70)" : undefined} />
+    <svg ref={a.ref} viewBox={crop ? "40 -4 120 160" : "0 0 200 230"} width={size} height={crop ? size * 1.33 : size * 1.15} role="img" aria-label={title ?? "Lagomo the rabbit"} className={`overflow-visible ${a.live ? "rb-live" : ""}`} style={{ filter: coatFilter(petNow().coat) }}>
+      <g className="rb-body">
+      <g className={earT("l")}><ellipse cx="80" cy="34" rx="15" ry="38" fill={lav} /><ellipse cx="80" cy="38" rx="7" ry="26" fill="hsl(var(--warning) / .35)" /></g>
+      <g className={earT("r")}><ellipse cx="120" cy="34" rx="15" ry="38" fill={lav} transform={face === "curious" ? "rotate(10 120 70)" : face === "sleepy" || face === "sleep" ? "rotate(18 120 70)" : undefined} /><ellipse cx="120" cy="38" rx="7" ry="26" fill="hsl(var(--warning) / .35)" transform={face === "curious" ? "rotate(10 120 70)" : face === "sleepy" || face === "sleep" ? "rotate(18 120 70)" : undefined} /></g>
       {!crop && <>
         {up ? <><path d="M74 146 L40 102" stroke={lav} strokeWidth="16" strokeLinecap="round" /><circle cx="38" cy="99" r="11" fill={lav} /><path d="M126 146 L160 102" stroke={lav} strokeWidth="16" strokeLinecap="round" /><circle cx="162" cy="99" r="11" fill={lav} /></>
           : <><path d="M72 150 L58 186" stroke={lav} strokeWidth="16" strokeLinecap="round" /><path d="M128 150 L142 186" stroke={lav} strokeWidth="16" strokeLinecap="round" /></>}
         <ellipse cx="100" cy="170" rx="38" ry="42" fill={lav} /><ellipse cx="100" cy="176" rx="22" ry="27" fill="hsl(var(--background))" opacity=".85" />
         <ellipse cx="82" cy="212" rx="15" ry="9" fill={lavDark} /><ellipse cx="118" cy="212" rx="15" ry="9" fill={lavDark} /></>}
       <circle cx="100" cy="98" r="44" fill={lav} />
-      {eyes(face)}
+      <g style={{ transform: `translate(${a.gaze.x}px, ${a.gaze.y}px)`, transition: "transform .18s ease-out" }}><g className={`rb-eyes${a.blink ? " rb-blink" : ""}`}>{eyes(face)}</g></g>
       {face !== "sleepy" && face !== "sleep" && <><circle cx="74" cy="110" r="7" fill={blush} /><circle cx="126" cy="110" r="7" fill={blush} /></>}
       {(face === "sleepy" || face === "sleep" || face === "cosy") && <><circle cx="74" cy="110" r="7" fill={blush} /><circle cx="126" cy="110" r="7" fill={blush} /></>}
       {mouth(face)}
       {face === "sleep" && <text x="138" y="62" fontSize="22" fill={ink} opacity=".6" fontWeight="700">z<tspan fontSize="16" dx="4" dy="-12">z</tspan></text>}
       {outfit(wear)}
+      </g>
     </svg>);
 }

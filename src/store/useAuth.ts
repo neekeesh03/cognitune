@@ -4,7 +4,7 @@ import { installScope } from "@/lib/scope";
 import { createKeys, ensureKeys, forgetKey, hasKey, prepareKeys, unlockKeys, type KeyBundle } from "@/lib/e2ee";
 import { toast } from "sonner";
 import type { AvatarSpec } from "@/engine/avatar";
-export interface User { id: string; username: string; name: string; avatar: AvatarSpec; g?: boolean }
+export interface User { id: string; username: string; name: string; avatar: AvatarSpec; g?: boolean; pet?: { name: string; coat: string } | null }
 interface AuthResp { token: string; user: User; keys?: KeyBundle | null; isNew?: boolean }
 
 export function useAuth() {
