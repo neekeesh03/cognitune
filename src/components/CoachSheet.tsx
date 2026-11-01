@@ -42,17 +42,17 @@ type Phase = "pick" | "do" | "mood" | "plan";
 /** "Why is this hard?" in a few taps: say it or tap it, one small move that fits, then an if-then plan and an optional friend pledge. */
 export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: { task: string; onStart: (title: string, step: string) => void; onClose: () => void; friends?: { id: string; name: string }[]; onPledge?: (friendId: string) => void }) {
   const [f, setF] = useState<Friction | null>(null); const [mood, setMood] = useState<Mood | null>(null); const [ans, setAns] = useState(""); const [phase, setPhase] = useState<Phase>("pick"); const [cue, setCue] = useState("Now"); const [resetDone, setResetDone] = useState(false);
-  const [free, setFree] = useState(""); const [rd, setRd] = useState<ReturnType<typeof read> | null>(null); const [line, setLine] = useState("");
+  const [free, setFree] = useState(""); const [rd, setRd] = useState<Awaited<ReturnType<typeof read>> | null>(null); const [line, setLine] = useState("");
   const pr = (() => { try { return proof(loadLog(), loadCoach().events); } catch { return null; } })();
   const tac = f ? tacticFor(f) : null; const defaultStep = suggestSteps(task)[0]?.text ?? "Open it and look at it";
   const built = tac ? tac.build(task, ans) : { step: defaultStep, line: "Small and real." };
   const choose = (i: Intent) => {
-    setRd(null);
+    setRd(null); if (i === "other") return;
     if (i === "feeling") { setLine("Which feeling is closest? Tap one below."); setF(null); return; }
     if (i === "ready") { setF(null); setMood(null); setPhase("plan"); return; }
     setLine(openingLine(i)); setF(i); setAns(""); setResetDone(false); setPhase("do");
   };
-  const ask = () => { const r = read(free); setRd(r); setLine(!r.safety && r.top.length === 0 ? "I did not quite catch that. Tap the closest one below." : ""); };
+  const ask = async () => { const r = await read(free); setRd(r); setLine(!r.safety && (r.top.length === 0 || r.top[0].intent === "other") ? "I did not quite catch that. Tell me a bit more, or tap the closest one below." : ""); };
   const go = () => { logCoach({ ts: Date.now(), task, friction: f ?? "unclear", cue }, built.step); onClose(); if (cue === "Now") onStart(task, built.step); };
   const back = () => { if (phase === "plan") setPhase(f ? "do" : mood ? "mood" : "pick"); else setPhase("pick"); };
   return createPortal(
@@ -69,12 +69,12 @@ export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: {
           {pr && pr.starts > 0 && <p className="mt-2 rounded-2xl bg-primary/10 px-3 py-2 text-sm">You have started {pr.starts} {pr.starts === 1 ? "time" : "times"} before{pr.hardDays > 0 ? `, ${pr.hardDays} of those on hard days` : ""}. You can do this.</p>}
           <div className="mt-3 flex gap-2"><input value={free} onChange={e => setFree(e.target.value)} onKeyDown={e => e.key === "Enter" && free.trim() && ask()} maxLength={160} placeholder="Say it in your own words" aria-label="Say it in your own words" className="h-11 min-w-0 flex-1 rounded-2xl border border-border bg-secondary/40 px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" /><button disabled={!free.trim()} onClick={ask} className="rounded-full bg-primary px-4 text-sm text-primary-foreground disabled:opacity-40">Go</button></div>
           {rd?.safety && <div className="mt-3 rounded-2xl border border-border bg-secondary/50 p-3 text-sm" role="alert">{SAFETY_TEXT}</div>}
-          {rd && !rd.safety && rd.top.length > 0 && <div className="mt-3 rounded-2xl bg-secondary/50 p-3 text-sm"><div className="mb-2 text-muted-foreground">{rd.confident ? "That sounds like:" : "That could be either of these:"}</div><div className="flex flex-col gap-2">{rd.top.slice(0, rd.confident ? 1 : 2).map(t => <button key={t.intent} onClick={() => choose(t.intent)} className="rounded-2xl border border-primary/40 bg-primary/10 px-3 py-2 text-start hover:bg-primary/20">{LABEL[t.intent]}</button>)}</div><div className="mt-2 text-xs text-muted-foreground">Not right? Tap another below.</div></div>}
+          {rd && !rd.safety && rd.top.length > 0 && rd.top[0].intent !== "other" && <div className="mt-3 rounded-2xl bg-secondary/50 p-3 text-sm"><div className="mb-2 text-muted-foreground">{rd.confident ? "That sounds like:" : "That could be either of these:"}</div><div className="flex flex-col gap-2">{rd.top.slice(0, rd.confident ? 1 : 2).map(t => <button key={t.intent} onClick={() => choose(t.intent)} className="rounded-2xl border border-primary/40 bg-primary/10 px-3 py-2 text-start hover:bg-primary/20">{LABEL[t.intent]}</button>)}</div><div className="mt-2 text-xs text-muted-foreground">Not right? Tap another below.</div></div>}
           {line && !rd?.safety && <p className="mt-3 text-sm text-muted-foreground">{line}</p>}
           <div className="mt-4 space-y-2">{TACTICS.map(t => <button key={t.id} onClick={() => { setF(t.id); setAns(""); setResetDone(false); setLine(""); setRd(null); setPhase("do"); }} className="w-full rounded-2xl border border-border px-4 py-3 text-start text-[15px] transition hover:border-primary hover:bg-primary/5">{t.label}</button>)}</div>
           <div className="mt-4 text-sm font-medium">Or, how do you feel right now?</div>
           <div className="mt-2 flex flex-wrap gap-2">{MOODS.map(m => <button key={m.id} onClick={() => { setMood(m.id); setF(null); setResetDone(false); setRd(null); setLine(""); setPhase("mood"); }} className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">{m.label}</button>)}</div>
-          <p className="mt-3 text-xs text-muted-foreground">No wrong answer. This stays on your device.</p>
+          <p className="mt-3 text-xs text-muted-foreground">No wrong answer. This stays on your device. If things ever feel unsafe, findahelpline.com lists free lines by country.</p>
         </>)}
 
         {phase === "mood" && mood && (() => { const m = MOODS.find(x => x.id === mood)!; return (<>

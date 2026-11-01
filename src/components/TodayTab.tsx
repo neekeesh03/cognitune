@@ -74,6 +74,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };
   const dueSoon = plan.tasks.filter(t => !t.doneAt && t.due && dueDays(t.due) <= 7).sort((x, y) => dueDays(x.due) - dueDays(y.due)).slice(0, 3);
+  const dateNow = plan.blocks.filter(b => b.date && b.day === dkey() && !b.done).map(b => ({ b, mins: b.start - (new Date().getHours() * 60 + new Date().getMinutes()) })).filter(x => x.mins <= 15 && x.mins >= -x.b.dur).sort((a, c) => a.mins - c.mins)[0];
   const [coach, setCoach] = useState<string | null>(null); const [cs, setCs] = useState(loadCoach);
   useEffect(() => { const f = () => setCs(loadCoach()); window.addEventListener(coachEvent, f); return () => window.removeEventListener(coachEvent, f); }, []);
   const parked = cs.parked.filter(p => Date.now() - p.ts < 4 * 864e5).sort((a, b) => b.ts - a.ts)[0]; const myPlan = cs.plan && Date.now() - cs.plan.ts < 36e5 * 36 && cs.plan.cue !== "Now" ? cs.plan : null;
@@ -92,6 +93,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
           {([["circle", "Start together", Users], ["plan", "Plan my day", CalendarCheck], ["me", "Write a line", PenLine]] as const).map(([id, label, I]) => (
             <button key={id} onClick={() => go(id)} className="glass flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-xs text-foreground transition hover:scale-[1.03]"><I className="h-5 w-5 text-primary" />{tr(label)}</button>))}
         </div>
+        {dateNow && onStartBlock && <div className="glass flex items-center gap-3 rounded-3xl border border-primary/30 p-4"><Avatar spec={friends.find(f => f.id === dateNow.b.date!.friendId)?.avatar ?? avatar} size={40} /><div className="min-w-0 flex-1"><div className="text-xs uppercase tracking-[0.2em] text-primary">Study date</div><div className="truncate font-semibold">{dateNow.b.title}</div><div className="text-xs text-muted-foreground">With {dateNow.b.date!.name.split(" ")[0]} · {dateNow.mins > 0 ? `starts in ${dateNow.mins} min` : "happening now"}</div></div><button onClick={() => onStartBlock(dateNow.b)} className="shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-sm text-primary-foreground">Open quiet room</button></div>}
         {coach && <CoachSheet task={coach} onStart={onStart} onClose={() => setCoach(null)} friends={friends.map(f => ({ id: f.id, name: f.name }))} onPledge={onPinky} />}
         {(myPlan || parked) && (
           <div className="glass space-y-3 rounded-3xl p-4">

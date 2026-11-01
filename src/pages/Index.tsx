@@ -27,6 +27,7 @@ import { useAuth, type AuthApi, type User } from "@/store/useAuth";
 import { useCalendar } from "@/store/useCalendar";
 import { itemsForDay } from "@/engine/calendar";
 import { notify } from "@/lib/notify";
+import { toast } from "@/lib/fx";
 import { api } from "@/lib/api";
 import { useBurrow } from "@/store/useBurrow";
 import { LangPicker } from "@/components/LangPicker";
@@ -76,7 +77,15 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const [live, setLive] = useState<{ taskName?: string; title: string; dur: number; solo?: boolean; buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }; resources?: Block; blockId?: string; onDoneExtra?: () => void } | null>(null);
   // A reminder (toast or phone alert) opens "/?start=BLOCK_ID": go straight to that block's timer with its resources.
   const planRef = useRef(plan); planRef.current = plan;
-  const startBlock = (b: Block) => setLive({ title: b.title, dur: Math.min(b.dur, 45), solo: true, resources: b, blockId: b.id });
+  const startBlock = (b: Block) => { if (b.date) { void openDateRoom(b); return; } setLive({ title: b.title, dur: Math.min(b.dur, 45), solo: true, resources: b, blockId: b.id }); };
+  /** A study date: both friends open the same quiet room, named after the plan, so whoever taps first creates it and the other simply joins. */
+  const openDateRoom = async (b: Block) => {
+    const fr = peopleRef.current?.friends.find(x => x.id === b.date!.friendId);
+    if (!fr) { setLive({ title: b.title, dur: Math.min(b.dur, 45), solo: true, resources: b, blockId: b.id }); return; }
+    const sid = "sd-" + (b.sharedId ?? b.id);
+    try { await api("room-create", { body: { sid, inv: [fr.id] } }); } catch (e) { if ((e as { status?: number }).status !== 409) { toast("Could not open the room", (e as Error).message); return; } }
+    setLive({ title: "In the quiet room", dur: Math.min(b.dur, 45), buddy: { sid, friendId: fr.id, name: "Quiet room", avatar: fr.avatar, room: true }, blockId: b.id });
+  };
   useEffect(() => {
     const open = (raw: string) => { try { const sp = new URL(raw, location.origin).searchParams; if (sp.has("undo")) { planRef.current.undoRemove(); track("block_undo"); return; } const id = sp.get("start"); if (!id) return; const b = planRef.current.blocks.find(x => x.id === id); if (b && !b.done) { startBlock(b); track("block_start_from_reminder"); } } catch { /* ignore a bad link */ } };
     if (new URLSearchParams(location.search).has("start")) { open(location.href); window.history.replaceState(null, "", location.pathname); }
@@ -87,8 +96,9 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   }, []);
   const [dark, setDark] = useTheme();
   const tabRef = useRef(tab); tabRef.current = tab; const openRef = useRef(openId); openRef.current = openId;
+  const peopleRef = useRef<ReturnType<typeof usePeople> | null>(null);
   const people = usePeople(true, (f, n) => { if (!(tabRef.current === "circle" && openRef.current === f.id && !document.hidden)) notify({ id: `msg:${f.id}:${f.unread}`, tag: "msg:" + f.id, title: f.name, body: n > 1 ? `${n} new messages` : "New message" }); });
-  const burrow = useBurrow(); useBlockReminders(plan);
+  peopleRef.current = people; const burrow = useBurrow(); useBlockReminders(plan);
   useEffect(() => {
     if (!takeGuestStart()) return;
     game.earn("started"); localStorage.setItem("lagomo.firstStart", "1"); track("timer_start");

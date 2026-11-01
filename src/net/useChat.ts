@@ -7,7 +7,7 @@ import { filePayload } from "@/net/blobs";
 import { openJson, sealBytes, sealJson, unb64 } from "@/lib/e2ee";
 export interface ChatMsg { id: string; ts: number; from: string; kind: "text" | "file" | "session" | "session_join" | "react" | "plan" | "pinky" | "pinky_quiet"; text: string; plan?: SharedPlan; pinky?: PinkyEvt; react?: { to: string; e: string }; file?: { id: string; name: string; type: string; size: number; iv?: string }; session?: { id: string; dur: number; room?: boolean }; pending?: boolean }
 
-export interface SharedPlan { id: string; title: string; day: string; start: number; dur: number; note?: string }
+export interface SharedPlan { id: string; title: string; day: string; start: number; dur: number; note?: string; date?: boolean }
 interface Raw { id: string; ts: number; from: string; kind: ChatMsg["kind"]; enc?: string; fileId?: string; text?: string; file?: ChatMsg["file"]; session?: ChatMsg["session"] }
 interface Content { pinky?: PinkyEvt; plan?: SharedPlan; react?: { to: string; e: string }; text?: string; session?: ChatMsg["session"]; file?: { name: string; type: string; size: number; iv: string } }
 const NEEDS_PK = "Your friend needs to open Lagomo and sign in once to turn on private messaging before you can message them.";

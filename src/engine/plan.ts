@@ -8,7 +8,7 @@ export function dueText(due?: string): string {
 export const dueDays = (due?: string) => (due ? Math.round((new Date(due + "T12:00").getTime() - new Date(new Date().toDateString() + " 12:00").getTime()) / 864e5) : 9999);
 export interface BlockFile { id: string; name: string; type: string; size: number }
 /** A planned block. note, links and files are the things you will need ("bring along"); remind is minutes before the start (0 = at the start). All of it stays on this device. */
-export interface Block { id: string; title: string; day: string; start: number; dur: number; done?: boolean; taskId?: string; note?: string; links?: string[]; files?: BlockFile[]; remind?: number; notified?: boolean; series?: string; sharedId?: string }
+export interface Block { id: string; title: string; day: string; start: number; dur: number; done?: boolean; taskId?: string; note?: string; links?: string[]; files?: BlockFile[]; remind?: number; notified?: boolean; series?: string; sharedId?: string; date?: { friendId: string; name: string } }
 export type Repeat = "none" | "daily" | "weekdays" | "weekly";
 /** A repeating plan. Real blocks are made from it a few weeks ahead, so the calendar, reminders and timer work the same as for any block. */
 export interface Series { id: string; title: string; start: number; dur: number; rule: Exclude<Repeat, "none">; anchor: string; skip: string[]; note?: string; links?: string[]; files?: BlockFile[]; remind?: number }

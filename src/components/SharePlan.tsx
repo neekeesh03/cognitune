@@ -11,9 +11,9 @@ const dayLabel = (k: string) => { const [y, m, d] = k.split("-").map(Number); re
 /** Small form to plan a start with a friend. */
 export function PlanTogetherForm({ first, onSend, onClose }: { first: string; onSend: (p: SharedPlan, addMine: boolean) => Promise<void>; onClose: () => void }) {
   const today = new Date(); const [title, setTitle] = useState(""); const [day, setDay] = useState(keyOf(today)); const [start, setStart] = useState(() => Math.min(21 * 60, (Math.ceil((today.getHours() * 60 + today.getMinutes() + 30) / 30) * 30)));
-  const [dur, setDur] = useState(25); const [mine, setMine] = useState(true); const [busy, setBusy] = useState(false);
+  const [dur, setDur] = useState(25); const [mine, setMine] = useState(true); const [room, setRoom] = useState(false); const [busy, setBusy] = useState(false);
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-  const send = async () => { if (!title.trim() || busy) return; setBusy(true); try { await onSend({ id: crypto.randomUUID(), title: title.trim().slice(0, 120), day, start, dur }, mine); onClose(); } finally { setBusy(false); } };
+  const send = async () => { if (!title.trim() || busy) return; setBusy(true); try { await onSend({ id: crypto.randomUUID(), title: title.trim().slice(0, 120), day, start, dur, ...(room ? { date: true } : {}) }, mine); onClose(); } finally { setBusy(false); } };
   return (
     <div className="space-y-3 rounded-3xl border border-border bg-background p-4 text-sm">
       <div className="font-semibold">Plan a start with {first}</div>
@@ -27,6 +27,7 @@ export function PlanTogetherForm({ first, onSend, onClose }: { first: string; on
         <select aria-label="Start time" value={start} onChange={e => setStart(Number(e.target.value))} className="h-9 rounded-2xl border border-border bg-secondary/60 px-3">{Array.from({ length: 34 }, (_, i) => 360 + i * 30).map(m => <option key={m} value={m}>{fmtTime(m)}</option>)}</select>
         {DURS.map(d => <button key={d} onClick={() => setDur(d)} className={`rounded-full border px-3 py-1.5 ${dur === d ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{d} min</button>)}
       </div>
+      <label className="flex items-start gap-2"><input type="checkbox" checked={room} onChange={e => setRoom(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]" /><span><b>Make it a study date</b><span className="block text-xs text-muted-foreground">At the time, you both get a button to open the same quiet room. No one studies alone.</span></span></label>
       <label className="flex items-center gap-2 text-muted-foreground"><input type="checkbox" checked={mine} onChange={e => setMine(e.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />Also add it to my day, with a reminder</label>
       <div className="flex gap-2"><Button variant="hero" className="rounded-full" disabled={!title.trim() || busy} onClick={send}><CalendarPlus className="mr-1 h-4 w-4" />Send plan</Button><Button variant="ghost" className="rounded-full" onClick={onClose}>Cancel</Button></div>
     </div>);
@@ -37,7 +38,7 @@ export function PlanCard({ p, mine, first, blocks, onAdd }: { p: SharedPlan; min
   const added = blocks.some(b => b.sharedId === p.id);
   return (
     <div className="min-w-[14rem]">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] opacity-80"><CalendarPlus className="h-3.5 w-3.5" />{mine ? "You planned" : `${first} planned`}</div>
+      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.15em] opacity-80"><CalendarPlus className="h-3.5 w-3.5" />{p.date ? (mine ? "You set a study date" : `${first} set a study date`) : mine ? "You planned" : `${first} planned`}</div>
       <div className="mt-1 text-lg font-semibold" translate="no" dir="auto">{p.title}</div>
       <div className="text-sm opacity-90">{dayLabel(p.day)} · {fmtTime(p.start)} · {p.dur} min</div>
       {added ? <div className="mt-2 flex items-center gap-1 text-sm opacity-90"><Check className="h-4 w-4" />In your day</div>
