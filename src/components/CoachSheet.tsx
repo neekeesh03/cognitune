@@ -8,6 +8,7 @@ import { loadLog } from "@/lib/startlog";
 import { proof } from "@/engine/proof";
 import { suggestSteps } from "@/engine/plan";
 import { usePet } from "@/lib/pet";
+import { tr } from "@/i18n";
 
 const LABEL: Record<string, string> = { ...Object.fromEntries(TACTICS.map(t => [t.id, t.label])), feeling: "I am feeling something", ready: "I am ready, just give me a step" };
 
@@ -61,20 +62,20 @@ export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: {
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-background/80 p-3 backdrop-blur sm:items-center" role="dialog" aria-label="Get unstuck">
       <div className="glass max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl p-5 shadow-xl">
         <div className="mb-2 flex items-center justify-between">
-          {phase !== "pick" ? <button aria-label="Back" onClick={back} className="rounded-full p-1.5 text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button> : <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground"><span translate="no">{pet.name}</span> · get unstuck</span>}
+          {phase !== "pick" ? <button aria-label="Back" onClick={back} className="rounded-full p-1.5 text-muted-foreground"><ChevronLeft className="h-5 w-5" /></button> : <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground"><span translate="no">{tr("{name} · get unstuck").replace("{name}", pet.name)}</span></span>}
           <button aria-label="Close" onClick={onClose} className="rounded-full p-1.5 text-muted-foreground"><X className="h-5 w-5" /></button>
         </div>
-        <div className="mb-3 truncate text-sm text-muted-foreground">{task}</div>
+        <div className="mb-3 truncate text-sm text-muted-foreground">{tr(task)}</div>
 
         {phase === "pick" && (<>
           <h2 className="text-2xl leading-snug">What is the hard part?</h2>
-          {pr && pr.starts > 0 && <p className="mt-2 rounded-2xl bg-primary/10 px-3 py-2 text-sm">You have started {pr.starts} {pr.starts === 1 ? "time" : "times"} before{pr.hardDays > 0 ? `, ${pr.hardDays} of those on hard days` : ""}. You can do this.</p>}
+          {pr && pr.starts > 0 && <p className="mt-2 rounded-2xl bg-primary/10 px-3 py-2 text-sm">{pr.starts === 1 ? tr("You have started 1 time before. You can do this.") : pr.hardDays > 0 ? tr("You have started {n} times before, {h} of those on hard days. You can do this.").replace("{n}", String(pr.starts)).replace("{h}", String(pr.hardDays)) : tr("You have started {n} times before. You can do this.").replace("{n}", String(pr.starts))}</p>}
           <div className="mt-3 flex gap-2"><input value={free} onChange={e => setFree(e.target.value)} onKeyDown={e => e.key === "Enter" && free.trim() && ask()} maxLength={160} placeholder="Say it in your own words" aria-label="Say it in your own words" className="h-11 min-w-0 flex-1 rounded-2xl border border-border bg-secondary/40 px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30" /><button disabled={!free.trim()} onClick={ask} className="rounded-full bg-primary px-4 text-sm text-primary-foreground disabled:opacity-40">Go</button></div>
           {rd?.safety && <div className="mt-3 rounded-2xl border border-border bg-secondary/50 p-3 text-sm" role="alert">{SAFETY_TEXT}</div>}
           {rd && !rd.safety && rd.top.length > 0 && rd.top[0].intent !== "other" && <div className="mt-3 rounded-2xl bg-secondary/50 p-3 text-sm"><div className="mb-2 text-muted-foreground">{rd.confident ? "That sounds like:" : "That could be either of these:"}</div><div className="flex flex-col gap-2">{rd.top.slice(0, rd.confident ? 1 : 2).map(t => <button key={t.intent} onClick={() => choose(t.intent)} className="rounded-2xl border border-primary/40 bg-primary/10 px-3 py-2 text-start hover:bg-primary/20">{LABEL[t.intent]}</button>)}</div><div className="mt-2 text-xs text-muted-foreground">Not right? Tap another below.</div></div>}
           {line && !rd?.safety && <p className="mt-3 text-sm text-muted-foreground">{line}</p>}
           <div className="mt-4 space-y-2">{(showAll ? usual : usual.slice(0, 3)).map(t => <button key={t.id} onClick={() => { setF(t.id); setAns(""); setResetDone(false); setLine(""); setRd(null); setPhase("do"); }} className="w-full rounded-2xl border border-border px-4 py-3 text-start text-[15px] transition hover:border-primary hover:bg-primary/5">{t.label}</button>)}</div>
-          {!showAll && <button onClick={() => setShowAll(true)} className="mt-2 text-sm text-primary underline-offset-4 hover:underline">Something else ({usual.length - 3} more)</button>}
+          {!showAll && <button onClick={() => setShowAll(true)} className="mt-2 text-sm text-primary underline-offset-4 hover:underline">{tr("Something else ({n} more)").replace("{n}", String(usual.length - 3))}</button>}
           {!showMoods ? <button onClick={() => setShowMoods(true)} className="mt-3 block text-sm text-muted-foreground underline-offset-4 hover:underline">Or name a feeling instead</button> : <><div className="mt-4 text-sm font-medium">How do you feel right now?</div>
           <div className="mt-2 flex flex-wrap gap-2">{MOODS.map(m => <button key={m.id} onClick={() => { setMood(m.id); setF(null); setResetDone(false); setRd(null); setLine(""); setPhase("mood"); }} className="rounded-full border border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground">{m.label}</button>)}</div></>}
           <p className="mt-3 text-xs text-muted-foreground">No wrong answer. This stays on your device. If things ever feel unsafe, findahelpline.com lists free lines by country.</p>

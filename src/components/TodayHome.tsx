@@ -73,7 +73,7 @@ export function TodayHome({ j, name, avatar, go, game, plan, agenda, onStart, on
   const cheerNow = hops.lastCheer && Date.now() - hops.lastCheer.ts < 10 * 60e3 ? hops.lastCheer : null; const cheerer = cheerNow ? friends.find(f => f.id === cheerNow.from) : undefined;
   const hr1 = new Date().getHours();
   const mood: Mood = cheerNow ? "cheering" : game.g.todayActive ? "proud" : idle >= 2 ? "cosy" : hr1 >= 22 || hr1 < 5 ? "sleepy" : waiting ? "curious" : "ready";
-  const rabbitLine = cheerNow ? `${(cheerer?.name ?? "A friend").split(" ")[0]} sent you ${cheerNow.e}` : mood === "curious" && waiting ? `${waiting.name.split(" ")[0]} started. Join them?` : undefined;
+  const rabbitLine = cheerNow ? `${(cheerer?.name ?? "A friend").split(" ")[0]} sent you ${cheerNow.e}` : mood === "curious" && waiting ? `${waiting.name.split(" ")[0]} started. Join them?` : idle >= 1 && !game.g.todayActive ? `Welcome back. ${friends.filter(f => hops.hops[f.id] && new Date(hops.hops[f.id]).toDateString() === new Date().toDateString()).length > 0 ? "Some of your friends started today." : "No rush. Ready when you are."}` : undefined;
   const freshLabel = freshToday(nowD); const banner = started && idle >= 5 && !backGone ? "back" : started && (monday || first || !!freshLabel) && !freshGone ? "fresh" : "";
   const dismissBanner = () => { if (banner === "back") setBackGone(true); else { localStorage.setItem(freshKey, "1"); setFreshGone(true); } };
   const focusStart = () => { dismissBanner(); (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus(); };

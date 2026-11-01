@@ -3,12 +3,14 @@ import { Flame, Sparkles, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/Avatar";
 import type { AvatarSpec } from "@/engine/avatar";
+import { coatFilter, petNow } from "@/lib/pet";
+import { tr } from "@/i18n";
 
 /** Lagomo the rabbit, full body, paws up. Colours come from the brand tokens. */
 function CheerBunny({ size = 190 }: { size?: number }) {
   const lav = "hsl(var(--f-grain))", lavDark = "hsl(259 32% 52%)", ink = "hsl(var(--foreground))";
   return (
-    <svg viewBox="0 0 200 230" width={size} height={size * 1.15} aria-hidden="true" className="overflow-visible">
+    <svg viewBox="0 0 200 230" width={size} height={size * 1.15} aria-hidden="true" className="overflow-visible" style={{ filter: coatFilter(petNow().coat) }}>
       <g className="cele-ear-l" style={{ transformOrigin: "82px 70px" }}><ellipse cx="80" cy="34" rx="15" ry="38" fill={lav} /><ellipse cx="80" cy="38" rx="7" ry="26" fill="hsl(var(--warning) / .35)" /></g>
       <g className="cele-ear-r" style={{ transformOrigin: "118px 70px" }}><ellipse cx="120" cy="34" rx="15" ry="38" fill={lav} /><ellipse cx="120" cy="38" rx="7" ry="26" fill="hsl(var(--warning) / .35)" /></g>
       <g className="cele-arm-l" style={{ transformOrigin: "74px 146px" }}><path d="M74 146 L40 102" stroke={lav} strokeWidth="16" strokeLinecap="round" /><circle cx="38" cy="99" r="11" fill={lav} /></g>
@@ -73,6 +75,7 @@ export function Celebration({ minutes, sparks, streak, me, buddy, title, sub, on
       <div className="h-2 w-64 rounded-full bg-foreground/10" aria-hidden="true" />
       <h1 className="cele-pop mt-8 text-5xl font-bold tracking-tight" style={{ color: "hsl(var(--warning))", animationDelay: ".15s" }}>{heading}</h1>
       <p className="cele-pop mt-3 text-lg text-muted-foreground" style={{ animationDelay: ".3s" }}>{sub ?? "You started. That is the hard part."}</p>
+      <p className="cele-pop mt-1 text-sm text-muted-foreground" style={{ animationDelay: ".38s" }}><span translate="no">{tr("{name} hopped for joy.").replace("{name}", petNow().name)}</span></p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         {cards.map((c, i) => (
           <div key={c.k} className="cele-pop w-40 overflow-hidden rounded-3xl border-2" style={{ borderColor: `hsl(${c.tone})`, animationDelay: `${0.45 + i * 0.12}s` }}>

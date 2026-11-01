@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RabbitFace } from "@/components/RabbitFace";
 import { api } from "@/lib/api";
+import { tr } from "@/i18n";
 import { COATS, DEFAULT_PET, SUGGESTIONS, nameProblem, savePetLocal } from "@/lib/pet";
 import type { AuthApi, User } from "@/store/useAuth";
 
@@ -27,7 +28,7 @@ export function MeetRabbit({ auth, onDone }: { auth: AuthApi; onDone: () => void
         <button onClick={() => { setName(SUGGESTIONS[Math.floor(Math.random() * SUGGESTIONS.length)]); setErr(""); }} className="rounded-full border border-dashed border-border px-3 py-1.5 text-sm text-muted-foreground hover:border-primary/60">Surprise me</button></div>
       <div className="mt-5 text-sm text-muted-foreground">Pick a coat</div>
       <div className="mt-2 flex gap-2" role="radiogroup" aria-label="Coat">{COATS.map(c => <button key={c.id} role="radio" aria-checked={coat === c.id} aria-label={c.label} onClick={() => setCoat(c.id)} className={`h-9 w-9 rounded-full border-2 ${coat === c.id ? "border-primary" : "border-transparent"}`}><span className="block h-full w-full rounded-full" style={{ background: "#9a85c9", filter: c.filter }} /></button>)}</div>
-      <Button variant="hero" className="mt-6 h-12 w-full rounded-2xl text-base" disabled={busy || !name.trim()} onClick={() => save({ name, coat })}>Say hi to {shown === "your rabbit" ? "your rabbit" : shown}</Button>
+      <Button variant="hero" className="mt-6 h-12 w-full rounded-2xl text-base" disabled={busy || !name.trim()} onClick={() => save({ name, coat })}>{shown === "your rabbit" ? tr("Say hi to your rabbit") : tr("Say hi to {name}").replace("{name}", shown)}</Button>
       <button disabled={busy} onClick={() => save({ ...DEFAULT_PET, coat })} className="mt-3 text-sm text-muted-foreground underline-offset-4 hover:underline">Name it later</button>
       {err && <p role="alert" className="mt-3 text-sm text-destructive">{err}</p>}
       <p className="mt-4 max-w-xs text-xs text-muted-foreground">Your rabbit is a small AI that runs in this app. What you tell it stays on your device. You can rename it any time in Me.</p>

@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Pause, Play, X } from "lucide-react";
 import { LofiPanel } from "@/components/LofiPanel";
 import { Mascot } from "@/components/Mascot";
+import { RabbitFace } from "@/components/RabbitFace";
+import { wornNow } from "@/components/Rabbit";
+import { usePet } from "@/lib/pet";
 import { AfterStart } from "@/components/AfterStart";
 import { GuestSave } from "@/components/GuestStart";
 import { Celebration } from "@/components/Celebration";
@@ -26,7 +29,8 @@ function FocusTimerInner({ taskName, color, task, onStarted, onClose, onDone, mi
   const start = (minutes ?? 2) * 60;
   const [total, setTotal] = useState(start);
   const [left, setLeft] = useState(start);
-  const [run, setRun] = useState(!!autoStart);
+  const [run, setRun] = useState(!!autoStart); const pet = usePet(); const [echo, setEcho] = useState(false); const echoed = useRef(false);
+  useEffect(() => { if (run && !echoed.current) { echoed.current = true; setEcho(true); const t = window.setTimeout(() => setEcho(false), 5000); return () => window.clearTimeout(t); } }, [run]);
   const [done, setDone] = useState(false);
   const [how, setHow] = useState<string | null>(null);
   const fired = useRef(false); const doneFired = useRef(false); const [celeSeen, setCeleSeen] = useState(false);
@@ -72,7 +76,7 @@ function FocusTimerInner({ taskName, color, task, onStarted, onClose, onDone, mi
       <div className="m-auto flex w-full max-w-5xl flex-col items-center px-2 lg:flex-row lg:items-center lg:justify-center lg:gap-24"><div className="contents lg:flex lg:flex-col lg:items-center">
       <p className="mb-1 text-xs uppercase tracking-[0.25em] text-muted-foreground">Focus</p>
       <h2 className={`${buddy ? "mb-4" : "mb-8"} max-w-sm px-6 text-center text-3xl`}>{task || "Your task"}</h2>
-      {!buddy && !done && <div className="mb-6 flex items-center gap-2 rounded-full bg-secondary/70 px-3 py-1.5 text-sm" role="status"><span className={run ? "animate-pulse" : ""}><Mascot size={28} /></span>Lagomo is here with you</div>}
+      {!buddy && !done && <div className="mb-6 flex flex-col items-center gap-1" role="status"><span className={echo ? "animate-hop" : ""}><RabbitFace alive crop face={echo ? "happy" : run ? "calm" : "curious"} wear={wornNow()} size={52} /></span><span className="rounded-full bg-secondary/70 px-3 py-1.5 text-sm"><span translate="no">{tr("{name} is here with you").replace("{name}", pet.name)}</span>{echo && task ? <span className="text-muted-foreground"> · {task.split(" ").slice(0, 6).join(" ")}</span> : null}</span></div>}
       {isRoom && <div className="mb-6 flex max-w-sm flex-wrap items-center justify-center gap-2" role="status">{members.length === 0 && <span className="rounded-full bg-secondary/70 px-3 py-1.5 text-sm">Waiting for friends to join the quiet room...</span>}{members.map(m => <span key={m.id} title={`${m.name}: ${roomLine(m)}`} className="flex items-center gap-1.5 rounded-full bg-secondary/70 px-2.5 py-1 text-xs"><span className={`relative ${m.state === "working" ? "animate-pulse" : m.state === "none" || m.state === "left" ? "opacity-40" : ""}`}><Avatar spec={m.avatar} size={26} />{floats[m.id] && <span className="cheer-up pointer-events-none absolute -top-4 left-1/2 -translate-x-1/2 text-xl" aria-hidden="true" translate="no">{floats[m.id]}</span>}</span>{m.name.split(" ")[0]} {roomLine(m)}</span>)}<span className="text-xs text-muted-foreground">· quiet by design</span></div>}
       {isRoom && !done && <div className="relative mb-5 flex items-center gap-1 rounded-full bg-secondary/60 p-1" role="group" aria-label="Send a cheer to the room" translate="no">{CHEER_EMOJI.map(e => <button key={e} onClick={() => cheerRoom(e)} aria-label={`Cheer ${e}`} className="rounded-full px-2 py-1 text-xl leading-none transition hover:scale-125">{e}</button>)}{mineFloat && <span className="cheer-up pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 text-2xl" aria-hidden="true">{mineFloat}</span>}</div>}
       {buddy && !isRoom && <div className="mb-6 flex items-center gap-2 rounded-full bg-secondary/70 px-3 py-1.5 text-sm" role="status"><span className={buddyState === "working" ? "animate-pulse" : ""}><Avatar spec={buddy.avatar} size={28} /></span>{buddyLine}<span className="text-xs text-muted-foreground">· quiet by design</span></div>}
