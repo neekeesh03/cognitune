@@ -5,6 +5,7 @@ import { Avatar } from "@/components/Avatar";
 import type { AvatarSpec } from "@/engine/avatar";
 import { coatFilter, petNow } from "@/lib/pet";
 import { tr } from "@/i18n";
+import { finishLine } from "@/engine/director";
 
 /** Lagomo the rabbit, full body, paws up. Colours come from the brand tokens. */
 function CheerBunny({ size = 190 }: { size?: number }) {
@@ -74,7 +75,7 @@ export function Celebration({ minutes, sparks, streak, me, buddy, title, sub, on
       </div>
       <div className="h-2 w-64 rounded-full bg-foreground/10" aria-hidden="true" />
       <h1 className="cele-pop mt-8 text-5xl font-bold tracking-tight" style={{ color: "hsl(var(--warning))", animationDelay: ".15s" }}>{heading}</h1>
-      <p className="cele-pop mt-3 text-lg text-muted-foreground" style={{ animationDelay: ".3s" }}>{sub ?? "You started. That is the hard part."}</p>
+      <p className="cele-pop mt-3 text-lg text-muted-foreground" style={{ animationDelay: ".3s" }}>{sub ?? finishLine() ?? "You started. That is the hard part."}</p>
       <p className="cele-pop mt-1 text-sm text-muted-foreground" style={{ animationDelay: ".38s" }}><span translate="no">{tr("{name} hopped for joy.").replace("{name}", petNow().name)}</span></p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         {cards.map((c, i) => (

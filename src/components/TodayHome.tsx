@@ -22,6 +22,7 @@ import { MomentumRing } from "@/components/MomentumRing";
 import { useDrive } from "@/lib/useDrive";
 import { CoachSheet } from "@/components/CoachSheet";
 import { clearParked, coachEvent, loadCoach } from "@/engine/coach";
+import { clearTomorrow, comeback, tomorrowStep } from "@/engine/director";
 import { DriveCard } from "@/components/DriveCard";
 import type { Inputs } from "@/engine/model";
 import { StartHero } from "@/components/StartHero";
@@ -90,6 +91,9 @@ export function TodayHome({ j, name, avatar, go, game, plan, agenda, onStart, on
   const examTask = plan.tasks.filter(t => !t.doneAt && t.due && /exam|test|quiz|final|midterm|viva|assessment/i.test(t.title) && dueDays(t.due) >= 0).sort((a, b) => dueDays(a.due) - dueDays(b.due))[0];
   const focusInput = () => (document.querySelector('[aria-label="What are you putting off"]') as HTMLInputElement | null)?.focus();
   const moves: Move[] = [];
+  const tmr = tomorrowStep(); const cb = comeback();
+  if (tmr) moves.push({ key: "tmr", kicker: "Saved for you", title: tmr.task, sub: `Your first step is ready. You usually start around ${tmr.hour % 12 || 12}${tmr.hour < 12 ? "am" : "pm"}.`, cta: "Start 2 min", onClick: () => { clearTomorrow(); onStart(tmr.task, tmr.step ?? "Open it and look at it for two minutes."); } });
+  else if (cb) moves.push({ key: "cb", kicker: "Welcome back", title: cb.task, sub: "No catching up. Just one small minute.", cta: "Start", onClick: () => onStart(cb.task, "Open it and look at it for one minute.") });
   if (dateNow && onStartBlock) moves.push({ key: "date", kicker: "Study date", title: dateNow.b.title, sub: `With ${dateNow.b.date!.name.split(" ")[0]} · ${dateNow.mins > 0 ? `starts in ${dateNow.mins} min` : "happening now"}`, cta: "Open quiet room", onClick: () => onStartBlock(dateNow.b) });
   if (myPlan) moves.push({ key: "plan", kicker: "Your plan", title: `When ${myPlan.cue}, I will ${myPlan.step.toLowerCase()}`, cta: "Do it now", onClick: () => onStart(myPlan.task, myPlan.step) });
   if (examTask) { const d = dueDays(examTask.due); moves.push({ key: "exam", kicker: d === 0 ? "Exam today" : `Exam in ${d} ${d === 1 ? "day" : "days"}`, title: examTask.title, sub: d <= 3 ? "Short and steady beats a big push." : "A small slice now beats a big push later.", cta: "Study 2 min", onClick: () => onStart(examTask.title, examTask.steps.find(s => !s.done)?.text ?? "Open your notes and read the first page.") }); }

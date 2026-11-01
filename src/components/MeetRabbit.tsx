@@ -31,7 +31,6 @@ export function MeetRabbit({ auth, onDone }: { auth: AuthApi; onDone: () => void
       <Button variant="hero" className="mt-6 h-12 w-full rounded-2xl text-base" disabled={busy || !name.trim()} onClick={() => save({ name, coat })}>{shown === "your rabbit" ? tr("Say hi to your rabbit") : tr("Say hi to {name}").replace("{name}", shown)}</Button>
       <button disabled={busy} onClick={() => save({ ...DEFAULT_PET, coat })} className="mt-3 text-sm text-muted-foreground underline-offset-4 hover:underline">Name it later</button>
       {err && <p role="alert" className="mt-3 text-sm text-destructive">{err}</p>}
-      <Science />
       <p className="mt-4 max-w-xs text-xs text-muted-foreground">Your rabbit is a small AI that runs in this app. What you tell it stays on your device. You can rename it any time in Me.</p>
     </div>);
 }

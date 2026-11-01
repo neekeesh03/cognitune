@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BADGES, BOX_LINES, EventKind, GameState, SPARKS, STREAK_EVENTS, bumpStreak, dkey, emptyGame, levelFor } from "@/engine/game";
 import { burst, toast } from "@/lib/fx";
+import { surprise } from "@/engine/director";
 const K = "lagomo.game.v1";
 export function useGame() {
   const [g, setG] = useState<GameState>(() => { try { return { ...emptyGame(), ...JSON.parse(localStorage.getItem(K) || "{}") }; } catch { return emptyGame(); } });
@@ -8,12 +9,14 @@ export function useGame() {
 
   /** Record something good you did. Awards sparks, updates streak and badges, and celebrates. */
   const earn = useCallback((kind: EventKind, extra?: { early?: boolean; people?: number }) => {
+    const sup = kind === "timer" || kind === "buddy" ? surprise() : null; // rolled once, outside the updater
     setG(prev => {
       let s: GameState = { ...prev, counts: { ...prev.counts, [kind]: (prev.counts[kind] || 0) + 1 } };
       const day = dkey(); let n = SPARKS[kind].n;
       if (kind === "chat" && s.counts.chat > 0 && prev.today === day && (prev.counts["chat_" + day] || 0) >= 3) n = 0; // cap chat sparks per day
       if (kind === "chat") s.counts["chat_" + day] = (prev.counts["chat_" + day] || 0) + 1;
       if (n) { s.sparks += n; s.lifetime += n; }
+      if (sup) { s.sparks += sup.sparks; s.lifetime += sup.sparks; }
       let msg: string | undefined;
       if (STREAK_EVENTS.includes(kind)) s.counts["s_" + day] = (prev.counts["s_" + day] || 0) + 1;
       if (STREAK_EVENTS.includes(kind)) { const r = bumpStreak(s, day); s = r.g; msg = r.msg; s.todayActive = true; }
@@ -30,6 +33,7 @@ export function useGame() {
       const lvlUp = levelFor(s.lifetime).level > levelFor(prev.lifetime).level;
       setTimeout(() => {
         if (n) toast(`+${n} sparks`, SPARKS[kind].label);
+        if (sup) { toast(`+${sup.sparks} bonus sparks`, sup.line); burst(); }
         if (msg) toast("Streak", msg);
         newB.forEach(b => { toast("New badge", BADGES.find(x => x.id === b)!.name); burst(); });
         if (lvlUp) { toast("You grew!", `Level ${levelFor(s.lifetime).level + 1}: ${levelFor(s.lifetime).name}`); burst(); }

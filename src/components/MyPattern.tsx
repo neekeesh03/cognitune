@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { PsychLens } from "@/components/PsychLens";
 import { ProofCard } from "@/components/ProofCard";
 import { useStartLog } from "@/lib/startlog";
 import { ARMS, accuracy, analyse, armStats } from "@/engine/pattern";
@@ -68,7 +67,6 @@ export function MyPattern() {
           </div>
         </Card>
       </div>
-      <div className="lg:col-span-2"><PsychLens /></div>
     </div>
   );
 }
