@@ -52,7 +52,8 @@ export async function experimentStats() {
   const users = (await rdp(ids.map(i => ["GET", "user:" + i]))).map(v => v && JSON.parse(v)).filter(Boolean);
   const total = users.length;
   const [fcount] = [await rdp(users.map(u => ["SCARD", "f:" + u.id]))];
-  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "cue_set", "reminder_set", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer"];
+  const pct = (a, b) => (b ? a / b : null);
+  const evNames = ["checkin", "timer_start", "timer_done", "together_start", "invite", "tab_circle", "tab_plan", "cue_set", "reminder_set", "name_story_seen", "name_say_right", "name_say_other", "name_recall_ok", "name_recall_miss", "hop_cheer", "invite_join", "rabbit_session", "rabbit_handoff_show", "rabbit_handoff_tap", "rabbit_roam_tap"];
   const evSets = {}; for (const n of evNames) evSets[n] = new Set(await rd("SMEMBERS", "evf:" + n));
   // retention: for each user, was she active on day +1, +7, +30 (only if that day has fully passed)
   const checks = []; const meta = [];
@@ -77,9 +78,13 @@ export async function experimentStats() {
   // landing variants
   const lpKeys = []; for (const v of ["tiny", "together", "calm"]) for (const s of ["a", "b"]) for (const k of ["view", "click", "signup"]) lpKeys.push([v, s, k]);
   const lpv = await rdp(lpKeys.map(([v, s, k]) => ["GET", `lp:${v}:${s}:${k}`])); const landing = {}; lpKeys.forEach(([v, s, k], i) => { const key = `${v}:${s}`; (landing[key] ||= { v, s, view: 0, click: 0, signup: 0 })[k] = +lpv[i] || 0; });
+  // your rabbit: how often it is used, and the safety check that it sends people towards friends rather than replacing them
+  const RB = ["rabbit_session", "rabbit_handoff_show", "rabbit_handoff_tap", "rabbit_roam_tap"]; const d7 = lastDays(7);
+  const rbv = await rdp(RB.flatMap(n => d7.map(d => ["GET", `stat:ev_${n}:${d}`]))); const wk = {}; RB.forEach((n, k) => { wk[n] = d7.reduce((a, _, i) => a + (+rbv[k * d7.length + i] || 0), 0); });
+  const rbUsers = evSets.rabbit_session; const rbWithFriend = users.filter(u => rbUsers.has(u.id) && (evSets.together_start.has(u.id) || evSets.invite.has(u.id) || evSets.invite_join.has(u.id))).length;
+  const rabbit = { users: rbUsers.size, shownUsers: evSets.rabbit_handoff_show.size, tappedUsers: evSets.rabbit_handoff_tap.size, roamUsers: evSets.rabbit_roam_tap.size, week: { sessions: wk.rabbit_session, shown: wk.rabbit_handoff_show, taps: wk.rabbit_handoff_tap, roam: wk.rabbit_roam_tap }, tapRate7: pct(wk.rabbit_handoff_tap, wk.rabbit_handoff_show), friendActionAmongRabbitUsers: pct(rbWithFriend, rbUsers.size) };
   const wlCount = await rd("LLEN", "wl");
   const weeklyActive7 = new Set(); for (const d of lastDays(7)) (await rd("SMEMBERS", "dau:" + d)).forEach(x => weeklyActive7.add(x));
-  const pct = (a, b) => (b ? a / b : null);
   const gstv = await rdp(["guest_start", "guest_done", "guest_save"].map(k => ["GET", "gst:" + k]));
   return {
     users: total, weeklyActive: weeklyActive7.size,
@@ -91,7 +96,7 @@ export async function experimentStats() {
     weekly,
     pulse: { counts: pc, n: pr.length, veryPct: pct(pc.very, pr.length), comments: pr.filter(p => p.benefit || p.alt || p.improve).slice(-30).reverse().map(p => ({ ts: p.ts, answer: p.answer, benefit: p.benefit, alt: p.alt, improve: p.improve })) },
     plus: { counts: plus, total: pl.length, opened: opens, ofActive: pct(pl.filter(p => p.price !== "none").length, weeklyActive7.size || 0) },
-    landing: Object.values(landing), waitlist: wlCount,
+    rabbit, landing: Object.values(landing), waitlist: wlCount,
     guest: Object.fromEntries(["guest_start", "guest_done", "guest_save"].map((k, i) => [k, +(gstv[i] || 0)])),
   };
 }
