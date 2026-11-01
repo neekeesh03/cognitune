@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, CalendarCheck, Heart, Home, LogOut, Moon, Sprout, Sun } from "lucide-react";
+import { Activity, CalendarCheck, Heart, Home, LogOut, MessageCircle, Moon, Sprout, Sun } from "lucide-react";
+import { TalkTab } from "@/components/TalkTab";
 import { CheckInTab } from "@/components/CheckInTab";
 import { MeetRabbit } from "@/components/MeetRabbit";
 import { savePetLocal, usePet } from "@/lib/pet";
@@ -53,6 +54,7 @@ import { wornNow } from "@/components/Rabbit";
 
 const TABS = [
   { id: "today", label: "Today", icon: Home },
+  { id: "talk", label: "Talk", icon: MessageCircle },
   { id: "plan", label: "Plan", icon: CalendarCheck },
   { id: "checkin", label: "Start", icon: Activity },
   { id: "circle", label: "Friends", icon: Heart },
@@ -144,12 +146,12 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   const lastTask = history[history.length - 1]?.task && history[history.length - 1].task !== "Untitled" ? history[history.length - 1].task : plan.tasks.find(t => !t.doneAt)?.title ?? "";
   void lastTask;
   const startNow = (title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, taskName: title, dur: 2, solo: true }); };
-  const [coachOpen, setCoachOpen] = useState(false); const pet = usePet();
+  const [coachOpen, setCoachOpen] = useState(false); const [coachTask, setCoachTask] = useState("something I am putting off"); const pet = usePet();
   return (
     <div className="min-h-screen pb-28 lg:pb-12 lg:pl-56">
       <FxHost />
-      {!live && tab !== "today" && <button onClick={() => setCoachOpen(true)} aria-label={`Ask ${pet.name}`} className="fixed bottom-24 right-4 z-30 flex h-12 w-12 items-center justify-center gap-1.5 rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 sm:h-auto sm:w-auto sm:px-4 sm:py-3 lg:bottom-8 lg:right-8"><Sparkles className="h-5 w-5 sm:h-4 sm:w-4" /><span className="hidden sm:inline" translate="no">{pet.name}</span></button>}
-      {coachOpen && <CoachSheet task="something I am putting off" onStart={startNow} onClose={() => setCoachOpen(false)} friends={people.friends.map(f => ({ id: f.id, name: f.name }))} onPledge={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} />}
+      {!live && tab !== "today" && tab !== "talk" && <button onClick={() => setCoachOpen(true)} aria-label={`Ask ${pet.name}`} className="fixed bottom-24 right-4 z-30 flex h-12 w-12 items-center justify-center gap-1.5 rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 sm:h-auto sm:w-auto sm:px-4 sm:py-3 lg:bottom-8 lg:right-8"><Sparkles className="h-5 w-5 sm:h-4 sm:w-4" /><span className="hidden sm:inline" translate="no">{pet.name}</span></button>}
+      {coachOpen && <CoachSheet task={coachTask} onStart={startNow} onClose={() => setCoachOpen(false)} friends={people.friends.map(f => ({ id: f.id, name: f.name }))} onPledge={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} />}
       <AnnounceBanner />
       <PulseCard />
       {live && <FocusTimer onlineFriend={people.friends.find(f => f.online) ?? null} onFriend={id => { setLive(null); setOpenId(id); setTab("circle"); }} color="var(--f-flexion)" taskName={live.taskName} task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (live.solo) track("rabbit_session"); if (!live.solo) track("together_start"); const tk = plan.tasks.find(t => t.title === live.taskName || t.title === live.title || t.steps.some(s => s.text === live.title)); logStart({ together: !live.solo, dueIn: tk?.due ? dueDays(tk.due) : null, task: tk?.title ?? live.taskName ?? live.title, created: tk?.createdAt }); }} resources={live.resources} onDone={() => { track("timer_done"); saveTomorrow(live.taskName ?? live.title); game.earn(live.solo ? "timer" : "buddy"); if (live.blockId) plan.patchBlock(live.blockId, { done: true }); live.onDoneExtra?.(); }} onClose={() => setLive(null)} />}
@@ -168,6 +170,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       </header>
       <main className="mx-auto max-w-6xl overflow-x-clip px-5 pt-8">
         {tab === "today" && <TodayHome avatar={user.avatar} onPinky={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} sliders={history.length && Date.now() - history[history.length - 1].ts < 864e5 ? history[history.length - 1].inputs : null} go={t => { if (t.startsWith("circle:")) { setOpenId(t.slice(7)); setTab("circle"); } else if (t === "pattern") { sessionStorage.setItem("lagomo.me.view", "pattern"); setTab("me"); } else setTab(t as Tab); }} game={game} plan={plan} agenda={agenda} onStart={startNow} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
+        {tab === "talk" && <TalkTab myName={user.name} ctx={{ tasks: plan.tasks.filter(t => !t.doneAt).slice(0, 3).map(t => ({ title: t.title, step: t.steps.find(x => !x.done)?.text })), streak: game.g.streak.current }} onStart={startNow} onCoach={t => { setCoachTask(t || "something I am putting off"); setCoachOpen(true); }} onPlan={() => setTab("plan")} onCircle={() => setTab("circle")} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); const ci = history.find(h => h.id === id); logStart({ together: false, dueIn: ci?.hoursToDeadline != null ? Math.floor(ci.hoursToDeadline / 24) : null, task: ci?.task }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab startPinky={(title, onDoneExtra) => setLive({ title, dur: 2, solo: true, onDoneExtra })} pairs={burrow.pairs} people={people} game={game} plan={plan} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In the quiet room" : `Focusing with ${name}`, dur, buddy })} />}
@@ -182,7 +185,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <nav className="glass fixed bottom-5 lg:hidden left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 gap-0.5 rounded-full p-1.5" aria-label="Main">
         {TABS.filter(t => t.id !== "checkin" && (deepUser || t.id === "today" || t.id === "circle" || t.id === tab || (hasStarted && t.id === "plan"))).map(t => { const I = t.icon, on = tab === t.id; return (
           <button key={t.id} onClick={() => setTab(t.id)} aria-label={t.label} aria-current={on ? "page" : undefined} className={`flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-2.5 text-sm transition ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-            <span className="relative"><I className="h-4 w-4" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span><span className="text-xs sm:text-sm">{t.label}</span>
+            <span className="relative"><I className="h-4 w-4" />{t.id === "circle" && unread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] text-destructive-foreground">{unread}</span>}</span><span className={`text-xs sm:text-sm ${on ? "" : "hidden min-[460px]:inline"}`}>{t.label}</span>
           </button>); })}
       </nav>
     </div>

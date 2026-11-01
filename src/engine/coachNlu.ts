@@ -20,6 +20,8 @@ function feats(text: string, m: M): string[] {
   if (m.char.char) for (const x of w) { const p = "^" + x + "$"; for (let n = 3; n <= 5; n++) for (let i = 0; i + n <= p.length; i++) f.add("c:" + p.slice(i, i + n)); }
   return [...f];
 }
+/** Quick safety check used by the chat too: true if the words suggest the person may be in danger. */
+export const looksUnsafe = (text: string) => SAFETY.test(text.toLowerCase().replace(/[\u2019']/g, ""));
 export interface Reading { safety: boolean; top: { intent: Intent; p: number }[]; confident: boolean }
 export async function read(text: string): Promise<Reading> {
   const clean = text.toLowerCase().replace(/[\u2019']/g, "");
