@@ -88,3 +88,10 @@ export function comeback(now = Date.now()): { task: string; days: number } | nul
   const S = loadLog().starts.filter(s => s.ts <= now); const last = S[S.length - 1]; if (!last) return null;
   const days = dayKeyNum(now) - dayKeyNum(last.ts); return days >= 2 && days <= 14 ? { task: last.task || "one small thing", days } : null;
 }
+
+// Values affirmation (Steele 1988; Epton et al. 2015: small but reliable effect on behaviour, d = .32).
+// Reflecting on what matters lowers the threat of a task that feels like a test of you. Used only on the "afraid I'll do it badly" path.
+export const VALUES = ["Learning", "Family", "Health", "Freedom", "Creativity", "Being reliable", "Kindness", "Growing"];
+const VK = "lagomo.values.v1";
+export const loadValue = (): string | null => { try { const v = localStorage.getItem(VK); return v && VALUES.includes(v) ? v : null; } catch { return null; } };
+export const saveValue = (v: string) => { try { localStorage.setItem(VK, v); } catch { /* ignore */ } };

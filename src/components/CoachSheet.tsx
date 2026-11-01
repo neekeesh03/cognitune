@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Affirm } from "@/components/Affirm";
+import { directorOn } from "@/lib/arm";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,7 +89,7 @@ export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: {
           <h2 className="text-2xl leading-snug">One minute for that</h2>
           <p className="mt-1 text-sm text-muted-foreground">{m.label}. Naming it is already a step.</p>
           {!resetDone ? <MoodReset mood={mood} onDone={() => setResetDone(true)} /> : <div className="mt-4"><div className="rounded-2xl bg-primary/10 p-3 text-sm">Good. Now one tiny thing: <b>{defaultStep}</b></div></div>}
-          <details className="mt-3 text-sm text-muted-foreground"><summary className="cursor-pointer">Why this helps <span className="ml-1 rounded-full bg-foreground/[.07] px-2 py-0.5 text-[10px]">Exploratory</span></summary><p className="mt-2">{m.idea}</p></details>
+          
           <Button variant="hero" className="mt-4 h-12 w-full rounded-2xl" disabled={!resetDone} onClick={() => setPhase("plan")}>Next</Button>
           <button onClick={onClose} className="mt-2 w-full text-center text-sm text-muted-foreground">Rest is okay too. No shame.</button>
         </>); })()}
@@ -101,8 +103,9 @@ export function CoachSheet({ task, onStart, onClose, friends = [], onPledge }: {
               {tac.ask.chips && <div className="mb-2 flex flex-wrap gap-2">{tac.ask.chips.map(c => <button key={c} onClick={() => setAns(c)} className={`rounded-full border px-3 py-1.5 text-sm ${ans === c ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{c}</button>)}</div>}
               {tac.id === "big" && <div className="mb-2 flex flex-wrap gap-2">{suggestSteps(task).slice(0, 3).map(s => <button key={s.id} onClick={() => setAns(s.text)} className={`rounded-full border px-3 py-1.5 text-sm ${ans === s.text ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground"}`}>{s.text}</button>)}</div>}
               {(tac.ask.ph || tac.id === "big") && <input value={ans} onChange={e => setAns(e.target.value)} placeholder={tac.ask.ph || "Or write your own"} maxLength={120} className="h-11 w-full rounded-2xl border border-border bg-secondary/40 px-3 outline-none focus:ring-2 focus:ring-primary/30" />}</div>}
+            {tac.id === "scared" && directorOn() && <Affirm />}
             <div className="mt-4 rounded-2xl bg-primary/10 p-3 text-sm"><div className="text-xs uppercase tracking-[0.15em] text-primary">Your first step</div><div className="mt-0.5 font-medium">{built.step}</div><div className="mt-1 text-muted-foreground">{built.line}</div></div>
-            <details className="mt-3 text-sm text-muted-foreground"><summary className="cursor-pointer">Why this helps <span className="ml-1 rounded-full bg-foreground/[.07] px-2 py-0.5 text-[10px]">{tac.strength}</span></summary><p className="mt-2">{tac.idea}</p></details>
+            
             <Button variant="hero" className="mt-4 h-12 w-full rounded-2xl" onClick={() => setPhase("plan")}>Next</Button>
             {tac.id === "tired" && <button onClick={onClose} className="mt-2 w-full text-center text-sm text-muted-foreground">Rest is okay too. No shame.</button>}
           </>}
