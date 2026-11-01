@@ -140,7 +140,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
   return (
     <div className="min-h-screen pb-28 lg:pb-12 lg:pl-56">
       <FxHost />
-      {!live && tab !== "today" && <button onClick={() => setCoachOpen(true)} aria-label="Ask your coach" className="fixed bottom-24 right-4 z-30 flex items-center gap-1.5 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 lg:bottom-8 lg:right-8"><Sparkles className="h-4 w-4" />Coach</button>}
+      {!live && tab !== "today" && <button onClick={() => setCoachOpen(true)} aria-label="Ask your coach" className="fixed bottom-24 right-4 z-30 flex h-12 w-12 items-center justify-center gap-1.5 rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 sm:h-auto sm:w-auto sm:px-4 sm:py-3 lg:bottom-8 lg:right-8"><Sparkles className="h-5 w-5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Coach</span></button>}
       {coachOpen && <CoachSheet task="something I am putting off" onStart={startNow} onClose={() => setCoachOpen(false)} friends={people.friends.map(f => ({ id: f.id, name: f.name }))} onPledge={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} />}
       <AnnounceBanner />
       <PulseCard />

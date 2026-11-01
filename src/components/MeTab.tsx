@@ -32,7 +32,7 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
   const saveProfile = async () => { setPmsg(""); try { const r = await api<{ user: typeof user }>("profile", { body: { name: pname, avatar: pav } }); auth.updateUser(r.user); setPmsg("Saved."); } catch (e) { setPmsg((e as Error).message); } };
   const deleteAccount = async () => { if (!confirm("Delete your account and all your messages? This cannot be undone.")) return; try { await api("account", { method: "DELETE", body: user.g ? { confirm: delPw } : { password: delPw } }); auth.logout(); } catch (e) { setPmsg((e as Error).message); } };
   const { g } = game; const lv = levelFor(g.lifetime); const file = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState(""); const [cost, setCost] = useState("50");
+  const [name, setName] = useState(""); const [cost, setCost] = useState("50"); const [showMore, setShowMore] = useState(false);
   const boxReady = g.todayActive && g.boxDay !== dkey();
   const exportAll = () => { const o: Record<string, string | null> = {}; KEYS.forEach(k => (o[k] = localStorage.getItem(k))); const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(o)], { type: "application/json" })); a.download = `lagomo-backup-${dkey()}.json`; a.click(); };
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
@@ -57,8 +57,8 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
           </div>
           </div>
           <div className="space-y-5">
-          <Wardrobe starts={g.counts.started ?? 0} />
-          <StartsCard name={user.name} avatar={user.avatar} g={g} />
+          {showMore && <><Wardrobe starts={g.counts.started ?? 0} />
+          <StartsCard name={user.name} avatar={user.avatar} g={g} /></>}
           <div className="grid grid-cols-3 gap-3 text-center">
             <div className="glass rounded-3xl p-4"><Flame className="mx-auto h-6 w-6" style={{ color: "hsl(var(--f-primode))" }} /><div className="text-3xl font-semibold">{g.streak.current}</div><div className="text-xs text-muted-foreground">showing-up days</div></div>
             <div className="glass rounded-3xl p-4"><Sparkles className="mx-auto h-6 w-6 text-primary" /><div className="text-3xl font-semibold">{g.sparks}</div><div className="text-xs text-muted-foreground">sparks to spend</div></div>
@@ -66,13 +66,14 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
           </div>
           <p className="text-center text-xs text-muted-foreground">Best streak: {g.streak.best} {g.streak.best === 1 ? "day" : "days"}. A freeze covers a missed day so your streak stays safe. You earn one every 7 days.</p>
           </div>
-          <div className="glass rounded-3xl p-5 lg:col-span-2">
+          {showMore && <div className="glass rounded-3xl p-5 lg:col-span-2">
             <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">Badges</div>
             <div className="grid gap-2 sm:grid-cols-2">{BADGES.map(b => { const on = g.badges.includes(b.id); return (
               <div key={b.id} className={`flex items-center gap-3 rounded-2xl p-3 ${on ? "bg-primary/10" : "bg-foreground/[.04] opacity-70"}`}>
                 <div className={`flex h-9 w-9 items-center justify-center rounded-full ${on ? "bg-primary text-primary-foreground" : "bg-foreground/10"}`}>{on ? <Sparkles className="h-4 w-4" /> : <Lock className="h-4 w-4" />}</div>
                 <div><div className="text-sm font-semibold">{b.name}</div><div className="text-xs text-muted-foreground">{b.how}</div></div></div>); })}</div>
-          </div>
+          </div>}
+          <button onClick={() => setShowMore(m => !m)} aria-expanded={showMore} className="mx-auto block text-sm text-muted-foreground hover:text-foreground lg:col-span-2">{showMore ? "Less" : "Wardrobe, share card and badges"}</button>
         </div>)}
 
       {view === "progress" && (
