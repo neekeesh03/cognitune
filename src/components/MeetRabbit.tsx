@@ -31,7 +31,24 @@ export function MeetRabbit({ auth, onDone }: { auth: AuthApi; onDone: () => void
       <Button variant="hero" className="mt-6 h-12 w-full rounded-2xl text-base" disabled={busy || !name.trim()} onClick={() => save({ name, coat })}>{shown === "your rabbit" ? tr("Say hi to your rabbit") : tr("Say hi to {name}").replace("{name}", shown)}</Button>
       <button disabled={busy} onClick={() => save({ ...DEFAULT_PET, coat })} className="mt-3 text-sm text-muted-foreground underline-offset-4 hover:underline">Name it later</button>
       {err && <p role="alert" className="mt-3 text-sm text-destructive">{err}</p>}
+      <Science />
       <p className="mt-4 max-w-xs text-xs text-muted-foreground">Your rabbit is a small AI that runs in this app. What you tell it stays on your device. You can rename it any time in Me.</p>
     </div>);
+}
+const THEORIES: { t: string; w: string }[] = [
+  { t: "Choice builds ownership", w: "Self-determination theory (Deci & Ryan): when you choose, you feel the thing is yours, and you keep going longer." },
+  { t: "Naming makes it yours", w: "Psychological ownership (Pierce, Kostova & Dirks): naming and shaping something makes you feel it belongs to you." },
+  { t: "You value what you shape", w: "The IKEA effect (Norton, Mochon & Ariely): people value what they helped make. A meta-analysis found a medium effect." },
+  { t: "A face feels like company", w: "Anthropomorphism and CASA (Epley; Reeves & Nass): we treat friendly characters as social partners, even when we know they are not people." },
+  { t: "Small cues start habits", w: "Implementation intentions (Gollwitzer): a cue like \"when I open Lagomo, I say hi\" makes starting more automatic." },
+  { t: "Kind, not guilty", w: "Self-compassion research (Neff; Sirois): being kind to yourself after a slip helps you start again. Your rabbit never scolds." },
+];
+function Science() {
+  return (
+    <details className="mt-4 w-full max-w-xs rounded-2xl border border-border bg-secondary/30 px-4 py-3 text-left text-sm">
+      <summary className="cursor-pointer text-center text-muted-foreground">Why a name helps (the science)</summary>
+      <ul className="mt-3 space-y-3">{THEORIES.map(x => <li key={x.t}><div className="font-medium">{x.t}</div><div className="text-xs text-muted-foreground">{x.w}</div></li>)}</ul>
+      <p className="mt-3 text-xs text-muted-foreground">These are well-studied ideas, but none of them proves the rabbit will work for you.</p>
+    </details>);
 }
 function RabbitFaceStatic() { return <RabbitFace alive face="happy" size={150} />; }
