@@ -6,7 +6,7 @@ import { analyze } from "@/engine/text";
 import type { Friction } from "@/engine/coach";
 
 export type Intent = Friction | "feeling" | "ready" | "other";
-interface M { labels: string[]; drop: string[]; char: boolean; T: number; B: number[]; w: Record<string, number[]>; thresholds: { confident: number } }
+interface M { labels: string[]; drop: string[]; char: { char: boolean; clause: boolean }; T: number; B: number[]; w: Record<string, number[]>; thresholds: { confident: number } }
 let cache: Promise<M> | null = null;
 const load = () => (cache ??= import("@/engine/coachModel.json").then(x => (x.default ?? x) as unknown as M));
 const SAFETY = /\b(kill myself|killing myself|suicid\w*|end it all|(?:want|wanna|wish|going) to die(?! of| from| laughing| inside)|hurt myself|hurting myself|harm myself|better off dead|not be alive|dont want to be alive|dont want to live(?: anymore| any more|\s*$|[.!,])|wish i were dead|disappear forever|end my life|better off without me|better off if i (?:was|were) gone|no reason to (?:keep )?(?:live|living)|not worth living|isnt worth living|wish i (?:would not|wouldnt|did not|didnt) wake up)\b/;
@@ -17,7 +17,7 @@ function feats(text: string, m: M): string[] {
   const pr = primary(text); if (pr) { const pw = tok(pr).filter(x => !drop.has(x)); for (const x of pw) f.add("p:" + x); for (let i = 0; i < pw.length - 1; i++) f.add("pb:" + pw[i] + "_" + pw[i + 1]); }
   const all = tok(text); for (let i = 0; i < all.length - 1; i++) if (all[i] === "not" || all[i] === "dont" || all[i] === "never") { f.add("n:" + all[i + 1]); if (all[i + 2]) f.add("n:" + all[i + 2]); }
   for (const x of w) f.add("w:" + x); for (let i = 0; i < w.length - 1; i++) f.add("b:" + w[i] + "_" + w[i + 1]);
-  if (m.char) for (const x of w) { const p = "^" + x + "$"; for (let n = 3; n <= 5; n++) for (let i = 0; i + n <= p.length; i++) f.add("c:" + p.slice(i, i + n)); }
+  if (m.char.char) for (const x of w) { const p = "^" + x + "$"; for (let n = 3; n <= 5; n++) for (let i = 0; i + n <= p.length; i++) f.add("c:" + p.slice(i, i + n)); }
   return [...f];
 }
 export interface Reading { safety: boolean; top: { intent: Intent; p: number }[]; confident: boolean }
