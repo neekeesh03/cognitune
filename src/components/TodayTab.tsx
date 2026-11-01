@@ -13,6 +13,8 @@ import type { PlanApi } from "@/store/usePlan";
 import { dkey } from "@/engine/game";
 import { dueDays, dueText, fmtTime, hasResources, type Block } from "@/engine/plan";
 import { fmtClock, type CalItem } from "@/engine/calendar";
+import { DriveCard } from "@/components/DriveCard";
+import type { Inputs } from "@/engine/model";
 import { StartHero } from "@/components/StartHero";
 import type { Mood } from "@/components/Rabbit";
 import { FriendsHere } from "@/components/FriendsHere";
@@ -31,7 +33,7 @@ import type { BurrowApi } from "@/store/useBurrow";
 import type { Friend } from "@/store/usePeople";
 import type { HopsApi } from "@/store/useHops";
 
-export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onStartBlock, onPinky, friends, hops, burrow, username }: { j: JournalApi; name: string; avatar: AvatarSpec; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; onStartBlock?: (b: Block) => void; onPinky?: (friendId: string) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
+export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onStartBlock, onPinky, friends, hops, burrow, username, sliders }: { sliders?: Inputs | null; j: JournalApi; name: string; avatar: AvatarSpec; go: (t: string) => void; game: GameApi; plan: PlanApi; agenda: CalItem[]; onStart: (title: string, step: string) => void; onStartBlock?: (b: Block) => void; onPinky?: (friendId: string) => void; friends: Friend[]; hops: HopsApi; burrow: BurrowApi; username: string }) {
   const [calm, setCalm] = useState(() => !!localStorage.getItem("lagomo.calm")); const toggleCalm = () => { const v = !calm; setCalm(v); v ? localStorage.setItem("lagomo.calm", "1") : localStorage.removeItem("lagomo.calm"); };
   const started = !!localStorage.getItem("lagomo.firstStart") || (game.g.counts.started ?? 0) > 0;
   const planned = (() => { try { const p = JSON.parse(localStorage.getItem("lagomo.nexthop") || "null"); return p && Date.now() - p.ts < 36e5 * 30 ? String(p.w).toLowerCase() : ""; } catch { return ""; } })();
@@ -83,6 +85,7 @@ export function TodayTab({ j, name, avatar, go, game, plan, agenda, onStart, onS
           {([["circle", "Start together", Users], ["plan", "Plan my day", CalendarCheck], ["me", "Write a line", PenLine]] as const).map(([id, label, I]) => (
             <button key={id} onClick={() => go(id)} className="glass flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3 text-xs text-foreground transition hover:scale-[1.03]"><I className="h-5 w-5 text-primary" />{tr(label)}</button>))}
         </div>
+        {deep && <DriveCard tasks={plan.tasks} friendsStarted={friends.filter(f => hops.hops[f.id] && new Date(hops.hops[f.id]).toDateString() === new Date().toDateString()).length} hasFriends={friends.length > 0} sliders={sliders ?? null} onStart={onStart} openPattern={() => go("pattern")} />}
         {dueSoon.length > 0 && (
           <div className="glass rounded-3xl p-4">
             <div className="mb-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">{tr("Due soon")}</div>

@@ -38,6 +38,9 @@ import { StartsCard } from "@/components/StartsCard";
 import { invitedBy, clearInvite } from "@/lib/invite";
 import { suggestSteps, uid } from "@/engine/plan";
 import { dkey } from "@/engine/game";
+import { logStart } from "@/lib/startlog";
+import { dueDays } from "@/engine/plan";
+import { MyPattern } from "@/components/MyPattern";
 import { usePresence } from "@/lib/presence";
 import { wornNow } from "@/components/Rabbit";
 
@@ -123,7 +126,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <FxHost />
       <AnnounceBanner />
       <PulseCard />
-      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); }} resources={live.resources} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); if (live.blockId) plan.patchBlock(live.blockId, { done: true }); live.onDoneExtra?.(); }} onClose={() => setLive(null)} />}
+      {live && <FocusTimer color="var(--f-flexion)" task={live.title} minutes={live.dur} autoStart buddy={live.buddy} hasFriends={people.friends.length > 0} username={user.username} cele={{ sparks: live.solo ? 10 : 12, streak: game.g.streak.current, me: user.avatar }} extra={<StartsCard compact name={user.name} avatar={user.avatar} g={game.g} />} onStarted={() => { track("timer_start"); if (!live.solo) track("together_start"); const tk = plan.tasks.find(t => t.title === live.title || t.steps.some(s => s.text === live.title)); logStart({ together: !live.solo, dueIn: tk?.due ? dueDays(tk.due) : null, task: tk?.title ?? live.title, created: tk?.createdAt }); }} resources={live.resources} onDone={() => { track("timer_done"); game.earn(live.solo ? "timer" : "buddy"); if (live.blockId) plan.patchBlock(live.blockId, { done: true }); live.onDoneExtra?.(); }} onClose={() => setLive(null)} />}
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 pt-6 max-[340px]:px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
           <Mascot size={32} />
@@ -138,7 +141,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl overflow-x-clip px-5 pt-8">
-        {tab === "today" && <TodayTab avatar={user.avatar} onPinky={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} go={t => { if (t.startsWith("circle:")) { setOpenId(t.slice(7)); setTab("circle"); } else setTab(t as Tab); }} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
+        {tab === "today" && <TodayTab avatar={user.avatar} onPinky={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} sliders={history.length && Date.now() - history[history.length - 1].ts < 864e5 ? history[history.length - 1].inputs : null} go={t => { if (t.startsWith("circle:")) { setOpenId(t.slice(7)); setTab("circle"); } else if (t === "pattern") { sessionStorage.setItem("lagomo.me.view", "pattern"); setTab("me"); } else setTab(t as Tab); }} game={game} plan={plan} agenda={agenda} onStart={(title, step) => { game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); localStorage.setItem("lagomo.firstStart", "1"); hops.hopIn(); setTimeout(burrow.reload, 1500); setLive({ title: step || title, dur: 2, solo: true }); }} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab startPinky={(title, onDoneExtra) => setLive({ title, dur: 2, solo: true, onDoneExtra })} pairs={burrow.pairs} people={people} game={game} plan={plan} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In the quiet room" : `Focusing with ${name}`, dur, buddy })} />}

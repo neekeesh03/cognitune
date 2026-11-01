@@ -15,6 +15,7 @@ import { RecoveryCode } from "@/components/RecoveryCode";
 import { JournalTab } from "@/components/JournalTab";
 import type { JournalApi } from "@/store/useJournal";
 import type { AvatarSpec } from "@/engine/avatar";
+import { MyPattern } from "@/components/MyPattern";
 import { InsightsTab } from "@/components/InsightsTab";
 import { BADGES, dkey, levelFor } from "@/engine/game";
 import type { GameApi } from "@/store/useGame";
@@ -25,7 +26,7 @@ const KEYS = ["lagomo.history.v2", "lagomo.entries.v1", "lagomo.settings.v1", "l
 interface Props { j: JournalApi; auth: AuthApi; game: GameApi; profile: Profile; history: CheckIn[]; onFollowUp: (id: string, s: boolean) => void; onClear: () => void; onDelete: (id: string) => void }
 
 export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, onDelete }: Props) {
-  const [view, setView] = useState<"progress" | "rewards" | "journal" | "insights" | "profile" | "data">("progress");
+  const [view, setView] = useState<"progress" | "rewards" | "journal" | "insights" | "profile" | "data" | "pattern">(() => { const v = sessionStorage.getItem("lagomo.me.view"); sessionStorage.removeItem("lagomo.me.view"); return v === "pattern" ? "pattern" : "progress"; });
   const [admin, setAdmin] = useState(false); useEffect(() => { api<{ admin: boolean }>("me").then(r => setAdmin(!!r.admin)).catch(() => {}); }, []);
   const user = auth.user!; const [pname, setPname] = useState(user.name); const [pav, setPav] = useState<AvatarSpec>(user.avatar); const [pmsg, setPmsg] = useState(""); const [delPw, setDelPw] = useState("");
   const saveProfile = async () => { setPmsg(""); try { const r = await api<{ user: typeof user }>("profile", { body: { name: pname, avatar: pav } }); auth.updateUser(r.user); setPmsg("Saved."); } catch (e) { setPmsg((e as Error).message); } };
@@ -37,8 +38,9 @@ export function MeTab({ j, auth, game, profile, history, onFollowUp, onClear, on
   const importAll = async (f: File) => { try { const o = JSON.parse(await f.text()); Object.entries(o).forEach(([k, v]) => KEYS.includes(k) && typeof v === "string" && localStorage.setItem(k, v)); location.reload(); } catch { alert("That file could not be read."); } };
   return (
     <div className="animate-rise mx-auto max-w-3xl lg:max-w-5xl">
-      <div className="mx-auto mb-6 flex w-fit flex-wrap justify-center gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["journal", "Journal"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
+      <div className="mx-auto mb-6 flex w-fit flex-wrap justify-center gap-1 rounded-full bg-foreground/[.05] p-1">{([["progress", "Progress"], ["pattern", "My pattern"], ["journal", "Journal"], ["data", "Settings"]] as const).map(([id, l]) => <button key={id} onClick={() => setView(id)} className={`rounded-full px-4 py-1.5 text-sm ${view === id ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>{l}</button>)}</div>
 
+      {view === "pattern" && <MyPattern />}
       {view === "progress" && (
         <div className="space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
           <div className="space-y-5">
