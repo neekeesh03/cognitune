@@ -39,14 +39,14 @@ export function PsychLens() {
       </div>
       {items.map(f => (
         <div key={f.id} className="glass rounded-3xl p-5">
-          <div className="mb-2 flex items-start justify-between gap-2"><div className="text-sm font-semibold">{f.title}</div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${tagCls(f.strength)}`}>{f.strength} evidence</span></div>
+          <div className="mb-2 flex items-start justify-between gap-2"><div className="text-sm font-semibold">{f.title}</div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${tagCls(f.strength)}`}>{`${f.strength} evidence`}</span></div>
           {f.body ? <p className="text-sm">{f.body}</p> : <p className="text-sm text-muted-foreground">{f.need}</p>}
           {f.body && f.tip && <p className="mt-2 rounded-2xl bg-primary/10 px-3 py-2 text-xs text-primary">{f.tip}</p>}
           {f.id === "ii" && <PlanEditor plan={plan} onSave={p => { savePlan(p); setPlan(p); }} />}
           <div className="mt-2 text-[10px] text-muted-foreground">Idea: {f.theory}</div>
         </div>))}
       <details className="glass rounded-3xl p-5 text-sm">
-        <summary className="cursor-pointer font-semibold">The science behind Lagomo ({THEORIES.length} ideas)</summary>
+        <summary className="cursor-pointer font-semibold">{`The science behind Lagomo (${THEORIES.length} ideas)`}</summary>
         <ul className="mt-3 space-y-4">{THEORIES.map(t => (
           <li key={t.id}><div className="flex items-start justify-between gap-2"><div className="font-medium">{t.name}</div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${tagCls(t.strength)}`}>{t.strength}</span></div>
             <div className="text-xs text-muted-foreground">{t.who}</div><p className="mt-1 text-xs">{t.idea}</p><p className="mt-1 text-xs text-muted-foreground"><b>What the research found:</b> {t.fact}</p><p className="mt-1 text-xs text-primary">In Lagomo: {t.use}</p></li>))}</ul>
