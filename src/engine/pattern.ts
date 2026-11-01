@@ -7,7 +7,7 @@ import type { Inputs } from "@/engine/model";
 export type Outcome = "did" | "got" | "not";
 export interface StartEv { id: string; ts: number; together: boolean; dueIn: number | null; o?: Outcome; task?: string; created?: number }
 export interface Check { day: string; sleep: number; energy: number; dread: number } // each 1..3
-export interface Snap { ts: number; p: number; pb: number; pl: number | null; y?: 0 | 1 }
+export interface Snap { ts: number; p: number; pb: number; pl: number | null; y?: 0 | 1; x?: number[] }
 export interface Exp { day: string; arm: string; hit?: boolean }
 export interface Log { starts: StartEv[]; checks: Check[]; snaps: Snap[]; exps: Exp[] }
 export const emptyLog = (): Log => ({ starts: [], checks: [], snaps: [], exps: [] });
@@ -24,17 +24,32 @@ export function paperDrive(i: Inputs): number {
 }
 
 export interface Ctx { now: number; dueTasks: { due?: string; doneAt?: number }[]; friendsStarted: number; sliders?: Inputs | null }
-export interface Prediction { p: number; pb: number; pl: number | null; lift: number; usual: number; why: string[]; known: number }
+export interface Prediction { p: number; pb: number; pl: number | null; lift: number; usual: number; why: string[]; known: number; x: number[] }
+/** Starting guesses for how much each signal matters, halved because they are unproven. Order: deadline, sleep, energy, feels-heavy, friends started, momentum. Each person's own data then moves them. */
+const W0 = [0.9, 0.35, 0.35, -0.4, 0.3, 0.6].map(w => w * 0.5);
+const LAMBDA = 6;
+/** Fit this person's weights on checked windows: ridge logistic regression pulled towards the starting guesses. */
+export function fitWeights(log: Log): number[] {
+  const rows = log.snaps.filter(s => s.y !== undefined && s.x && s.x.length === W0.length); const w = W0.slice();
+  if (rows.length < 8) return w;
+  for (let it = 0; it < 25; it++) {
+    const g = W0.map(() => 0), h = W0.map(() => 0);
+    for (const r of rows) { const x = r.x as number[]; const p = sig(logit(r.pb) + x.reduce((a, v, j) => a + v * w[j], 0)); const e = p - (r.y as number); x.forEach((v, j) => { g[j] += e * v; h[j] += p * (1 - p) * v * v; }); }
+    for (let j = 0; j < w.length; j++) { g[j] += LAMBDA * (w[j] - W0[j]); h[j] += LAMBDA; w[j] -= 0.7 * g[j] / h[j]; }
+  }
+  return w;
+}
 
 function observedDays(log: Log, now: number) {
   const first = Math.min(...[log.starts[0]?.ts, log.snaps[0]?.ts, log.checks[0] ? new Date(log.checks[0].day + "T12:00").getTime() : undefined].filter((x): x is number => !!x), now);
   return clamp(Math.ceil((now - first) / DAY), 1, 28);
 }
-/** Chance that, in the 3 hours starting at this hour, you start something. Smoothed towards 25% while data is thin. */
+/** Chance that, in the 3 hours starting at this hour, you start something. Pulled towards your overall rate so a few lucky hours do not look like a pattern. */
 export function hourWindowRate(log: Log, now: number): number {
-  const days = observedDays(log, now), h = new Date(now).getHours(); const hits = new Set<string>();
-  for (const s of log.starts) { if (now - s.ts > 28 * DAY) continue; const d = new Date(s.ts), hh = d.getHours(); const inWin = (hh - h + 24) % 24 < 3; if (inWin) hits.add(dayKeyOf(s.ts)); }
-  return (hits.size + 0.75) / (days + 3);
+  const days = observedDays(log, now); const recent = log.starts.filter(s => now - s.ts <= 28 * DAY && s.ts <= now);
+  const hitsAt = (h: number) => { const set = new Set<string>(); for (const s of recent) { if (((new Date(s.ts).getHours() - h + 24) % 24) < 3) set.add(dayKeyOf(s.ts)); } return set.size; };
+  let all = 0; for (let h = 0; h < 24; h += 3) all += hitsAt(h); const pc = (all / 8 + 0.75) / (days + 3);
+  return clamp((hitsAt(new Date(now).getHours()) + 6 * pc) / (days + 6), 0.02, 0.95);
 }
 function pressure(ctx: Ctx): { d: number; hrs: number | null } {
   let best: number | null = null;
@@ -45,33 +60,31 @@ function pressure(ctx: Ctx): { d: number; hrs: number | null } {
 export function predict(log: Log, ctx: Ctx): Prediction {
   const now = ctx.now, today = dayKeyOf(now);
   const pb = hourWindowRate(log, now); const days = observedDays(log, now);
-  const pg = (new Set(log.starts.map(s => dayKeyOf(s.ts))).size + 0.75) / (days + 3) / 2.2; // rough usual level across windows
-  let eta = logit(pb); const parts: { w: number; t: string }[] = [];
+  const usualDays = new Set(log.starts.map(s => dayKeyOf(s.ts))).size;
+  const pg = (usualDays + 0.75) / (days + 3) / 2.2; // rough level of an ordinary window, used only for wording
+  const w = fitWeights(log); const x = [0, 0, 0, 0, 0, 0]; const parts: { w: number; t: string }[] = [];
+  const add = (j: number, v: number, pos: string, neg: string) => { x[j] = v; const c = w[j] * v; if (c > 0.08 && pos) parts.push({ w: c, t: pos }); if (c < -0.08 && neg) parts.push({ w: c, t: neg }); };
   if (pb > pg * 1.5 && log.starts.length >= 5) parts.push({ w: 0.5, t: "This is one of your usual start hours." });
   if (pb < pg * 0.6 && log.starts.length >= 5) parts.push({ w: -0.5, t: "This is not usually one of your start hours." });
   const pr = pressure(ctx);
-  if (pr.hrs !== null && pr.d > 0.05) { const w = 0.9 * pr.d; eta += w; parts.push({ w, t: pr.hrs < 24 ? "Something is due within a day." : "A deadline is getting close." }); }
+  add(0, pr.hrs !== null ? pr.d : 0, pr.hrs !== null && pr.hrs < 24 ? "Something is due within a day." : "A deadline is getting close.", "");
   const ck = log.checks.find(c => c.day === today);
-  if (ck) {
-    const a = 0.35 * (ck.sleep - 2), b = 0.35 * (ck.energy - 2), c = -0.4 * (ck.dread - 2); eta += a + b + c;
-    if (a < 0) parts.push({ w: a, t: "You slept badly, so go gently." }); if (a > 0) parts.push({ w: a, t: "You slept well." });
-    if (b < 0) parts.push({ w: b, t: "Energy is low today." }); if (b > 0) parts.push({ w: b, t: "Energy is good today." });
-    if (c < 0) parts.push({ w: c, t: "It feels heavy. Make the first step tiny." }); if (c > 0) parts.push({ w: c, t: "It feels light today." });
-  }
-  const fs = Math.min(ctx.friendsStarted, 2); if (fs > 0) { eta += 0.3 * fs; parts.push({ w: 0.3 * fs, t: fs === 1 ? "A friend already started." : "Friends already started." }); }
-  const act = new Set(log.starts.filter(s => now - s.ts < 7 * DAY).map(s => dayKeyOf(s.ts))).size / 7;
-  if (log.starts.length >= 3) { const m = 0.6 * (act - 0.4); eta += m; if (m > 0.1) parts.push({ w: m, t: "You have been on a roll this week." }); if (m < -0.1) parts.push({ w: m, t: "A quiet week. A tiny start restarts it." }); }
+  if (ck) { add(1, ck.sleep - 2, "You slept well.", "You slept badly, so go gently."); add(2, ck.energy - 2, "Energy is good today.", "Energy is low today."); add(3, ck.dread - 2, "", "It feels heavy. Make the first step tiny."); if (ck.dread < 2) parts.push({ w: 0.2, t: "It feels light today." }); }
+  add(4, Math.min(ctx.friendsStarted, 2), ctx.friendsStarted > 1 ? "Friends already started." : "A friend already started.", "");
+  const act = new Set(log.starts.filter(s => now - s.ts < 7 * DAY && s.ts <= now).map(s => dayKeyOf(s.ts))).size / 7;
+  if (log.starts.length >= 3) add(5, act - 0.4, "You have been on a roll this week.", "A quiet week. A tiny start restarts it.");
+  const eta = logit(pb) + x.reduce((a, v, j) => a + v * w[j], 0);
   const p = sig(eta);
   const pl = ctx.sliders ? sig(logit(pb) + clamp(1.0 * (paperDrive(ctx.sliders) - 0.7), -1.5, 1.5)) : null;
-  parts.sort((x, y) => Math.abs(y.w) - Math.abs(x.w));
-  return { p, pb, pl, lift: eta - logit(pb), usual: pb, why: parts.slice(0, 3).map(x => x.t), known: log.starts.length };
+  parts.sort((u, v) => Math.abs(v.w) - Math.abs(u.w));
+  return { p, pb, pl, lift: eta - logit(pb), usual: pb, why: parts.slice(0, 3).map(q => q.t), known: log.starts.length, x };
 }
 
 /** Record a snapshot at most once every 3 hours, and settle old ones against what really happened. */
 export function updateSnaps(log: Log, pred: Prediction, now: number): Log {
   const snaps = log.snaps.map(s => (s.y === undefined && now >= s.ts + WIN ? { ...s, y: (log.starts.some(t => t.ts > s.ts && t.ts <= s.ts + WIN) ? 1 : 0) as 0 | 1 } : s));
   const last = snaps[snaps.length - 1];
-  if (!last || now - last.ts >= WIN) snaps.push({ ts: now, p: pred.p, pb: pred.pb, pl: pred.pl });
+  if (!last || now - last.ts >= WIN) snaps.push({ ts: now, p: pred.p, pb: pred.pb, pl: pred.pl, x: pred.x });
   return { ...log, snaps: snaps.slice(-400) };
 }
 
@@ -79,8 +92,8 @@ export interface Accuracy { n: number; verdict: "learning" | "ahead" | "behind" 
 const brier = (xs: [number, number][]) => xs.reduce((a, [p, y]) => a + (p - y) ** 2, 0) / Math.max(xs.length, 1);
 export function accuracy(log: Log): Accuracy {
   const r = log.snaps.filter(s => s.y !== undefined); const n = r.length;
-  const m = r.reduce((a, s) => a + (s.y as number), 0) / Math.max(n, 1);
-  const bP = brier(r.map(s => [s.p, s.y as number])), bB = brier(r.map(s => [s.pb, s.y as number])), bC = brier(r.map(s => [m, s.y as number]));
+  let cum = 0; const runMean = r.map((s, i) => { const m0 = (cum + 0.5) / (i + 2); cum += s.y as number; return m0; }); // fair baseline: only what was known before each window
+  const bP = brier(r.map(s => [s.p, s.y as number])), bB = brier(r.map(s => [s.pb, s.y as number])), bC = brier(r.map((s, i) => [runMean[i], s.y as number]));
   const ref = Math.min(bB, bC);
   const verdict: Accuracy["verdict"] = n < 15 ? "learning" : bP < ref - 0.002 ? "ahead" : bP > ref + 0.002 ? "behind" : "tie";
   const rl = r.filter(s => s.pl !== null); const nl = rl.length;
@@ -99,7 +112,7 @@ export interface Pattern {
   type: { name: string; blurb: string; tip: string } | null; need: number;
 }
 export function analyse(log: Log, now: number): Pattern {
-  const S = log.starts, n = S.length;
+  const S = log.starts.filter(s => s.ts <= now + 36e5), n = S.length;
   const hours = BLOCKS.map(b => ({ name: b.n, k: S.filter(s => { const h = new Date(s.ts).getHours(); return h >= b.a && h < b.b; }).length })).map(x => { const [lo, hi] = wilson(x.k, n); return { ...x, share: n ? x.k / n : 0, lo, hi }; });
   const top = [...hours].sort((a, b) => b.k - a.k)[0]; const best = n >= 5 && top.lo > 0.2 ? top.name : null;
   const weekdays = [0, 1, 2, 3, 4, 5, 6].map(d => S.filter(s => new Date(s.ts).getDay() === d).length);
@@ -112,12 +125,14 @@ export function analyse(log: Log, now: number): Pattern {
   let type: Pattern["type"] = null; const need = Math.max(0, 6 - n);
   if (n >= 6) {
     const sh = (f: (s: StartEv) => boolean) => S.filter(f).length / n, hr = (s: StartEv) => new Date(s.ts).getHours();
+    const lo = (f: (s: StartEv) => boolean) => wilson(S.filter(f).length, n)[0];
     const act = new Set(S.filter(s => now - s.ts < 7 * DAY).map(s => dayKeyOf(s.ts))).size;
-    if (deadline && deadline.late / deadline.n >= 0.6) type = { name: "Deadline Sprinter", blurb: "You start when the clock gets loud, and then you move.", tip: "Make a fake early deadline two days before the real one, and start for just two minutes." };
-    else if (sh(s => s.together) >= 0.5) type = { name: "Starts-with-others", blurb: "Company is your ignition. Alone is harder.", tip: "Book a start with a friend before you need it." };
-    else if (sh(s => hr(s) >= 5 && hr(s) < 12) >= 0.5) type = { name: "Morning Starter", blurb: "Your starts cluster before noon.", tip: "Put the hard thing first, before the day gets loud." };
-    else if (sh(s => hr(s) >= 17 || hr(s) < 5) >= 0.55) type = { name: "Night Owl", blurb: "Your starts come late and your best focus does too.", tip: "Protect an evening slot, and set a soft stop so sleep wins." };
-    else if (warm && warm.got / warm.n >= 0.5) type = { name: "Warm-up Starter", blurb: "Beginning is the hard bit, then you flow.", tip: "Lower the bar for the first two minutes. You usually keep going." };
+    const isMorning = (s: StartEv) => hr(s) >= 5 && hr(s) < 12, isNight = (s: StartEv) => hr(s) >= 21 || hr(s) < 4;
+    if (deadline && deadline.late / deadline.n >= 0.6 && wilson(deadline.late, deadline.n)[0] >= 0.4) type = { name: "Deadline Sprinter", blurb: "You start when the clock gets loud, and then you move.", tip: "Make a fake early deadline two days before the real one, and start for just two minutes." };
+    else if (sh(s => s.together) >= 0.5 && lo(s => s.together) >= 0.35) type = { name: "Starts-with-others", blurb: "Company is your ignition. Alone is harder.", tip: "Book a start with a friend before you need it." };
+    else if (warm && warm.got / warm.n >= 0.55 && wilson(warm.got, warm.n)[0] >= 0.38) type = { name: "Warm-up Starter", blurb: "Beginning is the hard bit, then you flow.", tip: "Lower the bar for the first two minutes. You usually keep going." };
+    else if (sh(isMorning) >= 0.5 && lo(isMorning) >= 0.36) type = { name: "Morning Starter", blurb: "Your starts cluster before noon.", tip: "Put the hard thing first, before the day gets loud." };
+    else if (sh(isNight) >= 0.45 && lo(isNight) >= 0.3) type = { name: "Night Owl", blurb: "Your starts come late and your best focus does too.", tip: "Protect an evening slot, and set a soft stop so sleep wins." };
     else if (act >= 5) type = { name: "Steady Starter", blurb: "You show up most days, in small ways.", tip: "Keep the same cue every day and let the routine carry you." };
     else type = { name: "Mixed Starter", blurb: "Your starts do not follow one pattern yet.", tip: "A few more starts will show what your pattern really is." };
   }
