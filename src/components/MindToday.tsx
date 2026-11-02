@@ -23,7 +23,7 @@ export function MindToday({ go, onStart }: { go: (t: string) => void; onStart?: 
   const quietDue = starts.length >= 8 && (() => { try { return Date.now() - +(localStorage.getItem("lagomo.quiet.ts") || 0) > 3 * 864e5; } catch { return false; } })();
   const quietPick: Pick[] = quietDue ? [{ view: "quiet", title: "Quiet read", line: "See how you seem to be from your own timing, with nothing to answer.", cta: "Read", why: "Your data" }] : [];
   const adapt = adaptivePick(mind); const base = pickMindAll(mind, starts);
-  const all = hidden ? [] : retune([...lightPicks, ...letterPick, ...base.slice(0, 1), ...winPick, ...(adapt ? [adapt] : []), ...gamePick, ...quietPick, ...base.slice(1)], loadPickFb(), lightPicks.length + letterPick.length); const pick = all.length ? all[skip % all.length] : null;
+  const all = hidden ? [] : retune([...lightPicks, ...letterPick, ...(gh < 17 ? gamePick : []), ...base.slice(0, 1), ...winPick, ...(adapt ? [adapt] : []), ...(gh < 17 ? [] : gamePick), ...quietPick, ...base.slice(1)], loadPickFb(), lightPicks.length + letterPick.length); const pick = all.length ? all[skip % all.length] : null;
   const insight = hidden ? null : topInsight(mind, starts); const ld = loadState(mind, starts);
   const woop = mind.woop[mind.woop.length - 1]; const today = woop && new Date(woop.ts).toDateString() === new Date().toDateString() ? woop : null;
   const parked = (mind.park ?? []).filter(p => !p.resumed && Date.now() - p.ts < 2 * 864e5).slice(-1)[0];

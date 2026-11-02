@@ -12,13 +12,13 @@ const mean = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.lengt
 const N = 24;
 export function HoldBack({ done, back, go }: MindProps) {
   const [phase, setPhase] = useState<"idle" | "run" | "end">("idle"); const [stim, setStim] = useState<"go" | "stop" | null>(null); const [n, setN] = useState(0);
-  const [res, setRes] = useState<{ com: number; om: number; rt: number; nogo: number } | null>(null);
+  const [res, setRes] = useState<{ com: number; om: number; rt: number; nogo: number; invalid: boolean } | null>(null);
   const R = useRef({ i: 0, t0: 0, answered: false, kind: "go" as "go" | "stop", rts: [] as number[], com: 0, om: 0, nogo: 0, timers: [] as number[] }); const prior = useRef(gameStore("hold"));
   useEffect(() => () => R.current.timers.forEach(t => window.clearTimeout(t)), []);
   const later = (f: () => void, ms: number) => { R.current.timers.push(window.setTimeout(f, ms)); };
   const finish = () => {
-    const r = R.current; const out = { com: r.nogo ? r.com / r.nogo : 0, om: r.om, rt: Math.round(median(r.rts)), nogo: r.nogo };
-    saveGame("hold", { ts: Date.now(), a: Math.round(out.com * 100), b: out.rt, c: out.om }); setRes(out); setPhase("end"); setStim(null); done("hold");
+    const r = R.current; const greens = N - r.nogo; const invalid = r.rts.length < 0.6 * greens; const out = { com: r.nogo ? r.com / r.nogo : 0, om: r.om, rt: Math.round(median(r.rts)), nogo: r.nogo, invalid };
+    if (!invalid) { saveGame("hold", { ts: Date.now(), a: Math.round(out.com * 100), b: out.rt, c: out.om }); done("hold"); } setRes(out); setPhase("end"); setStim(null);
   };
   const trial = () => {
     const r = R.current; if (r.i >= N) return finish();
@@ -32,7 +32,7 @@ export function HoldBack({ done, back, go }: MindProps) {
     if (phase !== "run" || !stim || r.answered) return;
     r.answered = true; if (r.kind === "go") r.rts.push(performance.now() - r.t0); else r.com++; setStim(null); later(trial, 450);
   };
-  const base = prior.current.length >= 3 ? mean(prior.current.slice(-15).map(g => g.a)) : null; const verdict = res && base != null ? (res.com * 100 > base + 15 ? "fast" : res.com * 100 < base - 15 ? "steady" : "usual") : null;
+  const base = prior.current.length >= 3 ? mean(prior.current.slice(-15).map(g => g.a)) : null; const verdict = res && !res.invalid && base != null ? (res.com * 100 > base + 15 ? "fast" : res.com * 100 < base - 15 ? "steady" : "usual") : null;
   return (
     <Screen title="Hold back" sub="A 40-second game. Tap on green circles. Do not tap on red squares." back={back} credit="Based on the go/no-go task used in research on impulse control: how often you tap when you should not is a standard measure of response inhibition. This short version is not clinically validated, so it only compares you with your own usual. Speed and accuracy trade off, so a few mistakes are normal.">
       <Card className="flex flex-col items-center gap-3">
@@ -42,7 +42,8 @@ export function HoldBack({ done, back, go }: MindProps) {
         </button>
         {phase === "run" && <div className="text-sm text-muted-foreground">{n} of {N}</div>}
       </Card>
-      {res && <Card className="space-y-2"><div className="text-lg font-semibold">{Math.round(res.com * 100)}% tapped when they should not</div>
+      {res && res.invalid && <Card className="space-y-2"><div className="text-lg font-semibold">That did not count</div><p className="text-sm">You missed most of the green circles, so there is nothing fair to measure. I did not save it. Try again when you can give it 40 seconds.</p><button onClick={() => { setPhase("idle"); setRes(null); }} className={ghost}>Again</button></Card>}
+      {res && !res.invalid && <Card className="space-y-2"><div className="text-lg font-semibold">{Math.round(res.com * 100)}% tapped when they should not</div>
         <p className="text-sm">Typical speed {res.rt} ms · {res.om} missed greens.</p>
         {verdict === "fast" && <p className="text-sm">More quick taps than your usual ({Math.round(base!)}%). That often shows up when you are rushed or tired. It is information, not a verdict. Try three slow breaths before a hard task.</p>}
         {verdict === "steady" && <p className="text-sm">Calmer than your usual ({Math.round(base!)}%). A good state for work that needs care.</p>}
