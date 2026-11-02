@@ -45,4 +45,12 @@ export const HAND = [
   ["i don't know, i need to talk about today", "greet", "want_to_talk"], ["hmm, can we talk about my week", "", "want_to_talk"], ["yeah i want to tell you what happened", "", "want_to_talk"],
   ["my boss really annoyed me today", "", "vent"], ["i'm so frustrated with my roommate", "", "vent"], ["i got blamed for something i didn't do", "", "vent"], ["people at work keep dumping tasks on me and i'm sick of it", "", "vent"],
   ["i don't know, i just feel so tired", "", "tired"], ["ok, help me plan tomorrow", "", "ask_plan"], ["no, i just want to talk", "", "want_to_talk"], ["hey, what should i start with", "", "ask_start"],
+  // stories (v5): wording that is not in the training parts
+  ["my sister read my diary and told mum", "", "vent"], ["the bus driver shouted at me for no reason", "", "vent"], ["my project partner never did their part", "", "vent"], ["my uncle made fun of my haircut", "", "vent"], ["my teammate kept hogging the ball and then blamed me", "", "vent"], ["the cashier was so rude to me today", "", "vent"], ["my brother ruined my game save and just laughed", "", "vent"], ["she borrowed my charger and lost it", "vent", "vent"],
+  ["i got the job and i feel amazing", "", "good_mood"], ["my exam went better than i expected and i'm thrilled", "", "good_mood"], ["i danced in the kitchen this morning and felt great", "", "good_mood"], ["we won the match and everyone was so happy", "", "good_mood"],
+  ["i finally unpacked my suitcase", "", "win"], ["i replied to all my messages", "", "win"], ["i ironed my shirts", "", "win"], ["i finally sent that email i was avoiding", "", "win"],
+  ["i'm shattered after the night shift", "", "tired"], ["i can barely keep my eyes open after that flight", "", "tired"],
+  ["i have a report and a quiz and a trip all this week", "", "overwhelm"], ["everything is due at once and i'm buried", "", "overwhelm"],
+  ["i'm worried about my driving test", "", "scared"], ["i get so nervous before speaking in class", "", "scared"],
+  ["i watered the plants and read a book", "", "share"], ["we had rice for dinner and i did the dishes", "", "share"],
 ];

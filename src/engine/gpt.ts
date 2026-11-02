@@ -3,11 +3,11 @@
 // candidate reply must pass `checkReply` before anyone sees it. If the model is missing, slow or fails a check, the written replies are used.
 // File format (tools/gpt/export.mjs): [u32 header length][header JSON][pad to 4][int8 weights and float32 row scales per tensor].
 
-interface Header { v: number; cfg: { V: number; T: number; C: number; L: number; H: number }; vocab: string[]; order: { k: string; off: number; rows: number; cols: number; q: boolean }[]; params: number; bank: string[]; byAct?: Record<string, number[]>; words: string[]; acts: string[]; name: string }
+interface Header { v: number; cfg: { V: number; T: number; C: number; L: number; H: number }; vocab: string[]; order: { k: string; off: number; rows: number; cols: number; q: boolean }[]; params: number; bank: string[]; frames?: Record<string, string[]>; prevs?: string[]; byAct?: Record<string, number[]>; words: string[]; acts: string[]; name: string }
 export interface GptModel { h: Header; P: Float32Array; o: Record<string, number>; ids: Record<string, number> }
 
 let model: Promise<GptModel | null> | null = null;
-export const GPT_URL = "/talk/lagomo-gpt-v1.bin";
+export const GPT_URL = "/talk/lagomo-gpt-v2.bin";
 
 export function parseGpt(buf: ArrayBuffer): GptModel {
   const dv = new DataView(buf); const hl = dv.getUint32(0, true); const h = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hl))) as Header;
@@ -69,13 +69,18 @@ export class Runner {
   }
 }
 
+/** Person swap for the mirror sentences ("my sister lied to me" -> "your sister lied to you"). Must match youForm() in tools/gpt/vocab.mjs. */
+export const youForm = (s: string) => s.toLowerCase().replace(/\u2019/g, "'").replace(/[^a-z0-9 ']/g, " ").replace(/\s+/g, " ").trim()
+  .replace(/\bi'm\b/g, "you're").replace(/\bi've\b/g, "you've").replace(/\bi'll\b/g, "you'll").replace(/\bi'd\b/g, "you'd").replace(/\bi am\b/g, "you are").replace(/\bi was\b/g, "you were")
+  .replace(/\bmyself\b/g, "yourself").replace(/\bmine\b/g, "yours").replace(/\bmy\b/g, "your").replace(/\bme\b/g, "you").replace(/\bi\b/g, "you");
 const norm = (s: string) => s.toLowerCase().replace(/\u2019/g, "'").replace(/[^a-z0-9 .,'?!:;-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 110);
-export interface GenOpts { maxNew?: number; temperature?: number; topK?: number; rand?: () => number; deadline?: number }
+export interface GenOpts { prev?: string; maxNew?: number; temperature?: number; topK?: number; rand?: () => number; deadline?: number }
 /** Write one reply for (act, text). Throws if the model can't be run. */
 export function generate(m: GptModel, act: string, text: string, opt: GenOpts = {}): string {
   const aid = m.ids["<act:" + act + ">"]; if (aid === undefined) throw new Error("act not covered");
   const r = new Runner(m); const rand = opt.rand ?? Math.random; const temp = opt.temperature ?? 0.7, topK = opt.topK ?? 20, maxNew = opt.maxNew ?? 150;
-  const prompt = [m.ids["<bos>"], aid, ...norm(text).split("").map(c => m.ids[c] ?? m.ids[" "]), m.ids["<sep>"]];
+  const pv = m.ids["<prev:" + (opt.prev && m.ids["<prev:" + opt.prev + ">"] !== undefined ? opt.prev : opt.prev ? "other" : "none") + ">"] ?? m.ids["<prev:none>"];
+  const prompt = [m.ids["<bos>"], pv, aid, ...norm(text).split("").map(c => m.ids[c] ?? m.ids[" "]), m.ids["<sep>"]];
   let lg = new Float32Array(0); for (const id of prompt) lg = r.step(id);
   const out: number[] = []; const end = m.ids["<end>"]; const dead = opt.deadline ?? Date.now() + 2500;
   for (let i = 0; i < maxNew; i++) {
@@ -89,6 +94,25 @@ export function generate(m: GptModel, act: string, text: string, opt: GenOpts = 
 
 const BANNED = /\b(kill|suicid\w*|self[- ]?harm|die|dead|hurt yourself|diagnos\w*|medicat\w*|therap\w*|doctor|pills?|drugs?|alcohol|sex\w*|porn\w*|nazi|racist|http|www|\.com|password|i am (a )?human|i'm (a )?human|my (mum|mom|dad|wife|husband|kids?)|i love you)\b/i;
 /** Every candidate goes through here. Returns the cleaned reply, or null to fall back to the written one. */
+const FILLER = ["honestly", "so", "ugh", "like", "today", "and", "well", "ok", "okay", "um", "hmm", "ngl", "idk", "but", "hey", "yeah", "anyway", "basically", "actually", "just", "uh", "oh", "pip", "lagomo", "lago", "also", "then", "because", "that", "just so you know"];
+const TRAIL = ["lol", "tbh", "ugh", "honestly", "though", "again", "haha"];
+/** The part of what the person said that can be echoed back: filler trimmed, 3 to 14 words, not a question, not about the rabbit. */
+export function clauseOf(user: string): string | null {
+  if (/[?]/.test(user)) return null;
+  const orig = user.toLowerCase().replace(/\u2019/g, "'").replace(/[^a-z0-9 ']/g, " ").split(/\s+/).filter(Boolean);
+  if (orig.some(x => x === "you" || x === "your" || x === "yours" || x === "u" || x === "ur" || x === "youre" || x === "you're")) return null; // addressed to the rabbit: don't echo
+  let w = youForm(user).split(" ").filter(Boolean);
+  for (let go = true; go;) { go = false; for (const f of FILLER.slice().sort((a, b) => b.length - a.length)) { const fw = f.split(" "); if (w.slice(0, fw.length).join(" ") === f && w.length > fw.length) { w = w.slice(fw.length); go = true; } } }
+  while (w.length > 3 && TRAIL.includes(w[w.length - 1])) w.pop();
+  if (w.length < 3 || w.length > 14) return null;
+  return w.join(" ");
+}
+/** Replace the model's ":::" placeholder with the person's own words, or return null if there is nothing safe to echo. */
+function fillMirror(raw: string, user?: string): string | null {
+  const s = raw.trim(); if (!s.includes(":::")) return s;
+  const cl = user !== undefined ? clauseOf(user) : null; if (!cl || (s.match(/:::/g) ?? []).length !== 1) return null;
+  return s.replace(":::", cl);
+}
 // Sentences that mention a topic must be grounded in what the person actually said (no "work" line when they talked about grandma).
 const TOPIC: [RegExp, RegExp][] = [
   [/\bwork\b/i, /\b(boss|manager|work|job|meeting|coworker|colleague|office|client|shift)\b/],
@@ -98,19 +122,20 @@ const TOPIC: [RegExp, RegExp][] = [
   [/\bmoney\b/i, /\b(money|rent|bills|salary|broke|debt)\b/],
 ];
 export function checkReply(m: GptModel, raw: string, ctx: { last?: string; act: string; maxChars?: number; user?: string }): string | null {
-  const s = raw.trim(); if (s.length < 12 || s.length > (ctx.maxChars ?? 230)) return null;
+  const s = fillMirror(raw, ctx.user); if (s === null) return null;
+  if (s.length < 12 || s.length > (ctx.maxChars ?? 230)) return null;
   if (!/[.?!]$/.test(s)) return null;
   if (BANNED.test(s) || /\d/.test(s)) return null;
   const sents = s.split(/(?<=[.?!])\s+/).filter(Boolean); if (sents.length > 4) return null;
   if (new Set(sents.map(x => x.toLowerCase())).size !== sents.length) return null;
   if (ctx.last && s.toLowerCase() === ctx.last.toLowerCase()) return null;
-  const known = new Set(m.h.words); const bank = new Set(m.h.bank);
-  // every word must be one the model was taught, so a rare slip can't introduce odd vocabulary
-  for (const w of s.toLowerCase().replace(/[^a-z' ]/g, " ").split(/\s+/).filter(Boolean)) if (!known.has(w)) return null;
-  // v1 rule: every sentence must be one the model was taught (a rare slip like "How is you." is rejected). New combinations are allowed.
-  for (const x of sents) if (!bank.has(x)) return null;
-  // ...and taught for this kind of message (no birthday cheer in reply to a complaint)
-  const allowed = m.h.byAct?.[ctx.act]; if (allowed) { const ok = new Set(allowed.map(i => m.h.bank[i])); for (const x of sents) if (!ok.has(x)) return null; }
-  if (ctx.user !== undefined) { const u = ctx.user.toLowerCase(); for (const [say, need] of TOPIC) if (say.test(s) && !need.test(u)) return null; }
+  const bank = new Set(m.h.bank); const allowed = m.h.byAct?.[ctx.act] ? new Set(m.h.byAct[ctx.act].map(i => m.h.bank[i])) : null;
+  for (const x of sents) {
+    if (bank.has(x)) { if (allowed && !allowed.has(x)) return null; continue; }
+    // a mirror sentence: an allowed opening + the person's own words (already filled in by fillMirror) and nothing else
+    const fr = (m.h.frames?.[ctx.act] ?? []).find(f => x.startsWith(f)); const cl = ctx.user !== undefined ? clauseOf(ctx.user) : null;
+    if (!fr || !cl || x !== fr + cl + ".") return null;
+  }
+  if (ctx.user !== undefined) { const u = ctx.user.toLowerCase(); const sNoPraise = s.replace(/\b(nice|good|great) work\b/gi, ""); for (const [say, need] of TOPIC) if (say.test(sNoPraise) && !need.test(u)) return null; }
   return s;
 }

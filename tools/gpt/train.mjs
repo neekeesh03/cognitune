@@ -12,12 +12,12 @@ if (!isMainThread) {
   var P_ = new Float32Array(P);
 } else {
   const rows = fs.readFileSync(new URL("./out/corpus.jsonl", import.meta.url), "utf8").split("\n").filter(Boolean).map(l => JSON.parse(l));
-  const mk = r => { const p = encPrompt(r.act, r.user), q = encReply(r.reply); const ids = [...p, ...q]; if (ids.length > T + 1) return null; const mask = ids.slice(0, -1).map((_, t) => (t >= p.length - 1 ? 1 : 0)); return { ids, mask }; };
+  const mk = r => { const p = encPrompt(r.act, r.user, r.prev), q = encReply(r.reply); const ids = [...p, ...q]; if (ids.length > T + 1) return null; const mask = ids.slice(0, -1).map((_, t) => (t >= p.length - 1 ? 1 : 0)); return { ids, mask }; };
   const tr = rows.filter(r => r.split === "train").map(mk).filter(Boolean), va = rows.filter(r => r.split === "val").map(mk).filter(Boolean);
   const tokens = tr.reduce((a, s) => a + s.ids.length, 0);
   console.log("train", tr.length, "val", va.length, "tokens", tokens, "params", countParams(cfg), cfg);
   let seed = 99; const rand = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
-  const NP = countParams(cfg); const Psab = new SharedArrayBuffer(NP * 4); const P = new Float32Array(Psab); P.set(initParams(cfg, rand));
+  const NP = countParams(cfg); const Psab = new SharedArrayBuffer(NP * 4); const P = new Float32Array(Psab); P.set(process.env.INIT ? Float32Array.from(JSON.parse(fs.readFileSync(new URL(process.env.INIT, import.meta.url), "utf8")).params) : initParams(cfg, rand));
   const W = Math.min(8, os.cpus().length); const BATCH = +(process.env.BATCH ?? 24); const STEPS = +(process.env.STEPS ?? 1500); const LR = +(process.env.LR ?? 3e-3); const TMAX = +(process.env.TMAX_MIN ?? 40) * 60e3;
   const workers = [], gs = [];
   // each worker keeps its own parameter copy; main broadcasts new values each step through a SharedArrayBuffer view

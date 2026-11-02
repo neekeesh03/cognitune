@@ -43,6 +43,8 @@ function parseBig(buf: ArrayBuffer): Model {
 }
 /** Start the quiet upgrade to the large model, if this device and connection suit it. Safe to call many times. */
 export function upgradeTalk(): Promise<void> {
+  // Paused (2 Nov): the 10M classifier was trained before story-style examples and now scores lower than the small v5 model on the hand-written checks (tools/talk/report.json). Remove this line after it is retrained and beats the small model.
+  return Promise.resolve();
   if (big || bigTry) return bigTry ?? Promise.resolve();
   try { const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string; type?: string }; deviceMemory?: number }); const n = c.connection; if (n?.saveData || (n?.effectiveType && n.effectiveType !== "4g") || n?.type === "cellular" || (c.deviceMemory ?? 4) < 4) return Promise.resolve(); } catch { /* assume fine */ }
   bigTry = fetch(BIG_URL).then(r => (r.ok ? r.arrayBuffer() : Promise.reject(new Error("no big model")))).then(b => { big = parseBig(b); }).catch(() => { bigTry = null; });
@@ -58,9 +60,10 @@ export const gptEnabled = () => { try { return localStorage.getItem(GPT_KEY) !==
 export const setGptEnabled = (on: boolean) => { try { localStorage.setItem(GPT_KEY, on ? "on" : "off"); } catch { /* ignore */ } };
 const GEN_OK: Act[] = ["greet", "thanks", "howru", "chitchat", "want_to_talk", "share", "vent", "good_mood", "win", "tired", "overwhelm", "scared"];
 let gptM: Awaited<ReturnType<typeof loadGpt>> = null;
+let curPrev = "";
 async function gen(act: Act, text: string, st: TalkState): Promise<string | null> {
   if (!gptEnabled() || !GEN_OK.includes(act) || !gptM) return null;
-  try { for (let i = 0; i < 3; i++) { const raw = generate(gptM, act, text, { deadline: Date.now() + 1200 }); const ok = checkReply(gptM, raw, { act, last: st.lastReply, user: text }); if (ok) return ok; } } catch { /* fall back to the written reply */ }
+  try { for (let i = 0; i < 3; i++) { const raw = generate(gptM, act, text, { prev: curPrev, deadline: Date.now() + 1200 }); const ok = checkReply(gptM, raw, { act, last: st.lastReply, user: text }); if (ok) return ok; } } catch { /* fall back to the written reply */ }
   return null;
 }
 export function preloadTalk() {
@@ -165,6 +168,8 @@ const lexicon = (t: string): Act | null => { const s = tok(t).join(" "); for (co
 
 // Listening mode: when someone wants to talk about their day, the rabbit stops offering menus and listens: it reflects what it heard,
 // names the feeling, and asks one open question at a time. After a few turns it offers, never pushes, one small thing to do.
+const PERSON = /\b(my|the) (boss|manager|teacher|professor|tutor|supervisor|coach|friend|best friend|roommate|flatmate|mum|mom|dad|brother|sister|partner|girlfriend|boyfriend|coworker|colleague|classmate|landlord|client|neighbou?r|cousin|aunt|uncle|grandma|grandpa|team|team lead|group|study group)\b/;
+const DEED = /\b(ate|lied|lies|yelled|shouted|screamed|ignored|took|stole|borrowed|lost|cancelled|canceled|forgot|blamed|criticised|criticized|laughed|interrupted|left|refused|never|keeps|kept|always|rude|mean|late|ghosted|bailed|snapped|complained|compared|embarrassed|insulted|bullied|dumped|broke)\b/;
 const TOPICS: [RegExp, string][] = [[/\b(boss|manager|work|job|meeting|colleague|coworker|office|client)\b/, "work"], [/\b(school|class|teacher|exam|exams|homework|professor|university|college|classmate|classmates|lecture)\b/, "school"], [/\b(friend|friends)\b/, "your friend"], [/\b(mom|dad|mother|father|parents|sister|brother|family)\b/, "your family"], [/\b(money|rent|bills|salary|debt)\b/, "money"], [/\b(roommate|neighbour|neighbor)\b/, "home"]];
 const OPENER: Partial<Record<Act, string[]>> = {
   vent: ["That sounds really frustrating.", "I can hear how annoying that was.", "Ugh, that sounds like a lot to deal with."],
@@ -206,7 +211,7 @@ async function listenReply(act: Act, text: string, st: TalkState, done: (t: Omit
 
 /** One turn of conversation. Pure apart from reading the start log. */
 export async function respond(text: string, prevState: TalkState, ctx: Ctx): Promise<Turn> {
-  const st: TalkState = { ...prevState, used: { ...prevState.used }, turns: prevState.turns + 1, prev2: prevState.last };
+  curPrev = prevState.last; const st: TalkState = { ...prevState, used: { ...prevState.used }, turns: prevState.turns + 1, prev2: prevState.last };
   const done = (t: Omit<Turn, "state">): Turn => { if (st.mode === "listen" || prevState.mode === "listen") t = { ...t, sensitive: true }; st.lastReply = t.reply; const sc = t.chips.find(c => c.act === "start"); if (sc) st.lastStep = sc.step; return { ...t, chips: dedupe(t.chips), state: st }; };
   if (looksUnsafe(text) || analyze(text).crisis) { st.last = "low"; st.awaiting = null; st.unsureRun = 0; return done({ reply: SAFETY_TEXT, chips: [{ label: "Talk to a friend", act: "circle" }], act: "low", conf: 1, sensitive: true }); }
   let rd = await readAct(text, prevState.last, prevState.prev2 ?? ""); let act = rd.top[0].act; let conf = rd.top[0].p;
@@ -216,6 +221,11 @@ export async function respond(text: string, prevState: TalkState, ctx: Ctx): Pro
     const clauses = text.split(/[,.;!?]| but | and | so | - /i).map(c => c.trim()).filter(c => tok(c).length >= 2);
     if (clauses.length > 1) { let best: { act: Act; p: number } | null = null; for (const c of clauses) { const r = await readAct(c, prevState.last, prevState.prev2 ?? ""); const t = r.top[0]; if (!FILLER.includes(t.act) && t.p >= 0.5 && (!best || t.p > best.p)) best = t; } if (best) { act = best.act; conf = best.p; rd = { top: [{ act, p: conf }, ...rd.top.filter(x => x.act !== act)].slice(0, 3), confident: true }; } }
   }
+  // The network sometimes reads a short story about someone else's behaviour as "overwhelm" or "other", and a finished task as "other".
+  // Two plain rules fix the obvious cases so the right kind of reply is written.
+  { const soft: Act[] = ["overwhelm", "tired", "scared", "big", "unclear", "boring", "distract", "share", "other", "chitchat", "dont_know", "clarify"];
+    if (soft.includes(act) && tok(text).length >= 4 && PERSON.test(text.toLowerCase()) && DEED.test(text.toLowerCase()) && !/\?/.test(text)) { act = "vent"; conf = Math.max(conf, 0.6); rd = { ...rd, confident: true }; }
+    else if (["other", "share", "chitchat", "dont_know", "clarify"].includes(act) && /\bi (just |finally |actually |managed to )?(finished|sent|submitted|completed|cleaned|booked|wrote|handed in|fixed|paid|tidied|started|did|made)\b/i.test(text) && tok(text).length >= 4 && !/\b(not|didn't|didnt|can't|cant|couldn't|couldnt|haven't|havent|never|won't|wont)\b/i.test(text) && !/\?/.test(text)) { act = "win"; conf = Math.max(conf, 0.6); rd = { ...rd, confident: true }; } }
   const listening = prevState.mode === "listen";
   // after we asked "which thing is it?", a short answer is the task
   if (prevState.awaiting && text.trim().length <= 70 && !(rd.confident && ["greet", "bye", "no", "thanks", "low", "dont_know", "complain", "clarify"].includes(act))) {

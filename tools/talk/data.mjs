@@ -5,6 +5,7 @@ import { MORE } from "./more.mjs";
 import { ACTS2, CORES2, GRAM2, MORE2 } from "./v2.mjs";
 import { ACTS3, CORES3, GRAM3, MORE3, FILLERS, CONTENT, JOIN } from "./v3.mjs";
 import { CORES4, GRAM4 } from "./v4.mjs";
+import { CORES5 } from "./v5.mjs";
 import fs from "fs";
 export const ACTS = ["greet","thanks","bye","howru","who_help","unclear","big","boring","scared","tired","distract","overwhelm","low","win","ask_start","ask_plan","ask_break","motivate","joke","chitchat","yes","no","task_say","progress","deadline","other",...ACTS2,...ACTS3];
 export const TASKS = ["essay","report","assignment","homework","thesis","project","presentation","revision","coding task","cv","application","taxes","lab report","reading","chemistry notes","maths problems","email","portfolio","exam prep","dissertation","slides","budget","cover letter","research paper","history essay","visa form","design brief","study plan"];
@@ -45,6 +46,7 @@ for (const k of Object.keys(CORES2)) CORES[k] = [...CORES2[k], ...(MORE2[k] || [
 for (const k of Object.keys(CORES3)) CORES[k] = [...CORES3[k], ...(MORE3[k] || [])];
 
 for (const k of Object.keys(CORES4)) CORES[k] = [...CORES[k], ...CORES4[k]];
+for (const k of Object.keys(CORES5)) CORES[k] = [...CORES[k], ...CORES5[k]];
 
 // Short replies whose meaning depends on what was just said. [text, previous acts -> label, default]
 export const AMBIG = [

@@ -1,238 +1,278 @@
 {
-  "model": "lagomo-gpt-v1",
-  "params": 477024,
+  "model": "lagomo-gpt-v2",
+  "params": 645120,
   "gates": {
-    "parityMaxRelLossDiff": 5.42e-7,
+    "parityMaxRelLossDiff": 3.51e-7,
     "parityOk": true,
+    "novelPass60": true,
+    "novelMirrors": false,
+    "contextVaries": true,
+    "youFormParity": true,
     "valPass85": true,
     "handPass70": true,
     "offAct10": true,
     "latency": true,
+    "mirrorUsed": true,
     "validatorRejectsUnsafe": true
   },
   "val": {
-    "n": 150,
-    "passRate": 0.867,
-    "novelAmongPassed": 0.008,
+    "n": 200,
+    "passRate": 0.945,
+    "mirrorRate": 0.164,
+    "novelAmongPassed": 0.164,
     "offActSentenceRate": 0,
-    "msPerReply": 57,
+    "msPerReply": 69,
     "rejectedExamples": [
       [
-        "thanks",
-        "ok so great thank you today",
-        "And! time. Anything small you'd like to get done next?"
+        "ask_break",
+        "ngl is ito k to rest",
+        "Of course. A real break is part of the work. What would feel restful?"
       ],
       [
-        "thanks",
-        "ngl thank you very much honestly",
-        "Any time."
+        "chitchat",
+        "nope let's talk honestly",
+        "I like carrots, but I'm software and have never tried one. Ithere anything about it your dofe. What about you?"
       ],
       [
-        "howru",
-        "how are you this orning lol",
-        "Prety good! I'm a rabbit made of maths, and I like it when you drop by. How is your day going?"
+        "ask_break",
+        "well i need a breathher",
+        "That makes me hang tou'me here ke Youst sound beenn won tore khing. What would feel restful?"
       ],
       [
         "howru",
         "how r u ugh",
-        "That'm doing d. Mostly I'm happy you're here. Can you say that another somes?"
+        "Prety good! I'm a rabbit made of maths, and I like it when you drop by. How is your day going?"
       ],
       [
-        "howru",
-        "hey how are you this morning thb",
-        "Prety good! I'm a rabbit made of maths, and I like it when you drop by. How are you?"
+        "ask_break",
+        "i need to stop for now",
+        "Of course. A real break is part of the work. How long do you want to rest?"
       ],
       [
-        "want_to_talk",
-        "listen i have news",
-        "That's lig etod here. Where would you like to begin?"
+        "ask_break",
+        "can i stop for now today",
+        "Of course. A real break is part of the work. What would feel restful?"
       ]
     ],
     "samples": [
       [
-        "greet",
-        "um hi friendd.",
-        "Hey, good to see you. Want to talk, or start something small?"
+        "good_mood",
+        "feeling fine today",
+        "That sounds like a good day. What would make today even better?"
+      ],
+      [
+        "scared",
+        "so i'm nervous about my assignment",
+        "Nerves like that are normal. What do you think might happen?"
+      ],
+      [
+        "boring",
+        "uh i find this really dull",
+        "Tedious things are hard to face. What if we made it two minutes long?"
+      ],
+      [
+        "good_mood",
+        "ok so um; i feel better now!",
+        "So you feel better now. What would make today even better?"
       ],
       [
         "greet",
-        "wassup tbh",
-        "Hey! Welcome back. What's on your mind?"
-      ],
-      [
-        "greet",
-        "honestly heyy...",
-        "Hey! Welcome back. What's on your mind?"
-      ],
-      [
-        "greet",
-        "namaste again",
-        "Hey there. What's going on today?"
-      ],
-      [
-        "greet",
-        "hey again!",
+        "honestly namaste...",
         "Hey, good to see you. What's going on today?"
       ],
       [
-        "greet",
-        "so heyy",
-        "Hey, good to see you. What's going on today?"
+        "chitchat",
+        "what do you do for fun.",
+        "Fun fact: rabbits can see almost all the way around them without turning their heads. What are you into lately?"
+      ],
+      [
+        "vent",
+        "so the driver told everyone my secret",
+        "It sounds like the driver told everyone your secret. Did you get to say anything back?"
+      ],
+      [
+        "thanks",
+        "uh nice thanks tbh",
+        "That makes me happy to hear. Want to keep going, or take a breather?"
+      ],
+      [
+        "no",
+        "pass ugh",
+        "No problem. Want to just talk?"
+      ],
+      [
+        "yes",
+        "ngl okay.",
+        "Alright. Tell me more."
+      ],
+      [
+        "share",
+        "so i bought new shoes!",
+        "That sounds like a real day. What part of it stayed with you the most?"
       ],
       [
         "greet",
-        "idk but whats up :",
+        "ngl hey again",
         "Hey there. What's on your mind?"
       ],
       [
-        "greet",
-        "hey again today",
-        "Hey there. What's going on today?"
+        "tired",
+        "feeling really fatigued today",
+        "I hear you. Is there anything that would help you wind down?"
       ],
       [
-        "greet",
-        "um hi hows it going",
-        "Hey! Welcome back. What's on your mind?"
-      ],
-      [
-        "greet",
-        "uh hi rabbit today",
-        "Hey! Welcome back. What's on your mind?"
-      ],
-      [
-        "greet",
-        "uh hey there",
-        "Hey! Welcome back. What's on your mind?"
-      ],
-      [
-        "greet",
-        "morning pip tbh",
-        "Hey! Welcome back. What's going on today?"
-      ],
-      [
-        "greet",
-        "um sup lol",
-        "Hey there. What's on your mind?"
-      ],
-      [
-        "greet",
-        "um hello pip right now",
-        "Hey there. What's going on today?"
+        "want_to_talk",
+        "idk but yes and talk to me for a minute today",
+        "Of course. Take your time. What happened today?"
       ]
     ]
   },
   "hand": {
     "n": 117,
-    "passRate": 0.915,
-    "novelAmongPassed": 0,
+    "passRate": 0.974,
+    "mirrorRate": 0.061,
+    "novelAmongPassed": 0.07,
     "offActSentenceRate": 0,
-    "msPerReply": 45,
+    "msPerReply": 62,
     "rejectedExamples": [
       [
-        "howru",
-        "are you doing okay?",
-        "Prety good! I'm a rabbit made of maths, and I like it when you drop by. How are you?"
-      ],
-      [
-        "ask_break",
-        "is it fine if i rest for ten minutes",
-        "Of course. A real break is part of the work. How long do you want to rest?"
-      ],
-      [
-        "yes",
-        "yes please",
-        "llright. gooood. What' get?"
-      ],
-      [
-        "distract",
-        "can't focus at all today",
-        "It's easy to drift. Could you put it inother room for two minutes?"
+        "good_mood",
+        "yeah i'm good",
+        "So :::. What was the hardest part?"
       ],
       [
         "want_to_talk",
-        "i want to vent",
-        "An'm l to bre. What's on your mind?"
-      ],
-      [
-        "vent",
-        "my boss really annoyed me today",
-        "That sounds exhausting. It sounds like something at home is on your mind. What part of it stayed with you the most?"
-      ]
-    ],
-    "samples": [
-      [
-        "greet",
-        "hey pip how's it going",
-        "Hey! Welcome back. Want to talk, or start something small?"
-      ],
-      [
-        "greet",
-        "good evening!",
-        "Hey, good to see you. Want to talk, or start something small?"
-      ],
-      [
-        "greet",
-        "heyyy",
-        "Hey! Welcome back. What's on your mind?"
-      ],
-      [
-        "thanks",
-        "thank you that actually helped",
-        "Any time. Anything small you'd like to get done next?"
-      ],
-      [
-        "thanks",
-        "nice one, cheers",
-        "Any time. Want to keep going, or take a breather?"
-      ],
-      [
-        "howru",
-        "how are you feeling today",
-        "Calm and cheerful, thanks. I'm software, so I don't get tired. How are you?"
-      ],
-      [
-        "unclear",
-        "i have no clue how to even begin this report",
-        "A vague task is hard to begin. What is the thing you're avoiding?"
-      ],
-      [
-        "unclear",
-        "i don't understand what step one is",
-        "A vague task is hard to begin. What's the first thing that comes to mind?"
-      ],
-      [
-        "unclear",
-        "where would you begin with a thesis?",
-        "That fog is normal when something is vague. What's the first thing that comes to mind?"
+        "listen",
+        "AI'm here and I'm listening. What's on your mind?"
       ],
       [
         "big",
         "it's such a massive project i freeze",
-        "That does sound like a lot. What would a tiny version look like?"
+        "Nig there is all at could you cegom your dou . What would a tiny version look like?"
+      ]
+    ],
+    "samples": [
+      [
+        "overwhelm",
+        "there are way too many things on my list",
+        "That's plenty for anyone. What could wait until tomorrow?"
       ],
       [
-        "big",
-        "there's just too much of it",
-        "That's a big one. What's the very first part?"
+        "want_to_talk",
+        "i need to talk about today",
+        "I'm here and I'm listening. What happened today?"
       ],
       [
-        "big",
-        "this assignment is gigantic",
-        "That's a big one. What's the very first part?"
+        "share",
+        "i'm sitting in a cafe",
+        "Mm-hm. How are you feeling about it now?"
       ],
       [
-        "boring",
-        "studying this is soooo dull",
-        "Tedious things are hard to face. What if we made it two minutes long?"
+        "overwhelm",
+        "i'm completely swamped with work",
+        "That's plenty for anyone. What could wait until tomorrow?"
       ],
       [
-        "boring",
-        "i find revision unbelievably tedious",
-        "Boring is real. What's the most boring part?"
+        "tired",
+        "i'm shattered today",
+        "Rest counts too. Would a short rest help?"
+      ],
+      [
+        "no",
+        "nah skip it",
+        "No problem. Want to just talk?"
+      ],
+      [
+        "yes",
+        "yes please",
+        "Great. What's next?"
+      ],
+      [
+        "yes",
+        "sure go ahead",
+        "Great. Tell me more."
+      ],
+      [
+        "chitchat",
+        "do you like lettuce",
+        "I can't go outside, but I like hearing about it. What are you into lately?"
+      ],
+      [
+        "want_to_talk",
+        "can we just talk for a bit",
+        "Yes, let's talk. What's going on?"
+      ],
+      [
+        "thanks",
+        "thanks pip",
+        "Any time. Want to keep going, or take a breather?"
+      ],
+      [
+        "distract",
+        "i can't stop looking at my phone",
+        "Phones are built to pull us in. What pulled you away?"
+      ],
+      [
+        "motivate",
+        "why am i even doing this, convince me",
+        "You don't need motivation to start. What's a tiny first move?"
+      ],
+      [
+        "other",
+        "well",
+        "I may be missing it. Can you say that another way?"
       ]
     ]
   },
+  "novel": {
+    "n": 65,
+    "passRate": 0.969,
+    "mirroredShare": 0.385,
+    "examples": [
+      [
+        "my sister read my diary and told mum",
+        "It sounds like your sister read your diary and told mum. What do you wish had gone differently?"
+      ],
+      [
+        "my project partner never did their part",
+        "So your project partner never did their part. What happened right before that?"
+      ],
+      [
+        "my uncle made fun of my haircut",
+        "It sounds like your uncle made fun of your haircut. Do you want to keep going or take a breath?"
+      ],
+      [
+        "i finally unpacked my suitcase",
+        "Nice, you finally unpacked your suitcase."
+      ],
+      [
+        "i replied to all my messages",
+        "Nice work, that one is yours. What helped you get it done?"
+      ],
+      [
+        "i ironed my shirts",
+        "That's something to be proud of. What was the hardest part?"
+      ],
+      [
+        "i'm shattered after the night shift",
+        "That's a heavy kind of tired. Is it more your body or your head that's tired?"
+      ],
+      [
+        "i'm worried about my driving test",
+        "That sounds scary. It makes sense to feel that way. Is there one small thing you could do to prepare?"
+      ],
+      [
+        "i danced in the kitchen this morning",
+        "Good days are worth noticing. What made it good?"
+      ],
+      [
+        "i watered the plants and read a book",
+        "Mm, that sounds like a full day. How did that leave you feeling?"
+      ]
+    ]
+  },
+  "contextRepeatOpenerRate": 0.125,
   "file": {
-    "bytes": 503252
+    "bytes": 676384
   }
 }
