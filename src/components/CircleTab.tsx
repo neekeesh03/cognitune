@@ -13,7 +13,7 @@ import { track } from "@/lib/track";
 import type { Pair } from "@/store/useBurrow";
 import AlertsCard from "@/components/AlertsCard";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowLeft, CalendarPlus, Check, HeartHandshake, CheckCheck, Copy, Download, FileText, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
+import { MoreHorizontal, ArrowLeft, CalendarPlus, Check, HeartHandshake, CheckCheck, Copy, Download, FileText, CornerUpLeft, Paperclip, Plus, Search, Send, Share2, Sparkles, Timer, UserMinus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/Avatar";
@@ -28,6 +28,7 @@ import type { User } from "@/store/useAuth";
 import type { GameApi } from "@/store/useGame";
 import type { PlanApi } from "@/store/usePlan";
 import { PlanCard, PlanTogetherForm } from "@/components/SharePlan";
+import { SharedMedia } from "@/components/ChatMedia";
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
 interface Props { pairs?: Record<string, Pair>; people: PeopleApi; game: GameApi; plan: PlanApi; startPinky?: (title: string, onDone: () => void) => void; me: User; openId: string | null; setOpenId: (id: string | null) => void; startSession: (name: string, dur: number, buddy?: { sid: string; friendId: string; name: string; avatar: AvatarSpec; room?: boolean }) => void }
@@ -136,7 +137,7 @@ function FileBubble({ m, meId, pk }: { m: ChatMsg; meId: string; pk: string | nu
   useEffect(() => { let u: string | null = null, live = true; if (m.file) fetchFileUrl(m.file, meId, pk).then(x => { if (x && live) { u = x; setUrl(x); } }); return () => { live = false; if (u) URL.revokeObjectURL(u); }; }, [m.file?.id]); // eslint-disable-line
   if (!m.file) return null; const img = m.file.type.startsWith("image/");
   return (<div>{img && url && <img src={url} alt={m.file.name} className="mb-1 max-h-56 rounded-xl" />}
-    <div className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0" /><span className="truncate">{m.file.name}</span><span className="shrink-0 text-xs opacity-70">{fmtSize(m.file.size)}</span>{url && <a href={url} download={m.file.name} aria-label={`Download ${m.file.name}`} className="shrink-0 rounded-full p-1 hover:bg-foreground/10"><Download className="h-4 w-4" /></a>}</div>
+    <div className="flex items-center gap-2"><FileText className="h-4 w-4 shrink-0" /><span className="truncate">{m.file.name}</span><span className="shrink-0 text-xs opacity-70">{fmtSize(m.file.size)}</span>{url && <a href={url} download={m.file.name} onClick={e => e.stopPropagation()} aria-label={`Download ${m.file.name}`} className="shrink-0 rounded-full p-1 hover:bg-foreground/10"><Download className="h-4 w-4" /></a>}</div>
     {m.text && <div className="mt-1 whitespace-pre-wrap">{m.text}</div>}</div>);
 }
 
@@ -149,6 +150,11 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null); const end = useRef<HTMLDivElement>(null); const tt = useRef(0); const ta = useRef<HTMLTextAreaElement>(null);
   const [reactFor, setReactFor] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<ChatMsg | null>(null); const [pend, setPend] = useState<{ file: File; url: string } | null>(null); const [mediaOpen, setMediaOpen] = useState(false);
+  const stage = (file: File) => { setPend(old => { if (old) URL.revokeObjectURL(old.url); return { file, url: URL.createObjectURL(file) }; }); setTimeout(() => ta.current?.focus(), 0); };
+  const snip = (m: ChatMsg) => (m.kind === "file" ? (m.file?.type.startsWith("image/") ? "Photo" : m.file?.name ?? "File") : m.text).slice(0, 120);
+  const jumpTo = (id: string) => { const el = document.getElementById("msg-" + id); if (!el) return; el.scrollIntoView({ behavior: "smooth", block: "center" }); el.classList.add("ring-2", "ring-primary", "rounded-2xl"); setTimeout(() => el.classList.remove("ring-2", "ring-primary", "rounded-2xl"), 1600); };
+  const onPaste = (e: React.ClipboardEvent) => { const f = [...(e.clipboardData?.files ?? [])][0]; if (!f) return; e.preventDefault(); stage(f.name ? f : new File([f], "pasted-image.png", { type: f.type || "image/png" })); };
   // Reactions: one per person per message, latest wins, empty = removed.
   const reacts = new Map<string, Map<string, string>>();
   for (const m of chat.messages) if (m.kind === "react" && m.react) { const per = reacts.get(m.react.to) ?? new Map<string, string>(); if (m.react.e) per.set(m.from, m.react.e); else per.delete(m.from); reacts.set(m.react.to, per); }
@@ -185,7 +191,11 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth" }); }, [shownMsgs.length, chat.typing]);
   useEffect(() => { people.refresh(); }, [chat.messages.length]); // eslint-disable-line
   const run = async (fn: () => Promise<unknown>) => { setErr(""); try { await fn(); } catch (e) { setErr((e as Error).message); } };
-  const send = () => { const t = text.trim(); if (!t) return; setText(""); run(async () => { await chat.sendText(t); game.earn("chat"); }); };
+  const send = () => {
+    const t = text.trim(); if (!t && !pend) return; const rp = replyTo ? { id: replyTo.id, from: replyTo.from, text: snip(replyTo) } : undefined; const pf = pend;
+    setText(""); setReplyTo(null); setPend(null); if (pf) URL.revokeObjectURL(pf.url);
+    run(async () => { if (pf) { await chat.sendFile(pf.file, t, rp); game.earn("nudge"); } else { await chat.sendText(t, rp); game.earn("chat"); } });
+  };
   const onType = (v: string) => { setText(v); window.clearTimeout(tt.current); tt.current = window.setTimeout(chat.sendTyping, 300); };
   const joined = (sid: string) => chat.messages.some(m => m.kind === "session_join" && m.session?.id === sid);
   const begin = (sid: string, dur: number, room?: boolean) => { if (started.includes(sid)) return; setStarted(s => [...s, sid]); startSession(room ? "Quiet room" : f.name, dur, { sid, friendId: f.id, name: room ? "Quiet room" : f.name, avatar: f.avatar, ...(room ? { room: true } : {}) }); };
@@ -200,6 +210,7 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
           <DropdownMenuTrigger asChild><button aria-label="More" className="rounded-full p-2 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"><MoreHorizontal className="h-5 w-5" /></button></DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => openProfile(f.username)}>View profile</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setMediaOpen(true)}>Photos and files</DropdownMenuItem>
             {f.pk && <DropdownMenuItem onSelect={() => setShowCode(v => !v)}>Privacy and safety code</DropdownMenuItem>}
             <DropdownMenuItem onSelect={async () => { const reason = prompt(`Report ${f.name}. What is the problem? (for example: spam, rude, unsafe)`); if (!reason) return; try { await api("report", { body: { id: f.id, reason: reason.slice(0, 40), text: reason } }); alert("Thanks. We aim to look at every report within 3 days."); } catch (e) { alert((e as Error).message); } }}>Report</DropdownMenuItem>
             <DropdownMenuItem className="text-destructive" onSelect={async () => { if (confirm(`Remove ${f.name} from your circle?`)) { await people.remove(f.id, confirm("Also block them so they cannot message you?")); back(); } }}>Remove from circle</DropdownMenuItem>
@@ -214,11 +225,12 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
           if (m.kind === "session_join") return <div key={m.id} className="text-center text-xs text-muted-foreground">{m.from === me.id ? "You" : first} joined the focus session</div>;
           const mine = m.from === me.id; const sj = m.session && joined(m.session.id);
           return (
-            <div key={m.id} className={`flex items-end gap-2 ${mine ? "justify-end" : ""}`}>
+            <div key={m.id} id={`msg-${m.id}`} className={`flex items-end gap-2 transition ${mine ? "justify-end" : ""}`}>
               {!mine && <Avatar spec={f.avatar} size={28} />}
               <div className={`relative flex max-w-[80%] flex-col ${mine ? "items-end" : "items-start"}`}>
-              {reactFor === m.id && <div className={`absolute -top-11 z-20 flex gap-0.5 rounded-full border border-border bg-popover p-1 shadow-lg ${mine ? "end-0" : "start-0"}`} role="menu" aria-label="React" translate="no">{QUICK_REACTIONS.map(e => <button key={e} onClick={() => doReact(m.id, e)} aria-label={e} className={`rounded-full px-1.5 py-0.5 text-xl leading-none hover:scale-125 transition ${myReact(m.id) === e ? "bg-primary/20" : ""}`}>{e}</button>)}</div>}
-              <div onClick={() => m.kind === "text" && setReactFor(r => r === m.id ? null : m.id)} className={`${m.kind === "text" && onlyEmoji(m.text) ? "px-1 text-5xl leading-tight" : `rounded-2xl px-3.5 py-2 text-[15px] ${mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-foreground/[.07]"}`} ${m.kind === "text" ? "cursor-pointer select-text" : ""}`}>
+              {reactFor === m.id && <div className={`absolute -top-11 z-20 flex gap-0.5 rounded-full border border-border bg-popover p-1 shadow-lg ${mine ? "end-0" : "start-0"}`} role="menu" aria-label="React" translate="no">{QUICK_REACTIONS.map(e => <button key={e} onClick={() => doReact(m.id, e)} aria-label={e} className={`rounded-full px-1.5 py-0.5 text-xl leading-none hover:scale-125 transition ${myReact(m.id) === e ? "bg-primary/20" : ""}`}>{e}</button>)}<button onClick={() => { setReplyTo(m); setReactFor(null); setTimeout(() => ta.current?.focus(), 0); }} aria-label="Reply" className="ms-0.5 flex items-center gap-1 rounded-full border-s border-border px-2 text-xs text-foreground hover:bg-secondary" translate="yes"><CornerUpLeft className="h-3.5 w-3.5" />Reply</button></div>}
+              <div onClick={() => (m.kind === "text" || m.kind === "file") && setReactFor(r => r === m.id ? null : m.id)} className={`${m.kind === "text" && onlyEmoji(m.text) ? "px-1 text-5xl leading-tight" : `rounded-2xl px-3.5 py-2 text-[15px] ${mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-foreground/[.07]"}`} ${m.kind === "text" || m.kind === "file" ? "cursor-pointer select-text" : ""}`}>
+                {m.reply && (m.kind === "text" || m.kind === "file") && <button onClick={e => { e.stopPropagation(); jumpTo(m.reply!.id); }} className="mb-1 block w-full max-w-full rounded-lg border-s-2 border-current bg-black/10 px-2 py-1 text-start text-xs opacity-90" translate="no"><span className="block font-semibold">{m.reply.from === me.id ? "You" : first}</span><span className="block truncate">{m.reply.text}</span></button>}
                 {m.kind === "file" ? <FileBubble m={m} meId={me.id} pk={f.pk ?? null} /> : m.kind === "pinky" && m.pinky ? (() => { const pp = pacts.find(x => x.id === m.pinky!.id); return pp ? pinkyCard(pp) : null; })() : m.kind === "plan" && m.plan ? <PlanCard p={m.plan} mine={mine} first={first} blocks={plan.blocks} onAdd={() => { const p = m.plan!; plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id, ...(p.date ? { date: { friendId: f.id, name: f.name } } : {}) }); run(() => chat.sendText("I am in for “" + p.title + "”.")); game.earn("chat"); track("plan_accept"); }} /> : m.kind === "session" && m.session ? (
                   <div><div className="flex items-center gap-2 font-medium"><Timer className="h-4 w-4" />{m.text}</div>
                     {!mine && !sj && <Button size="sm" variant="hero" className="mt-2 rounded-full" onClick={() => run(async () => { await chat.joinSession(m.session!.id, m.session!.dur, m.session!.room); begin(m.session!.id, m.session!.dur, m.session!.room); })}>Join now</Button>}
@@ -248,14 +260,19 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
         {planOpen && <PlanTogetherForm first={first} onClose={() => setPlanOpen(false)} onSend={async (p, addMine) => { await chat.sendPlan(p); if (addMine) plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id, ...(p.date ? { date: { friendId: f.id, name: f.name } } : {}) }); game.earn("chat"); track("plan_send"); }} />}
         {(err || chat.error) && <p className="text-xs text-destructive" role="alert">{err || chat.error}</p>}
         <div className="sticky bottom-24 z-20 lg:bottom-4 rounded-3xl bg-background shadow-md">
-        <div className="glass flex items-end gap-2 rounded-3xl p-2">
+        <div className="glass rounded-3xl p-2" onDragOver={e => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={e => { const f = e.dataTransfer.files?.[0]; if (f) { e.preventDefault(); stage(f); } }}>
+        {replyTo && <div className="mb-1 flex items-center gap-2 rounded-2xl bg-secondary/60 px-3 py-1.5 text-xs"><CornerUpLeft className="h-3.5 w-3.5 shrink-0" /><div className="min-w-0 flex-1"><div className="font-semibold">Replying to {replyTo.from === me.id ? "yourself" : first}</div><div className="truncate text-muted-foreground" translate="no">{snip(replyTo)}</div></div><button aria-label="Cancel reply" onClick={() => setReplyTo(null)} className="rounded-full p-1 hover:bg-foreground/10"><X className="h-4 w-4" /></button></div>}
+        {pend && <div className="mb-1 flex items-center gap-2 rounded-2xl bg-secondary/60 p-2 text-xs">{pend.file.type.startsWith("image/") ? <img src={pend.url} alt="Photo to send" className="h-14 w-14 rounded-lg object-cover" /> : <FileText className="h-6 w-6 shrink-0" />}<div className="min-w-0 flex-1"><div className="truncate font-medium">{pend.file.name}</div><div className="text-muted-foreground">Ready to send. Add a caption if you like.</div></div><button aria-label="Remove attachment" onClick={() => { URL.revokeObjectURL(pend.url); setPend(null); }} className="rounded-full p-1 hover:bg-foreground/10"><X className="h-4 w-4" /></button></div>}
+        <div className="flex items-end gap-2">
           <button aria-label="Attach a file" onClick={() => fileRef.current?.click()} className="rounded-full p-2.5 text-muted-foreground hover:text-foreground"><Paperclip className="h-5 w-5" /></button>
-          <input ref={fileRef} type="file" hidden onChange={e => { const file = e.target.files?.[0]; if (file) run(async () => { await chat.sendFile(file, text.trim()); setText(""); game.earn("nudge"); }); e.target.value = ""; }} />
+          <input ref={fileRef} type="file" hidden onChange={e => { const file = e.target.files?.[0]; if (file) stage(file); e.target.value = ""; }} />
           <EmojiPicker onPick={insertEmoji} />
-          <textarea ref={ta} value={text} onChange={e => onType(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} rows={1} placeholder={`Message ${first}...`} className="max-h-32 flex-1 resize-none bg-transparent px-2 py-2.5 outline-none" />
-          <button aria-label="Send" onClick={send} disabled={!text.trim()} className="rounded-full bg-primary p-2.5 text-primary-foreground disabled:opacity-40"><Send className="h-4 w-4" /></button>
+          <textarea ref={ta} value={text} onChange={e => onType(e.target.value)} onPaste={onPaste} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } if (e.key === "Escape") { setReplyTo(null); } }} rows={1} placeholder={`Message ${first}...`} className="max-h-32 flex-1 resize-none bg-transparent px-2 py-2.5 outline-none" />
+          <button aria-label="Send" onClick={send} disabled={!text.trim() && !pend} className="rounded-full bg-primary p-2.5 text-primary-foreground disabled:opacity-40"><Send className="h-4 w-4" /></button>
+        </div>
         </div>
         </div>
       </>
+      <SharedMedia open={mediaOpen} onClose={() => setMediaOpen(false)} msgs={chat.messages} meId={me.id} pk={f.pk ?? null} first={first} onJump={jumpTo} />
     </div>);
 }
