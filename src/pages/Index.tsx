@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, CalendarCheck, Heart, Home, LogOut, MessageCircle, Moon, Sprout, Sun } from "lucide-react";
+import { Activity, Brain, CalendarCheck, Heart, Home, LogOut, MessageCircle, Moon, Sprout, Sun } from "lucide-react";
 import { TalkTab } from "@/components/TalkTab";
 import { preloadTalk } from "@/engine/talk";
 import { CheckInTab } from "@/components/CheckInTab";
@@ -48,6 +48,7 @@ import { dkey } from "@/engine/game";
 import { logStart } from "@/lib/startlog";
 import { dueDays } from "@/engine/plan";
 import { MyPattern } from "@/components/MyPattern";
+import { MindTab } from "@/components/MindTab";
 import { saveTomorrow } from "@/engine/director";
 import { setArm } from "@/lib/arm";
 import { usePresence } from "@/lib/presence";
@@ -57,6 +58,7 @@ const TABS = [
   { id: "today", label: "Today", icon: Home },
   { id: "talk", label: "Talk", icon: MessageCircle },
   { id: "plan", label: "Plan", icon: CalendarCheck },
+  { id: "mind", label: "Mind", icon: Brain },
   { id: "checkin", label: "Start", icon: Activity },
   { id: "circle", label: "Friends", icon: Heart },
   { id: "me", label: "Me", icon: Sprout },
@@ -173,6 +175,7 @@ function Shell({ auth, user }: { auth: AuthApi; user: User }) {
       <main className="mx-auto max-w-6xl overflow-x-clip px-5 pt-8">
         {tab === "today" && <TodayHome avatar={user.avatar} onPinky={id => { sessionStorage.setItem("lagomo.pinky.open", id); setOpenId(id); setTab("circle"); track("pinky_door"); }} onStartBlock={b => { startBlock(b); track("block_start_today"); }} j={j} name={user.name} sliders={history.length && Date.now() - history[history.length - 1].ts < 864e5 ? history[history.length - 1].inputs : null} go={t => { if (t.startsWith("circle:")) { setOpenId(t.slice(7)); setTab("circle"); } else if (t === "pattern") { sessionStorage.setItem("lagomo.me.view", "pattern"); setTab("me"); } else setTab(t as Tab); }} game={game} plan={plan} agenda={agenda} onStart={startNow} friends={people.friends} hops={hops} burrow={burrow} username={user.username} />}
         {tab === "talk" && <TalkTab myName={user.name} ctx={{ tasks: plan.tasks.filter(t => !t.doneAt).slice(0, 3).map(t => ({ title: t.title, step: t.steps.find(x => !x.done)?.text })), streak: game.g.streak.current }} onStart={startNow} onCoach={t => { setCoachTask(t || "something I am putting off"); setCoachOpen(true); }} onPlan={() => setTab("plan")} onCircle={() => setTab("circle")} />}
+        {tab === "mind" && <MindTab onStart={startNow} onSpark={() => game.earn("mind")} />}
         {tab === "plan" && <PlanTab plan={plan} game={game} history={history} cal={cal} />}
         <div className={tab === "checkin" ? "" : "hidden"}><CheckInTab history={history} profile={j.profile} onSave={c => { add(c); game.earn("checkin"); track("checkin"); }} onStarted={id => { update(id, { started: true }); const ci = history.find(h => h.id === id); logStart({ together: false, dueIn: ci?.hoursToDeadline != null ? Math.floor(ci.hoursToDeadline / 24) : null, task: ci?.task }); game.earn("started", { early: new Date().getHours() < 9 }); track("timer_start"); }} onDone={() => { game.earn("timer"); track("timer_done"); }} /></div>
         {tab === "circle" && <CircleTab startPinky={(title, onDoneExtra) => setLive({ title, dur: 2, solo: true, onDoneExtra })} pairs={burrow.pairs} people={people} game={game} plan={plan} me={user} openId={openId} setOpenId={setOpenId} startSession={(name, dur, buddy) => setLive({ title: buddy?.room ? "In the quiet room" : `Focusing with ${name}`, dur, buddy })} />}
