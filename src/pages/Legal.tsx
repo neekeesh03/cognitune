@@ -36,6 +36,8 @@ export function Privacy() {
         <li>Chat with your rabbit (Talk): the words you type there are kept on your device. Unless you turn it off in Me, under Settings, we also store a copy of each message to train the rabbit's model, without your name or account, with emails, links, handles and long numbers removed. Messages that look like a crisis or a low mood are never copied. These copies are not linked to you, so we cannot find or delete yours individually. Turning the switch off stops anything further from being sent.</li>
         <li>Simple counts such as sign-ups and messages per day, and the time you were last active.</li>
       </ul>
+      <h2>Optional research sharing</h2>
+      <p>In Mind, "Lagun's Law, measured" has a research mode. It is off by default. When on, readings are saved on your device only. If you separately tick "share anonymously", only numbers are sent: six scores, the measurements behind them (such as reaction time or heart rate), the hour, and whether you started something in the next three hours. They are sent under a random code that is not linked to your account, and never include your name, task names, messages or journal. Because the code is not linked to you, shared rows cannot be found or removed later. You must be 16 or older. Camera video, motion and mouse data are processed on your device and are never uploaded. You can turn this off at any time and delete what is saved on your device.</p>
       <h2>Who handles it</h2>
       <p>Lagomo runs on Vercel and stores data in Upstash Redis. Lagomo is free: there is no paid plan. We do not sell your data and we do not show ads. We do not send your messages or journal to any AI service.</p>
       <h2>Your choices</h2>
