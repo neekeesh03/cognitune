@@ -9,6 +9,8 @@ import { Pm, Thoughts, Tlx, Woop } from "@/components/mind/MindTools";
 import { Breathe, Kind, Wind as WindDown } from "@/components/mind/MindCalm";
 import { Report } from "@/components/mind/MindReport";
 import { Bundle, Compass as ValuesCompass, Data, Experiment, Good, Ladder, Pulse, Review, Sleep, Urge, Why } from "@/components/mind/MindMore";
+import { Insights } from "@/components/mind/MindInsights";
+import { topInsightCached as topInsight } from "@/engine/insights";
 import { Anchor, Anger, KindThing, Ledger, Phone, Reach, Skills } from "@/components/mind/MindMore3";
 import { Break, Deck, Exam, Feel, GuessTime, Loop, Park, TrialTool, Worry } from "@/components/mind/MindMore2";
 import { Card, type MindProps } from "@/components/mind/MindParts";
@@ -73,7 +75,7 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
     { id: "data", title: "Your data", line: "Export, print, or delete", icon: Shield, tag: "private" },
   ] },
 ];
-const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, skills: Skills, anger: Anger, phone: Phone, anchor: Anchor, ledger: Ledger, reach: Reach, kindness: KindThing, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, data: Data };
+const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, insights: Insights, skills: Skills, anger: Anger, phone: Phone, anchor: Anchor, ledger: Ledger, reach: Reach, kindness: KindThing, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, data: Data };
 
 interface Props { onStart: (title: string, step: string) => void; onSpark: () => void; friends?: { id: string; name: string; last: number | null }[]; openChat?: (id: string, draft: string) => void }
 /** The Mind tab: a hub of short, evidence-based tools. Everything is stored on this device. */
@@ -96,6 +98,7 @@ export function MindTab({ onStart, onSpark, friends, openChat }: Props) {
     <section className="mx-auto max-w-2xl space-y-5">
       <div><h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><Brain className="h-7 w-7 text-primary" />Mind</h1>
         <p className="mt-1 text-sm text-muted-foreground">Short tools from psychology that actually move something. Each one measures, guides, or helps you act. {used === 0 ? "Start with one." : `${used} things recorded so far.`} Everything stays on this device.</p></div>
+      {(() => { const ins = topInsight(mind, loadLog().starts.map(s => s.ts)); return ins ? <button onClick={() => go("insights")} className="w-full rounded-3xl border border-primary/30 bg-primary/5 p-4 text-start transition hover:shadow-lg"><div className="text-xs font-semibold uppercase tracking-wide text-primary">From your data</div><div className="mt-1 text-sm">{ins.text}</div><div className="mt-2 text-[11px] text-muted-foreground">Open your patterns</div></button> : <button onClick={() => go("insights")} className="w-full rounded-3xl border border-border p-4 text-start transition hover:shadow-lg"><div className="text-xs font-semibold uppercase tracking-wide text-primary">Your patterns</div><div className="mt-1 text-sm text-muted-foreground">See how stretched you are, what goes with your best days, and what works for you.</div></button>; })()}
       {pick && <button onClick={() => go(pick.view)} className="glass w-full rounded-3xl p-4 text-start transition hover:shadow-lg"><div className="text-xs font-semibold uppercase tracking-wide text-primary">For right now</div><div className="mt-1 text-lg font-semibold">{pick.title}</div><div className="text-sm text-muted-foreground">{pick.line}</div><div className="mt-2 text-[11px] text-muted-foreground">Based on: {pick.why}</div></button>}
       {GROUPS.map(g => (
         <div key={g.title}><div className="mb-2 px-1"><h2 className="text-base font-semibold">{g.title}</h2><p className="text-xs text-muted-foreground">{g.sub}</p></div>
