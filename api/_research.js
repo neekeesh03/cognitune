@@ -23,7 +23,9 @@ export async function researchIn(me, body) {
   if (pushes.length) await rdp([...pushes, ["LTRIM", "rs", -200000, -1], ["INCRBY", dayKey, pushes.length], ["EXPIRE", dayKey, 2 * 86400]]);
   return { stored: pushes.length };
 }
-export async function researchRows() { return (await rd("LRANGE", "rs", 0, -1)).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(Boolean); }
+// pseudonyms used by the 2 Nov 2026 release tests; their rows are not real participants
+const TEST_PIDS = new Set(["abcdefghij1234", "2x676d003r5y240e"]);
+export async function researchRows() { return (await rd("LRANGE", "rs", 0, -1)).map(s => { try { return JSON.parse(s); } catch { return null; } }).filter(r => r && !TEST_PIDS.has(r.pid)); }
 export async function researchCsv() {
   const rows = await researchRows(); const rawKeys = Array.from(new Set(rows.flatMap(r => Object.keys(r.raw || {})))).sort();
   const head = ["pseudonym", "hour_utc", "primode", "cap", "flexion", "anchory", "grain", "slip", "coverage", "drive_paper", "drive_core", "p_usual_hour", "p_lagun", "started_within_3h", "protocol", ...rawKeys.map(k => "raw_" + k)];
