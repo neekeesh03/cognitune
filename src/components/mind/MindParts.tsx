@@ -10,6 +10,7 @@ export interface MindProps {
   mind: Mind; update: (fn: (m: Mind) => Mind) => void; done: (note?: string) => void; back: () => void;
   go: (v: import("@/engine/mind").MindView) => void; onStart: (title: string, step: string) => void;
   friends?: { id: string; name: string; last: number | null }[]; openChat?: (id: string, draft: string) => void;
+  schedule?: (title: string, day: string, start: number, dur: number) => void; tasks?: { id: string; title: string }[];
 }
 export function Screen({ title, sub, back, children, credit }: { title: string; sub?: string; back: () => void; children: ReactNode; credit?: string }) {
   return (

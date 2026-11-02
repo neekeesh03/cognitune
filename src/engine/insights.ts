@@ -2,7 +2,7 @@
 // Everything here is correlation on small samples. Uncertainty is shown, and nothing is called a cause.
 import type { Mind } from "@/store/useMind";
 import type { MindView } from "@/engine/mind";
-import { avg, energyMap, sleepNight } from "@/engine/mind";
+import { avg, energyMap, sleepNight, type Pick } from "@/engine/mind";
 import type { Trial } from "@/engine/mind2";
 import { planDays } from "@/engine/mind2";
 
@@ -132,4 +132,40 @@ let memo: { m: Mind; n: number; h: number; v: ReturnType<typeof topInsight> } | 
 export function topInsightCached(m: Mind, starts: number[], now = Date.now()) {
   const h = Math.floor(now / 36e5); if (memo && memo.m === m && memo.n === starts.length && memo.h === h) return memo.v;
   const v = topInsight(m, starts, now); memo = { m, n: starts.length, h, v }; return v;
+}
+
+// ---- 8. Your best window for the hardest task ----
+export interface Window { label: string; phrase: string; startMin: number; why: string }
+const PHRASE: Record<string, string> = { Early: "early in the morning", Morning: "in the morning", Midday: "around midday", Afternoon: "in the afternoon", Evening: "in the evening" };
+const BLOCK_START: Record<string, number> = { Early: 6 * 60 + 30, Morning: 9 * 60, Midday: 12 * 60, Afternoon: 15 * 60, Evening: 18 * 60 };
+export function bestWindow(m: Mind, starts: number[]): Window | null {
+  const em = energyMap(m.pulse).filter(b => b.e != null && b.count >= 2).sort((a, b) => b.e! - a.e!)[0];
+  if (em) { const k = em.n.split(" ")[0]; return { label: em.n.split(" (")[0].toLowerCase(), phrase: PHRASE[k] ?? "at your peak", startMin: BLOCK_START[k] ?? 9 * 60, why: `Your energy taps average ${em.e}/5 then (${em.count} taps).` }; }
+  const hrs = starts.map(ts => new Date(ts).getHours()); if (hrs.length < 5) return null; const c = new Map<number, number>(); hrs.forEach(h => c.set(h, (c.get(h) ?? 0) + 1)); const [h, n] = [...c.entries()].sort((a, b) => b[1] - a[1])[0];
+  return { label: `around ${h % 12 || 12}${h < 12 ? "am" : "pm"}`, phrase: `around ${h % 12 || 12}${h < 12 ? "am" : "pm"}`, startMin: h * 60, why: `You have started ${n} times around then.` };
+}
+
+// ---- 9. A tool you already know helps you, offered again ----
+const LAST: Record<string, (m: Mind) => number[]> = { feel: m => m.feelings.map(x => x.ts), skills: m => m.skills.map(x => x.ts), kind: m => m.calm.filter(c => c.kind === "kind").map(x => x.ts), breathe: m => m.calm.filter(c => c.kind !== "kind").map(x => x.ts), brk: m => m.breaks.map(x => x.ts), loop: m => m.loops.map(x => x.ts), anger: m => m.anger.map(x => x.ts), exam: m => m.exams.map(x => x.ts), thoughts: m => m.thoughts.map(x => x.ts), urge: m => m.urges.map(x => x.ts) };
+export function adaptivePick(m: Mind, now = Date.now()): Pick | null {
+  const e = toolEfficacy(m).find(x => x.n >= 3 && x.shrunk > 0.15 && x.view in LAST && !["exam", "anger", "urge"].includes(x.view)); if (!e) return null;
+  const last = Math.max(0, ...LAST[e.view](m)); if (now - last < 2 * DAY) return null;
+  return { view: e.view, title: `${e.name} works for you`, line: `It has eased you ${Math.round(e.mean * 100)}% on average over ${e.n} tries. Want to use it today?`, cta: "Use it", why: "Your own before-and-after ratings" };
+}
+
+// ---- 10. The weekly Mind letter ----
+export interface Letter { headline: string; paras: string[]; driver: Driver | null; next: string }
+export function weeklyLetter(m: Mind, starts: number[], now = Date.now()): Letter {
+  const inWk = (w: number) => starts.filter(t => t > now - (w + 1) * 7 * DAY && t <= now - w * 7 * DAY); const cur = inWk(0), prev = inWk(1);
+  const days = new Map<string, number>(); cur.forEach(t => days.set(dkL(t), (days.get(dkL(t)) ?? 0) + 1)); const best = [...days.entries()].sort((a, b) => b[1] - a[1])[0];
+  const paras: string[] = []; const dow = (k: string) => new Date(k + "T12:00:00").toLocaleDateString(undefined, { weekday: "long" });
+  paras.push(cur.length === 0 ? "This was a quiet week for starts. That is information, not a verdict. Quiet weeks happen, and the next small start is all it takes." : cur.length >= prev.length ? `You started ${cur.length} time${cur.length > 1 ? "s" : ""} this week${prev.length ? `, up from ${prev.length}` : ""}.${best ? ` Your strongest day was ${dow(best[0])}.` : ""}` : `You started ${cur.length} time${cur.length > 1 ? "s" : ""} this week, a little fewer than ${prev.length} last week. Rest and busy weeks both count.`);
+  const load = loadState(m, starts, now); if (load.state !== "steady") paras.push(`Your data suggests you have been ${load.state === "low" ? "running low" : "a bit stretched"}: ${load.signals.slice(0, 2).join(" ").toLowerCase()} Next week, protect the basics before adding more.`);
+  const eff = toolEfficacy(m).find(x => x.n >= 2 && x.shrunk > 0.1); if (eff) paras.push(`What helped you most: ${eff.name.toLowerCase()} (about ${Math.round(eff.mean * 100)}% relief, ${eff.n} tries).`);
+  const rows = dayTable(m, starts, now); const drv = drivers(rows)[0] ?? null; if (drv) paras.push(`${driverLine(drv)} ${drv.strength === "probable" ? "That looks real in your data." : "That is a hint, not a conclusion."} It is a link, not proof of cause.`);
+  const tr = trends(m, starts, now)[0]; if (tr) paras.push(tr.text);
+  const hits = m.woop.filter(w => w.hit != null && now - w.ts < 14 * DAY); if (hits.length >= 2) paras.push(`Your if-then plans worked ${hits.filter(h => h.hit).length} of ${hits.length} times lately.`);
+  const wins = m.ledger.filter(l => now - l.ts < 7 * DAY).length; if (wins) paras.push(`You added ${wins} proof${wins > 1 ? "s" : ""} to your ledger. Those are evidence you can begin.`);
+  const win = bestWindow(m, starts); const next = drv ? `Try the experiment: ${drv.trial!.question}` : win ? `Put your hardest task ${win.phrase}.` : load.state !== "steady" ? "One gentle thing a day, and two-minute starts only." : "Pick one tiny anchor and keep it small.";
+  return { headline: cur.length ? `Your week: ${cur.length} start${cur.length > 1 ? "s" : ""}` : "Your week, gently", paras, driver: drv, next };
 }

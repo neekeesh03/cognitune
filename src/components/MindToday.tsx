@@ -2,7 +2,7 @@ import { Brain } from "lucide-react";
 import { useMind } from "@/store/useMind";
 import { useState } from "react";
 import { pickMindAll, type Pick } from "@/engine/mind";
-import { loadState, toolEfficacy, topInsightCached as topInsight } from "@/engine/insights";
+import { adaptivePick, bestWindow, loadState, toolEfficacy, topInsightCached as topInsight } from "@/engine/insights";
 import { loadLog } from "@/lib/startlog";
 import { openMind } from "@/components/MindTab";
 
@@ -12,7 +12,12 @@ export function MindToday({ go, onStart }: { go: (t: string) => void; onStart?: 
   const starts = loadLog().starts.map(s => s.ts); const light = (() => { try { return localStorage.getItem("lagomo.lightday") === new Date().toDateString(); } catch { return false; } })();
   const gentle = ["kind", "breathe", "brk", "wind"] as const; const eff = toolEfficacy(mind).find(e => (gentle as readonly string[]).includes(e.view) && e.n >= 2); const lv = eff?.view ?? "kind";
   const lightPicks: Pick[] = light ? [{ view: lv, title: "One gentle thing", line: eff ? `${eff.name} has helped you before. Light day: only this, then rest.` : "Light day: do one kind thing for yourself, then rest.", cta: "Do it", why: "Your own data" }] : [];
-  const all = hidden ? [] : [...lightPicks, ...pickMindAll(mind, starts)]; const pick = all.length ? all[skip % all.length] : null;
+  const sunday = new Date().getDay() === 0 && (() => { try { return Date.now() - +(localStorage.getItem("lagomo.letter.ts") || 0) > 5 * 864e5; } catch { return false; } })();
+  const letterPick: Pick[] = sunday ? [{ view: "letter", title: "Your weekly letter is ready", line: "A kind write-up of your week from your own data, plus one thing to try.", cta: "Read", why: "Your data" }] : [];
+  const win = bestWindow(mind, starts); const winDone = (() => { try { return localStorage.getItem("lagomo.window.day") === new Date().toDateString(); } catch { return false; } })(); const h = new Date().getHours();
+  const winPick: Pick[] = win && !winDone && (h >= 17 || h < 9) && starts.length >= 3 ? [{ view: "window", title: "Put your hardest task in your best window", line: `Your energy is highest ${win.phrase}. Schedule the task you dread there.`, cta: "Schedule", why: "Your own data" }] : [];
+  const adapt = adaptivePick(mind); const base = pickMindAll(mind, starts);
+  const all = hidden ? [] : [...lightPicks, ...letterPick, ...base.slice(0, 1), ...winPick, ...(adapt ? [adapt] : []), ...base.slice(1)]; const pick = all.length ? all[skip % all.length] : null;
   const insight = hidden ? null : topInsight(mind, starts); const ld = loadState(mind, starts);
   const woop = mind.woop[mind.woop.length - 1]; const today = woop && new Date(woop.ts).toDateString() === new Date().toDateString() ? woop : null;
   const parked = (mind.park ?? []).filter(p => !p.resumed && Date.now() - p.ts < 2 * 864e5).slice(-1)[0];
