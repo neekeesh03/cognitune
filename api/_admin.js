@@ -1,5 +1,6 @@
 // Admin backend: overview stats, users, reports, announcements, team, audit log.
 import crypto from "node:crypto";
+import { researchCsv, researchCount } from "./_research.js";
 import { experimentStats, waitlistList } from "./_exp.js";
 import { rd, rdp, getJ, setJ, err, pub, lastDays, dayStr, hashPw, randomToken, randomId, convoKey, isAdmin, rootAdmins, forgetAdmin, deleteAccount, URL_, IS_PROD } from "./_core.js";
 
@@ -93,6 +94,8 @@ async function adminInner(path, method, ctx) {
   if (path === "admin-waitlist" && method === "GET") return res.json({ items: await waitlistList() });
   if (path === "admin-waitlist-export" && method === "GET") { const items = await waitlistList(); await audit(me, "export-waitlist", `${items.length} rows`); res.setHeader("Content-Type", "text/csv"); res.setHeader("Content-Disposition", 'attachment; filename="waitlist.csv"'); return res.send("email,variant,segment,source,joined\n" + items.map(i => [i.email, i.v, i.s, i.src || "", new Date(i.ts).toISOString()].join(",")).join("\n")); }
 
+  if (path === "admin-research" && method === "GET") return res.json(await researchCount());
+  if (path === "admin-research-export" && method === "GET") { const csv = await researchCsv(); await audit(me, "export-research", csv.split("\n").length - 1 + " rows"); res.setHeader("Content-Type", "text/csv"); res.setHeader("Content-Disposition", 'attachment; filename="lagun-research.csv"'); return res.send(csv); }
   if (path === "admin-audit" && method === "GET") { const raw = await rd("LRANGE", "audit", -150, -1); return res.json({ items: raw.map(s => JSON.parse(s)).reverse() }); }
 
   throw err(404, "Not found");

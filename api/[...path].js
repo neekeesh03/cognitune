@@ -9,6 +9,7 @@ import { feedIcs, fetchIcs, eventsFromIcs } from "./_calendar.js";
 import { adminRoute } from "./_admin.js";
 import { recoverPublic, recoverAuthed, mailOn } from "./_recover.js";
 import { wake, rtInfo } from "./_rt.js";
+import { researchIn } from "./_research.js";
 import { track, pulseEligible, pulseAnswer, landingHit, joinWaitlist } from "./_exp.js";
 import { verifyGoogleToken, cleanUsernameFrom } from "./_google.js";
 const GOOGLE_ID = () => process.env.GOOGLE_CLIENT_ID || "";
@@ -258,6 +259,7 @@ export default async function handler(req, res) {
       const ems = ids.length ? await rd("MGET", ...ids.map(i => `spe:${sid}:${i}`)) : [];
       return res.json({ members: ids.map((i, n) => { const u = us[n]; const v = sts[n] && JSON.parse(sts[n]); const ev = ems[n] && JSON.parse(ems[n]); return u ? { id: i, name: u.name, avatar: u.avatar, state: v && Date.now() - v.ts < 30000 ? v.state : "none", ...(ev && Date.now() - ev.ts < 12000 ? { e: ev.e, et: ev.ts } : {}) } : null; }).filter(Boolean) });
     }
+    if (path === "research" && method === "POST") return res.json(await researchIn(me, body));
     if (path === "pulse-check" && method === "GET") return res.json({ eligible: await pulseEligible(me) });
     if (path === "pulse" && method === "POST") { if (!(await pulseEligible(me))) throw err(400, "Not right now."); await pulseAnswer(me, body); return res.json({ ok: true }); }
     if (path === "keys" && method === "GET") return res.json({ keys: me.pk && me.wk ? { pk: me.pk, wk: me.wk } : null });
