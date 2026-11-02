@@ -10,10 +10,11 @@ import { dayKeyOf } from "@/engine/pattern";
 import { petNow } from "@/lib/pet";
 import { tomorrowStep } from "@/engine/director";
 import { directorOn } from "@/lib/arm";
+import { loadGpt, generate, checkReply } from "@/engine/gpt";
 
 export type Act = "greet" | "thanks" | "bye" | "howru" | "who_help" | "unclear" | "big" | "boring" | "scared" | "tired" | "distract" | "overwhelm" | "low" | "win" | "ask_start" | "ask_plan" | "ask_break" | "motivate" | "joke" | "chitchat" | "yes" | "no" | "task_say" | "progress" | "deadline" | "other" | "dont_know" | "clarify" | "complain" | "share" | "good_mood" | "want_to_talk" | "vent";
 export interface Chip { label: string; send?: string; act?: "start" | "coach" | "plan" | "circle"; task?: string; step?: string }
-export interface Msg { id: string; from: "me" | "pip"; text: string; ts: number; chips?: Chip[]; act?: Act; conf?: number }
+export interface Msg { gen?: boolean; id: string; from: "me" | "pip"; text: string; ts: number; chips?: Chip[]; act?: Act; conf?: number }
 export interface TalkState { last: Act | ""; task?: string; awaiting?: Act | null; pending?: "start" | "plan" | null; lowRun: number; used: Record<string, number>; turns: number; unsureRun: number; lastReply?: string; lastStep?: string; prev2?: Act | ""; mode?: "listen" | null; listenTurns?: number }
 export const emptyState = (): TalkState => ({ last: "", lowRun: 0, used: {}, turns: 0, unsureRun: 0 });
 export const MODEL_PARAMS = 566881; // the small model; the large one has 10,240,097
@@ -50,7 +51,20 @@ export function upgradeTalk(): Promise<void> {
 export const usingBigModel = () => !!big;
 
 /** Fetch and decode the small model quietly in the background, so the first message in Talk is instant. Skips slow or data-saver connections. */
+// Lagomo's own small language model (src/engine/gpt.ts). It only re-words replies for chatty acts; actions, plans, timers and anything
+// sensitive stay with the written engine. Every sentence it writes is checked, and any failure falls back to the written reply.
+export const GPT_KEY = "lagomo.gpt.v1";
+export const gptEnabled = () => { try { return localStorage.getItem(GPT_KEY) !== "off"; } catch { return true; } };
+export const setGptEnabled = (on: boolean) => { try { localStorage.setItem(GPT_KEY, on ? "on" : "off"); } catch { /* ignore */ } };
+const GEN_OK: Act[] = ["greet", "thanks", "howru", "chitchat", "want_to_talk", "share", "vent", "good_mood", "win", "tired", "overwhelm", "scared"];
+let gptM: Awaited<ReturnType<typeof loadGpt>> = null;
+async function gen(act: Act, text: string, st: TalkState): Promise<string | null> {
+  if (!gptEnabled() || !GEN_OK.includes(act) || !gptM) return null;
+  try { for (let i = 0; i < 3; i++) { const raw = generate(gptM, act, text, { deadline: Date.now() + 1200 }); const ok = checkReply(gptM, raw, { act, last: st.lastReply, user: text }); if (ok) return ok; } } catch { /* fall back to the written reply */ }
+  return null;
+}
 export function preloadTalk() {
+  void loadGpt().then(m => { gptM = m; });
   try { const c = (navigator as unknown as { connection?: { saveData?: boolean; effectiveType?: string } }).connection; if (c?.saveData || /(^|-)2g$/.test(c?.effectiveType ?? "")) return; } catch { /* ignore */ }
   void load().catch(() => { cache = null; });
 }
@@ -143,7 +157,7 @@ function weekStats() {
   return { total: S.length, week: wk.length, days: new Set(wk.map(s => dayKeyOf(s.ts))).size };
 }
 export interface Ctx { tasks: { title: string; step?: string }[]; streak: number }
-export interface Turn { reply: string; chips: Chip[]; act: Act; conf: number; state: TalkState; sensitive?: boolean; unsure?: boolean }
+export interface Turn { gen?: boolean; reply: string; chips: Chip[]; act: Act; conf: number; state: TalkState; sensitive?: boolean; unsure?: boolean }
 
 // A short lexicon as a safety net for one-word replies, used only when the network is unsure.
 const LEX: [RegExp, Act][] = [[/^(yes|yeah|yep|yup|sure|ok|okay|ya|yea|y)\b/, "yes"], [/^(no|nope|nah|n)\b/, "no"], [/^(hi|hey|hello|hiya|yo|hola)\b/, "greet"], [/^(thanks|thank you|thx|ty)\b/, "thanks"], [/^(bye|goodbye|cya|goodnight|good night)\b/, "bye"], [/^(idk|dunno|i dont know|not sure|no idea)\b/, "dont_know"], [/^(what|huh|why|how)\??$/, "clarify"]];
@@ -170,12 +184,12 @@ function toneOf(text: string): Act | null {
   if (/\b(happy|excited|proud|glad|great day|good news|fun)\b/.test(t)) return "good_mood";
   return null;
 }
-function listenReply(act: Act, text: string, st: TalkState, done: (t: Omit<Turn, "state">) => Turn, conf: number, fresh: boolean): Turn {
+async function listenReply(act: Act, text: string, st: TalkState, done: (t: Omit<Turn, "state">) => Turn, conf: number, fresh: boolean): Promise<Turn> {
   if ((act === "want_to_talk" || act === "other" || act === "clarify" || act === "complain" || act === "dont_know") && tok(text).length >= 5) { const tone = toneOf(text); if (tone) act = tone; else if (act === "want_to_talk" || act === "clarify" || act === "complain") act = "share"; }
   st.mode = "listen"; st.awaiting = null; st.listenTurns = fresh ? 1 : (st.listenTurns ?? 0) + 1; st.last = act; const n = st.listenTurns;
   const topic = TOPICS.find(([re]) => re.test(text.toLowerCase()))?.[1];
   if (act === "low") st.lowRun += 1;
-  let reply: string; const chips: Chip[] = [];
+  let reply: string; let wrote = false; const chips: Chip[] = [];
   if (n >= 5) { st.listenTurns = 1; reply = "Thank you for telling me all of that. Would it help to turn any of it into one small thing, or would you rather keep talking?"; chips.push({ label: "One small thing", send: "Help me start" }, { label: "Keep talking", send: "I want to keep talking" }, { label: "That's enough for now", send: "that's enough for now" }); }
   else if (act === "dont_know") reply = "That's okay. We can start anywhere. What was the first thing that happened today?";
   else if (act === "yes") reply = "Go on, I'm listening.";
@@ -184,9 +198,10 @@ function listenReply(act: Act, text: string, st: TalkState, done: (t: Omit<Turn,
   else {
     const open = vary(st, "lo_" + act, OPENER[act]!); const mirror = topic && ["vent", "low", "tired", "overwhelm", "scared"].includes(act) ? " It sounds like " + topic + " took a lot out of you." : "";
     reply = open + mirror + " " + FOLLOW[(n - 1) % FOLLOW.length];
+    const g = await gen(act, text, st); if (g) { reply = g; wrote = true; }
   }
   if (act === "low" && st.lowRun >= 2) reply += " If it keeps feeling this heavy, talking to someone you trust can help. findahelpline.com lists free lines by country.";
-  return done({ reply, chips, act, conf, sensitive: true });
+  return done({ reply, chips, act, conf, sensitive: true, gen: wrote || undefined });
 }
 
 /** One turn of conversation. Pure apart from reading the start log. */
@@ -270,7 +285,8 @@ export async function respond(text: string, prevState: TalkState, ctx: Ctx): Pro
     case "other": reply = fill(vary(st, "other", REPLY.other), st); chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I don't know where to start" }, { label: "Tell me a joke", send: "Tell me a joke" }); break;
     default: reply = fill(vary(st, act, REPLY[act] ?? REPLY.other), st); if (act === "greet") chips.push({ label: "Help me start", send: "Help me start" }, { label: "I'm stuck", send: "I don't know where to start" }, { label: "Plan my day", act: "plan" });
   }
-  st.last = act; return done({ reply, chips, act, conf });
+  let wrote = false; if (GEN_OK.includes(act) && !["other", "yes", "no"].includes(act)) { const g = await gen(act, text, st); if (g) { reply = g; wrote = true; } }
+  st.last = act; return done({ reply, chips, act, conf, gen: wrote || undefined });
 }
 
 /** Replies for the "this is hard" acts, with a concrete first step and a way to act on it. */

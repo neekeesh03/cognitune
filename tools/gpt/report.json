@@ -1,0 +1,238 @@
+{
+  "model": "lagomo-gpt-v1",
+  "params": 477024,
+  "gates": {
+    "parityMaxRelLossDiff": 5.42e-7,
+    "parityOk": true,
+    "valPass85": true,
+    "handPass70": true,
+    "offAct10": true,
+    "latency": true,
+    "validatorRejectsUnsafe": true
+  },
+  "val": {
+    "n": 150,
+    "passRate": 0.867,
+    "novelAmongPassed": 0.008,
+    "offActSentenceRate": 0,
+    "msPerReply": 57,
+    "rejectedExamples": [
+      [
+        "thanks",
+        "ok so great thank you today",
+        "And! time. Anything small you'd like to get done next?"
+      ],
+      [
+        "thanks",
+        "ngl thank you very much honestly",
+        "Any time."
+      ],
+      [
+        "howru",
+        "how are you this orning lol",
+        "Prety good! I'm a rabbit made of maths, and I like it when you drop by. How is your day going?"
+      ],
+      [
+        "howru",
+        "how r u ugh",
+        "That'm doing d. Mostly I'm happy you're here. Can you say that another somes?"
+      ],
+      [
+        "howru",
+        "hey how are you this morning thb",
+        "Prety good! I'm a rabbit made of maths, and I like it when you drop by. How are you?"
+      ],
+      [
+        "want_to_talk",
+        "listen i have news",
+        "That's lig etod here. Where would you like to begin?"
+      ]
+    ],
+    "samples": [
+      [
+        "greet",
+        "um hi friendd.",
+        "Hey, good to see you. Want to talk, or start something small?"
+      ],
+      [
+        "greet",
+        "wassup tbh",
+        "Hey! Welcome back. What's on your mind?"
+      ],
+      [
+        "greet",
+        "honestly heyy...",
+        "Hey! Welcome back. What's on your mind?"
+      ],
+      [
+        "greet",
+        "namaste again",
+        "Hey there. What's going on today?"
+      ],
+      [
+        "greet",
+        "hey again!",
+        "Hey, good to see you. What's going on today?"
+      ],
+      [
+        "greet",
+        "so heyy",
+        "Hey, good to see you. What's going on today?"
+      ],
+      [
+        "greet",
+        "idk but whats up :",
+        "Hey there. What's on your mind?"
+      ],
+      [
+        "greet",
+        "hey again today",
+        "Hey there. What's going on today?"
+      ],
+      [
+        "greet",
+        "um hi hows it going",
+        "Hey! Welcome back. What's on your mind?"
+      ],
+      [
+        "greet",
+        "uh hi rabbit today",
+        "Hey! Welcome back. What's on your mind?"
+      ],
+      [
+        "greet",
+        "uh hey there",
+        "Hey! Welcome back. What's on your mind?"
+      ],
+      [
+        "greet",
+        "morning pip tbh",
+        "Hey! Welcome back. What's going on today?"
+      ],
+      [
+        "greet",
+        "um sup lol",
+        "Hey there. What's on your mind?"
+      ],
+      [
+        "greet",
+        "um hello pip right now",
+        "Hey there. What's going on today?"
+      ]
+    ]
+  },
+  "hand": {
+    "n": 117,
+    "passRate": 0.915,
+    "novelAmongPassed": 0,
+    "offActSentenceRate": 0,
+    "msPerReply": 45,
+    "rejectedExamples": [
+      [
+        "howru",
+        "are you doing okay?",
+        "Prety good! I'm a rabbit made of maths, and I like it when you drop by. How are you?"
+      ],
+      [
+        "ask_break",
+        "is it fine if i rest for ten minutes",
+        "Of course. A real break is part of the work. How long do you want to rest?"
+      ],
+      [
+        "yes",
+        "yes please",
+        "llright. gooood. What' get?"
+      ],
+      [
+        "distract",
+        "can't focus at all today",
+        "It's easy to drift. Could you put it inother room for two minutes?"
+      ],
+      [
+        "want_to_talk",
+        "i want to vent",
+        "An'm l to bre. What's on your mind?"
+      ],
+      [
+        "vent",
+        "my boss really annoyed me today",
+        "That sounds exhausting. It sounds like something at home is on your mind. What part of it stayed with you the most?"
+      ]
+    ],
+    "samples": [
+      [
+        "greet",
+        "hey pip how's it going",
+        "Hey! Welcome back. Want to talk, or start something small?"
+      ],
+      [
+        "greet",
+        "good evening!",
+        "Hey, good to see you. Want to talk, or start something small?"
+      ],
+      [
+        "greet",
+        "heyyy",
+        "Hey! Welcome back. What's on your mind?"
+      ],
+      [
+        "thanks",
+        "thank you that actually helped",
+        "Any time. Anything small you'd like to get done next?"
+      ],
+      [
+        "thanks",
+        "nice one, cheers",
+        "Any time. Want to keep going, or take a breather?"
+      ],
+      [
+        "howru",
+        "how are you feeling today",
+        "Calm and cheerful, thanks. I'm software, so I don't get tired. How are you?"
+      ],
+      [
+        "unclear",
+        "i have no clue how to even begin this report",
+        "A vague task is hard to begin. What is the thing you're avoiding?"
+      ],
+      [
+        "unclear",
+        "i don't understand what step one is",
+        "A vague task is hard to begin. What's the first thing that comes to mind?"
+      ],
+      [
+        "unclear",
+        "where would you begin with a thesis?",
+        "That fog is normal when something is vague. What's the first thing that comes to mind?"
+      ],
+      [
+        "big",
+        "it's such a massive project i freeze",
+        "That does sound like a lot. What would a tiny version look like?"
+      ],
+      [
+        "big",
+        "there's just too much of it",
+        "That's a big one. What's the very first part?"
+      ],
+      [
+        "big",
+        "this assignment is gigantic",
+        "That's a big one. What's the very first part?"
+      ],
+      [
+        "boring",
+        "studying this is soooo dull",
+        "Tedious things are hard to face. What if we made it two minutes long?"
+      ],
+      [
+        "boring",
+        "i find revision unbelievably tedious",
+        "Boring is real. What's the most boring part?"
+      ]
+    ]
+  },
+  "file": {
+    "bytes": 503252
+  }
+}

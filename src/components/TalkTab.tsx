@@ -25,7 +25,7 @@ export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: Tal
           const turn = await respond(t, st0, ctx); stRef.current = turn.state;
           shareTurn({ x: t, prev: st0.last, act: turn.act, conf: turn.conf, via, unsure: turn.unsure }, { sensitive: turn.sensitive, names: [myName, pet.name] });
           await new Promise(r => setTimeout(r, 300 + Math.min(600, turn.reply.length * 5)));
-          setSt(turn.state); setMsgs(m => [...m, { id: uid(), from: "pip", text: turn.reply, ts: Date.now(), chips: turn.chips, act: turn.act, conf: turn.conf }]);
+          setSt(turn.state); setMsgs(m => [...m, { id: uid(), from: "pip", text: turn.reply, ts: Date.now(), chips: turn.chips, act: turn.act, conf: turn.conf, gen: turn.gen }]);
         } catch { setMsgs(m => [...m, { id: uid(), from: "pip", text: "Something went wrong on my side. Try again in a moment.", ts: Date.now() }]); }
       }
     } finally { running.current = false; setBusy(false); }
@@ -59,6 +59,7 @@ export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: Tal
           <div key={m.id} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[85%] rounded-3xl px-4 py-2.5 text-[15px] leading-snug ${m.from === "me" ? "bg-primary text-primary-foreground" : "glass"}`}>
               {m.from === "me" ? m.text : <span translate="no">{m.text}</span>}
+              {m.gen && <span className="mt-1 block text-[10px] opacity-60" translate="no">written by my own small model</span>}
               {m.chips && m.chips.length > 0 && i === msgs.length - 1 && <div className="mt-2 flex flex-wrap gap-2">{m.chips.map(c => <button key={c.label} onClick={() => chip(c)} className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm text-primary hover:bg-primary/20">{c.label}</button>)}</div>}
             </div>
           </div>))}
