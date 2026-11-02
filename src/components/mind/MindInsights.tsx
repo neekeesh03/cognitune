@@ -22,6 +22,17 @@ function drawProfile(p: ReturnType<typeof profile>, name: string): string {
   return c.toDataURL("image/png");
 }
 
+/** Small line chart of the last 30 days. Gaps are left empty, never filled in. */
+function Spark({ label, vals, unit, fmt }: { label: string; vals: (number | null)[]; unit: string; fmt?: (n: number) => string }) {
+  const pts = vals.map((v, i) => (v == null ? null : { v, i })).filter((x): x is { v: number; i: number } => x != null);
+  if (pts.length < 4) return <div className="text-sm"><b>{label}</b><Help>Needs about 4 days of entries ({pts.length} so far).</Help></div>;
+  const lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v)), span = hi - lo || 1, W = 300, H = 56, n = vals.length - 1 || 1;
+  const x = (i: number) => 4 + (i / n) * (W - 8), y = (v: number) => H - 6 - ((v - lo) / span) * (H - 12);
+  const avg = pts.reduce((a, p) => a + p.v, 0) / pts.length; const f = fmt ?? ((v: number) => String(Math.round(v * 10) / 10));
+  return <div className="space-y-1"><div className="flex items-baseline justify-between text-sm"><b>{label}</b><span className="text-xs text-muted-foreground">average {f(avg)}{unit} · {f(lo)} to {f(hi)}</span></div>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${label} over the last 30 days, average ${f(avg)}${unit}`}><polyline fill="none" stroke="hsl(var(--primary))" strokeWidth="2" strokeLinejoin="round" points={pts.map(p => `${x(p.i)},${y(p.v)}`).join(" ")} />{pts.map(p => <circle key={p.i} cx={x(p.i)} cy={y(p.v)} r="2.5" fill="hsl(var(--primary))" />)}</svg></div>;
+}
+
 /** Your patterns: what your own data says, what is changing, and what to try next. */
 export function Insights({ mind, update, done, back, go }: MindProps) {
   const starts = loadLog().starts.map(s => s.ts); const now = Date.now(); const rows = dayTable(mind, starts, now); const active = activeDays(rows);
@@ -50,6 +61,10 @@ export function Insights({ mind, update, done, back, go }: MindProps) {
       {drv.length === 0 && need === 0 && <Card><p className="text-sm">No habit stands out yet. That is an answer too: nothing you track clearly changes how often you start. Keep logging, or try the experiments to test ideas directly.</p></Card>}
 
       {tr.length > 0 && <Card className="space-y-2"><div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What is changing</div>{tr.slice(0, 4).map(t => <p key={t.label} className="text-sm"><span className={`me-2 inline-block h-2 w-2 rounded-full ${t.good ? "bg-[hsl(var(--v-ready))]" : "bg-[hsl(var(--v-notready))]"}`} />{t.text}</p>)}<Help>Trends need at least 5 data points and a clear direction.</Help></Card>}
+
+      {active >= 4 && (() => { const r30 = rows.slice(-30); return <Card className="space-y-3"><div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your last 30 days</div>
+        <Spark label="Starts per day" vals={r30.map(r => r.starts)} unit="" /><Spark label="Sleep" vals={r30.map(r => r.sleepH)} unit=" h" /><Spark label="Energy (1 to 5)" vals={r30.map(r => r.energy)} unit="" /><Spark label="Mood" vals={r30.map(r => r.mood)} unit="" />
+        <Help>Days with no entry are left blank, not filled in. Look for shape over weeks, not single days.</Help></Card>; })()}
 
       {eff.length > 0 && <Card className="space-y-2"><div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What works for you</div><Help>Average relief after each tool, from your own before-and-after ratings. Small samples are pulled toward the middle so one lucky try does not top the list.</Help>
         {eff.slice(0, 6).map(e => <div key={e.name} className="space-y-0.5"><div className="flex items-center justify-between gap-2 text-sm"><button onClick={() => go(e.view)} className="text-start underline-offset-2 hover:underline">{e.name}</button><span className="text-xs text-muted-foreground">{e.n}x</span></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className={`h-full ${e.shrunk >= 0 ? "bg-primary" : "bg-[hsl(var(--v-notready))]"}`} style={{ width: `${Math.max(4, Math.min(100, Math.abs(e.shrunk) * 200))}%` }} /></div></div>)}</Card>}
