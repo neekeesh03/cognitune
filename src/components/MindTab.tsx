@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MoodMap, FocusTap } from "@/components/mind/MindSense";
+import { TypeFlow, StroopTask, SwitchTask, TraceTask } from "@/components/mind/MindTasks";
 import { LagunLab } from "@/components/mind/MindLagun";
 import { SteadyHand, EyeCheck } from "@/components/mind/MindBody";
 import { HeartCheck } from "@/components/mind/MindCamera";
@@ -38,6 +39,10 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
   ] },
   { title: "Read me, no questions", sub: "Games, camera and phone sensors. Nothing to answer", items: [
     { id: "lagun", title: "Lagun's Law, measured", line: "Your six forces from games and sensors, plus research mode", icon: Gauge, tag: "research" },
+    { id: "typeflow", title: "Type flow", line: "30 seconds of typing reads start, rhythm and focus", icon: Activity, tag: "typing" },
+    { id: "stroop", title: "Colour clash", line: "Stroop, with your own task words", icon: Brain, tag: "attention" },
+    { id: "switch", title: "Rule switch", line: "How easily your mind changes gears", icon: Zap, tag: "game" },
+    { id: "trace", title: "Trace", line: "Follow a dot: smoothness and steadiness", icon: Gauge, tag: "motor" },
     { id: "moodmap", title: "Mood map", line: "One tap on a picture, no questions", icon: Zap, tag: "5 sec" },
     { id: "quiet", title: "Quiet read", line: "How you seem to be, nothing to answer", icon: Activity, tag: "no input" },
     { id: "heart", title: "Heart check", line: "Fingertip or face on the camera: pulse and calm", icon: HeartHandshake, tag: "camera" },
@@ -94,7 +99,7 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
     { id: "data", title: "Your data", line: "Export, print, or delete", icon: Shield, tag: "private" },
   ] },
 ];
-const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, letter: Letter, window: WindowTool, insights: Insights, skills: Skills, anger: Anger, phone: Phone, anchor: Anchor, ledger: Ledger, reach: Reach, kindness: KindThing, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, moodmap: MoodMap, focustap: FocusTap, holdback: HoldBack, recall: PatternRecall, quiet: QuietRead, heart: HeartCheck, hand: SteadyHand, eyes: EyeCheck, lagun: LagunLab, data: Data };
+const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, letter: Letter, window: WindowTool, insights: Insights, skills: Skills, anger: Anger, phone: Phone, anchor: Anchor, ledger: Ledger, reach: Reach, kindness: KindThing, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, moodmap: MoodMap, focustap: FocusTap, holdback: HoldBack, recall: PatternRecall, quiet: QuietRead, heart: HeartCheck, hand: SteadyHand, eyes: EyeCheck, lagun: LagunLab, typeflow: TypeFlow, stroop: StroopTask, switch: SwitchTask, trace: TraceTask, data: Data };
 
 interface Props { schedule?: (title: string, day: string, start: number, dur: number) => void; tasks?: { id: string; title: string }[]; onStart: (title: string, step: string) => void; onSpark: () => void; friends?: { id: string; name: string; last: number | null }[]; openChat?: (id: string, draft: string) => void }
 /** The Mind tab: a hub of short, evidence-based tools. Everything is stored on this device. */

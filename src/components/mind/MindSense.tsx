@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { exGauss, entropy, sd, mean } from "@/engine/signals";
 import { Card, Help, Primary, Saved, Screen, type MindProps } from "@/components/mind/MindParts";
 
 const ghost = "rounded-full border border-border px-4 py-2 text-sm";
@@ -31,7 +32,7 @@ export function MoodMap({ mind, update, done, back, go }: MindProps) {
 }
 
 // ---- Focus tap: a 40-second reaction game. Your own speed against your own usual ----
-const KEY = "lagomo.reflex.v1"; interface Run { ts: number; med: number; lapses: number; early: number; n: number }
+const KEY = "lagomo.reflex.v1"; interface Run { ts: number; med: number; lapses: number; early: number; n: number; tau?: number; cv?: number; ent?: number }
 const loadRuns = (): Run[] => { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } };
 const TRIALS = 10;
 export function FocusTap({ done, back, go }: MindProps) {
@@ -40,7 +41,7 @@ export function FocusTap({ done, back, go }: MindProps) {
   useEffect(() => () => window.clearTimeout(timer.current), []);
   const next = () => { setPhase("wait"); timer.current = window.setTimeout(() => { t0.current = performance.now(); setPhase("go"); }, 1200 + Math.random() * 2800); };
   const finish = () => {
-    const med = Math.round(median(rts.current)); const run: Run = { ts: Date.now(), med, lapses: rts.current.filter(x => x > 500).length, early: early.current, n: rts.current.length };
+    const med = Math.round(median(rts.current)); const ex = exGauss(rts.current); const run: Run = { ts: Date.now(), med, lapses: rts.current.filter(x => x > 500).length, early: early.current, n: rts.current.length, tau: Math.round(ex.tau), cv: Math.round((sd(rts.current) / (mean(rts.current) || 1)) * 1000) / 1000, ent: Math.round(entropy(rts.current, 8, 150, 1500) * 1000) / 1000 };
     runs.current = [...runs.current, run].slice(-60); try { localStorage.setItem(KEY, JSON.stringify(runs.current)); } catch { /* ignore */ } setRes(run); setPhase("end"); done("focus");
   };
   const tap = () => {

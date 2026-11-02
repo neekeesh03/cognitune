@@ -1,5 +1,6 @@
 // Local store for the measured Lagun's Law readings. Everything stays on this device unless "share for research" is switched on.
 import { loadLog } from "@/lib/startlog";
+import { attention } from "@/engine/attention";
 import { loadMind } from "@/store/useMind";
 import { gameStore } from "@/engine/games";
 import { loadState } from "@/engine/insights";
@@ -19,13 +20,13 @@ const saveRecs = (r: Rec[]) => ls.set(K_RECS, JSON.stringify(r.slice(-3000)));
 export function pid(): string { let p = ls.get(K_PID); if (!p) { p = Array.from(crypto.getRandomValues(new Uint8Array(9)), b => b.toString(36).padStart(2, "0")).join("").slice(0, 16); ls.set(K_PID, p); } return p; }
 export const deleteResearch = () => { [K_RECS, K_SENT, K_PID, K_ON, K_SHARE].forEach(ls.del); };
 
-const GK: GameKey[] = ["focus", "hold", "recall", "heart", "heartp", "heartf", "hand", "cursor", "eyes"];
+const GK: GameKey[] = ["focus", "hold", "recall", "heart", "heartp", "heartf", "hand", "cursor", "eyes", "type", "stroop", "switch", "trace"];
 export function gatherData(now = Date.now()): Data {
-  const log = loadLog(); const mind = loadMind(); const starts = log.starts.map(s => ({ ts: s.ts, created: s.created }));
+  const log = loadLog(); const mind = loadMind(); const starts = log.starts.map(s => ({ ts: s.ts, created: s.created, o: s.o }));
   const games = {} as Data["games"]; GK.forEach(k => { games[k] = gameStore(k as never) as never; });
   let deadline: number | null = null; try { const tasks = JSON.parse(ls.get("lagomo.tasks.v1") || "[]") as { due?: string; doneAt?: number }[]; let best: number | null = null; for (const t of tasks) { if (t.doneAt || !t.due) continue; const h = (new Date(t.due + "T23:59").getTime() - now) / 36e5; if (h > -24 && (best === null || h < best)) best = h; } if (best !== null) deadline = 1 / (1 + Math.exp(-(72 - best) / 12)); } catch { /* ignore */ }
   const load = (() => { try { return loadState(mind, starts.map(s => s.ts), now).state; } catch { return null; } })();
-  return { now, starts, games, pulse: mind.pulse ?? [], load, deadline, pb: log.starts.length >= 3 ? hourWindowRate(log, now) : null };
+  return { now, starts, games, pulse: mind.pulse ?? [], load, deadline, tabs: attention(now), pb: log.starts.length >= 3 ? hourWindowRate(log, now) : null };
 }
 /** Today's reading from measured signals. Null when too little has been measured to say anything. */
 export function currentReading(now = Date.now()): Reading | null { const r = read(gatherData(now)); return r.measured.coverage >= 0.34 ? r : null; }

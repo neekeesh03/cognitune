@@ -4,19 +4,20 @@
 import { clamp, coreDrive, uncertainty, VAR_KEYS, type Inputs, type VarKey } from "./model";
 import { paperDrive } from "./pattern";
 
-export const PROTOCOL = "lagun-measured-v1";
-export type GameKey = "focus" | "hold" | "recall" | "heart" | "heartp" | "heartf" | "hand" | "cursor" | "eyes";
-export interface Run { ts: number; a: number; b: number; c: number }
+export const PROTOCOL = "lagun-measured-v2";
+export type GameKey = "focus" | "hold" | "recall" | "heart" | "heartp" | "heartf" | "hand" | "cursor" | "eyes" | "type" | "stroop" | "switch" | "trace";
+export interface Run { ts: number; a: number; b: number; c: number; x?: Record<string, number | null> }
 export interface Data {
   now: number;
-  starts: { ts: number; created?: number }[];
+  starts: { ts: number; created?: number; o?: "did" | "got" | "not" }[];
+  tabs?: { switches: number; entropy: number; awaySec: number; n: number };
   games: Partial<Record<GameKey, Run[]>>;
   pulse: { ts: number; e: number; m: number }[];
   load: "steady" | "stretched" | "low" | null;
   deadline: number | null; // 0..1 pressure, null when nothing is due
   pb: number | null; // chance of starting in this hour window from the personal start pattern
 }
-export interface Part { v: VarKey; label: string; value: number }
+export interface Part { v: VarKey; label: string; value: number; w: number }
 export interface Measured { inputs: Inputs; parts: Part[]; coverage: number; signals: number; raw: Record<string, number | null> }
 
 const H = 36e5, D = 864e5;
@@ -35,7 +36,7 @@ function recent(runs: Run[] | undefined, now: number, hrs: number) {
 }
 
 export function measure(d: Data): Measured {
-  const parts: Part[] = []; const raw: Record<string, number | null> = {}; const add = (v: VarKey, label: string, value: number | null) => { if (value != null && isFinite(value)) parts.push({ v, label, value: clampN(value, 0, 1) }); };
+  const parts: Part[] = []; const raw: Record<string, number | null> = {}; const add = (v: VarKey, label: string, value: number | null, w = 1) => { if (value != null && isFinite(value)) parts.push({ v, label, value: clampN(value, 0, 1), w }); };
   const now = d.now;
   // Primode: could you begin right now? alertness and how fast you usually get going
   const f = recent(d.games.focus, now, 36); raw.reaction_ms = f?.last.a ?? null; if (f) add("Primode", "Reaction speed", (() => { const r = rel(f.last.a, f.prior.map(x => x.a)); return r == null ? null : 1 - r; })());
@@ -68,8 +69,21 @@ export function measure(d: Data): Measured {
   if (hb) add("Slip", "Missed greens", clampN(hb.last.c / 8, 0, 1));
   const mp = d.pulse.filter(p => p.ts <= now && now - p.ts < 7 * D); if (mp.length >= 4) { const m = mp.reduce((s, p) => s + p.m, 0) / mp.length; const sd = Math.sqrt(mp.reduce((s, p) => s + (p.m - m) ** 2, 0) / mp.length); raw.mood_sd_7d = Math.round(sd * 100) / 100; add("Slip", "Mood swings this week", clampN(sd / 1.2, 0, 1)); }
   const hs = st.filter(s => now - s.ts < 14 * D).map(s => new Date(s.ts).getHours() + new Date(s.ts).getMinutes() / 60); if (hs.length >= 4) { const cx = hs.reduce((s, h) => s + Math.cos((2 * Math.PI * h) / 24), 0) / hs.length, cy = hs.reduce((s, h) => s + Math.sin((2 * Math.PI * h) / 24), 0) / hs.length; const R = Math.hypot(cx, cy); raw.start_hour_spread = Math.round((1 - R) * 100) / 100; add("Slip", "Irregular start times", clampN((1 - R) * 1.6, 0, 1)); }
+  // ---- v2: typing, switching, Stroop, tracing, RT distribution, tab switching, latent load, finishing rate (IJSRA Table 7 and 8, LTA Table 12 and 14, CTT Table 12) ----
+  const rx = (r: { last: Run; prior: Run[] } | null, key: (x: Run) => number | null | undefined) => { if (!r) return null; const c = key(r.last); if (c == null || !isFinite(c)) return null; return rel(c, r.prior.map(key).filter((x): x is number => x != null && isFinite(x))); };
+  const inv = (v: number | null) => (v == null ? null : 1 - v);
+  const ty = recent(d.games.type, now, 36); if (ty) { const g = (k: string) => (x: Run) => x.x?.[k]; raw.type_wpm = ty.last.a; raw.type_first_key_ms = ty.last.b; raw.type_accuracy_pct = ty.last.c; raw.type_cv = ty.last.x?.cv ?? null; raw.type_tau_ms = ty.last.x?.tau ?? null; raw.type_entropy = ty.last.x?.ent ?? null; raw.type_pauses = ty.last.x?.pauses ?? null; raw.type_hesitation = ty.last.x?.hes ?? null; raw.type_resume_ms = ty.last.x?.resume ?? null; raw.type_backspaces = ty.last.x?.back ?? null;
+    add("Primode", "Typing: first key", inv(rx(ty, x => x.b)), 1.2); add("CAP", "Typing: burst speed", rx(ty, g("burst")), 0.7); add("Flexion", "Typing: rhythm fluency", inv(rx(ty, g("ent"))), 0.8); add("Anchory", "Typing: long pauses", inv(rx(ty, g("pauses"))), 1);
+    add("Grain", "Typing: hesitation", rx(ty, g("hes")), 1); add("Grain", "Typing: delay to resume after a pause", rx(ty, g("resume")), 1.2); add("Grain", "Typing: corrections", rx(ty, g("back")), 0.6); add("Slip", "Typing: slow tail of key gaps", rx(ty, g("tau")), 1.2); add("Slip", "Typing: rhythm wobble", rx(ty, g("cv")), 1); add("Slip", "Typing: rhythm entropy", rx(ty, g("ent")), 0.6); }
+  const sw = recent(d.games.switch, now, 36); if (sw) { raw.switch_cost_ms = sw.last.a; add("Flexion", "Rule-switch cost", inv(rx(sw, x => x.a)), 1.3); }
+  const sp = recent(d.games.stroop, now, 36); if (sp) { raw.stroop_clash_ms = sp.last.a; raw.stroop_task_words_ms = sp.last.x?.emo ?? null; add("Anchory", "Colour clash cost", inv(rx(sp, x => x.a)), 1.3); add("CAP", "Slower on your own task words", rx(sp, x => x.x?.emo), 0.8); add("Slip", "Answer-time wobble (Stroop)", rx(sp, x => x.x?.cv), 0.6); }
+  const tc = recent(d.games.trace, now, 36); if (tc) { raw.trace_error = tc.last.a; raw.trace_noise_px = tc.last.b; raw.trace_smoothness = tc.last.x?.ldlj ?? null; add("Flexion", "Movement smoothness", rx(tc, x => x.x?.ldlj), 1); add("Slip", "Movement wobble", rx(tc, x => x.b), 1); add("Anchory", "Staying on the dot", inv(rx(tc, x => x.a)), 0.8); }
+  if (f) { const fx = (k: string) => rx(f, x => x.x?.[k]); raw.reaction_tau_ms = f.last.x?.tau ?? null; raw.reaction_cv = f.last.x?.cv ?? null; add("Slip", "Reaction slow tail", fx("tau"), 1.2); add("Slip", "Reaction wobble", fx("cv"), 0.8); add("Slip", "Reaction entropy", fx("ent"), 0.6); }
+  if (d.tabs && d.tabs.n >= 2) { raw.tab_switches_30m = d.tabs.switches; raw.tab_entropy = d.tabs.entropy; raw.tab_away_sec = d.tabs.awaySec; add("Anchory", "Tab switching while Lagomo is open", 1 - clampN(d.tabs.switches / 6, 0, 1), 0.6); }
+  { const hv = hrRun ? rel(hrRun.r.last.b, hrRun.r.prior.map(x => x.b)) : null; const te = d.tabs && d.tabs.n >= 2 ? d.tabs.entropy : null; if (hv != null || te != null) { const ll = (hv != null ? 0.5 * (1 - hv) : 0.25) + (te != null ? 0.5 * te : 0.25); raw.latent_load = Math.round(ll * 1000) / 1000; add("Grain", "Latent load (heart variability and tab entropy)", ll, 0.8); } }
+  { const oc = st.filter(x => now - x.ts < 14 * D && x.o); if (oc.length >= 4) { const dr = oc.filter(x => x.o === "not").length / oc.length; raw.dropout_rate = Math.round(dr * 100) / 100; add("Flexion", "Finishing what you start", 1 - dr, 0.6); } }
   const inputs = {} as Inputs; let covered = 0;
-  for (const k of VAR_KEYS) { const ps = parts.filter(p => p.v === k); if (ps.length) covered++; inputs[k] = ps.length ? clampN(ps.reduce((s, p) => s + p.value, 0) / ps.length, 0.05, 0.95) : 0.5; }
+  for (const k of VAR_KEYS) { const ps = parts.filter(p => p.v === k); if (ps.length) covered++; inputs[k] = ps.length ? clampN(ps.reduce((s, p) => s + p.value * p.w, 0) / ps.reduce((s, p) => s + p.w, 0), 0.05, 0.95) : 0.5; }
   return { inputs, parts, coverage: covered / 6, signals: parts.length, raw };
 }
 
