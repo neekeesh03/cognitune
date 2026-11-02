@@ -24,7 +24,7 @@ export function HoldBack({ done, back, go }: MindProps) {
     const r = R.current; if (r.i >= N) return finish();
     r.i++; setN(r.i); r.answered = false; r.kind = Math.random() < 0.25 && r.i > 2 ? "stop" : "go"; if (r.kind === "stop") r.nogo++;
     setStim(r.kind); r.t0 = performance.now();
-    later(() => { if (!r.answered) { r.answered = true; if (r.kind === "go") r.om++; setStim(null); later(trial, 450); } }, 800);
+    const id = r.i; later(() => { if (r.i === id && !r.answered) { r.answered = true; if (r.kind === "go") r.om++; setStim(null); later(trial, 450); } }, 800); // id check: an old round's timer must not end the next round
   };
   const tap = () => {
     const r = R.current;
