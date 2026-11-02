@@ -38,9 +38,9 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
   { title: "Read me, no questions", sub: "Games, camera and phone sensors. Nothing to answer", items: [
     { id: "moodmap", title: "Mood map", line: "One tap on a picture, no questions", icon: Zap, tag: "5 sec" },
     { id: "quiet", title: "Quiet read", line: "How you seem to be, nothing to answer", icon: Activity, tag: "no input" },
-    { id: "heart", title: "Heart check", line: "Fingertip on the camera: pulse and calm", icon: HeartHandshake, tag: "camera" },
+    { id: "heart", title: "Heart check", line: "Fingertip or face on the camera: pulse and calm", icon: HeartHandshake, tag: "camera" },
     { id: "eyes", title: "Eye check", line: "Front camera: blinks show tiredness", icon: Moon, tag: "camera" },
-    { id: "hand", title: "Steady hand", line: "Phone sensor: how steady is your hand?", icon: Gauge, tag: "sensor" },
+    { id: "hand", title: "Steady hand", line: "Phone sensor or mouse: how steady is your hand?", icon: Gauge, tag: "sensor" },
     { id: "holdback", title: "Hold back", line: "A go / no-go game for impulse control", icon: Zap, tag: "game" },
     { id: "recall", title: "Pattern recall", line: "A memory game: how roomy is your head?", icon: Brain, tag: "game" },
     { id: "focustap", title: "Focus tap", line: "A 40-second game that reads your alertness", icon: Activity, tag: "game" },

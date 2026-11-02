@@ -21,8 +21,9 @@ export function HeartCheck({ done, back, go }: MindProps) {
       const v = vid.current!; v.srcObject = stream.current; await v.play();
       const W = v.videoWidth || 640, H = v.videoHeight || 480; const cn = document.createElement("canvas"); cn.width = W; cn.height = H; const g = cn.getContext("2d", { willReadFrequently: true })!;
       const T: number[] = [], V: number[] = [], disp: number[] = []; const t0 = performance.now(); let roi: { x: number; y: number; w: number; h: number } | null = null, n = 0, lastT = -1; setPhase("run");
-      const step = () => {
-        if (!lmRef.current) return; const now = performance.now() - t0;
+      type Meta = { mediaTime: number; captureTime?: number }; const vv = v as HTMLVideoElement & { requestVideoFrameCallback?: (cb: (n: number, m: Meta) => void) => number };
+      const step = (_n?: number, meta?: Meta) => {
+        if (!lmRef.current) return; const now = (meta?.captureTime ?? performance.now()) - t0;
         if (v.currentTime !== lastT && v.readyState >= 2) {
           lastT = v.currentTime; g.drawImage(v, 0, 0, W, H);
           if (n++ % 6 === 0) { const pts = lmRef.current.detectForVideo(v, performance.now()).faceLandmarks?.[0];
@@ -32,9 +33,9 @@ export function HeartCheck({ done, back, go }: MindProps) {
         }
         setSecs(Math.min(DUR, Math.round(now / 1000)));
         if (now >= DUR * 1000) { stop(); const out = analysePpg(T, V); setRes(out); setPhase("end"); if (out.ok) { saveGame("heartf", { ts: Date.now(), a: out.hr, b: out.rmssd, c: out.quality }); done("heart"); } return; }
-        rafId.current = requestAnimationFrame(step);
+        if (vv.requestVideoFrameCallback) vv.requestVideoFrameCallback(step); else rafId.current = requestAnimationFrame(step);
       };
-      rafId.current = requestAnimationFrame(step);
+      if (vv.requestVideoFrameCallback) vv.requestVideoFrameCallback(step); else rafId.current = requestAnimationFrame(step);
     } catch { stop(); setErr("I could not start the face version. It needs the camera and a one-time download of a small model (about 13 MB). Check your connection and camera permission, or skip this one."); setPhase("idle"); }
   };
   const begin = async () => {
@@ -47,14 +48,16 @@ export function HeartCheck({ done, back, go }: MindProps) {
       const v = vid.current!; v.srcObject = s; await v.play();
       const c = document.createElement("canvas"); c.width = 24; c.height = 24; const g = c.getContext("2d", { willReadFrequently: true })!;
       const T: number[] = [], V: number[] = [], disp: number[] = []; const t0 = performance.now(); setPhase("run");
-      loop.current = window.setInterval(() => {
-        const now = performance.now() - t0; g.drawImage(v, 0, 0, 24, 24); const d = g.getImageData(0, 0, 24, 24).data; let r = 0, gr = 0, bl = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; bl += d[i + 2]; } const n = d.length / 4; r /= n; gr /= n; bl /= n;
+      const tick = (tsMs: number) => {
+        const now = tsMs - t0; g.drawImage(v, 0, 0, 24, 24); const d = g.getImageData(0, 0, 24, 24).data; let r = 0, gr = 0, bl = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; bl += d[i + 2]; } const n = d.length / 4; r /= n; gr /= n; bl /= n;
         const cov = r > 90 && r > 1.6 * (gr + bl) / 2; setCovered(cov);
         if (cov && now > 4000) { T.push(now); V.push(r); disp.push(r); if (disp.length > 150) disp.shift(); }
         const cv = wave.current; if (cv && disp.length > 5) { const x = cv.getContext("2d")!; x.clearRect(0, 0, cv.width, cv.height); const mn = Math.min(...disp), mx = Math.max(...disp) || 1; x.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--primary") ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()})` : "#447d58"; x.lineWidth = 2; x.beginPath(); disp.forEach((p, i) => { const px = (i / 150) * cv.width, py = cv.height - ((p - mn) / (mx - mn || 1)) * (cv.height - 8) - 4; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke(); }
         setSecs(Math.min(DUR, Math.round(now / 1000)));
         if (now >= DUR * 1000) { stop(); const out = analysePpg(T, V); setRes(out); setPhase("end"); if (out.ok) { saveGame(paceRef.current ? "heartp" : "heart", { ts: Date.now(), a: out.hr, b: out.rmssd, c: out.quality }); done("heart"); } }
-      }, 33);
+      };
+      type Meta = { mediaTime: number; captureTime?: number }; const vv = v as HTMLVideoElement & { requestVideoFrameCallback?: (cb: (n: number, m: Meta) => void) => number };
+      if (vv.requestVideoFrameCallback) { let m0 = -1; const cbk = (_n: number, m: Meta) => { if (m0 < 0) m0 = m.mediaTime; tick(m.captureTime ?? t0 + (m.mediaTime - m0) * 1000); if (stream.current) vv.requestVideoFrameCallback!(cbk); }; vv.requestVideoFrameCallback(cbk); } else loop.current = window.setInterval(() => tick(performance.now()), 33);
     } catch { stop(); setErr("I could not open the camera. Allow camera access in your browser, or skip this one. Nothing else in the app needs it."); setPhase("idle"); }
   };
   const used = mode === "face" ? priorF : pace ? priorP : prior; const base = used.current.length >= 3 ? median(used.current.slice(-15).map(g => g.b)) : null; const bhr = used.current.length >= 3 ? median(used.current.slice(-15).map(g => g.a)) : null;
