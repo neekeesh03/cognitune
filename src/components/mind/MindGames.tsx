@@ -116,3 +116,5 @@ export function QuietRead({ mind, back, go }: MindProps) {
     </Screen>
   );
 }
+
+// last checked with 24 simulated testers
