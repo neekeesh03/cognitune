@@ -14,6 +14,7 @@ import { ROWS12 } from "./entries12";
 import { ROWS13 } from "./entries13";
 import { ROWS14, NE14 } from "./entries14";
 import { EXTRA14, ROWS15 } from "./patterns14";
+import { ROWS16 } from "./entries15";
 import * as NE2 from "./lang_ne2";
 import * as SI from "./lang_si";
 import * as DZ from "./lang_dz";
@@ -25,4 +26,5 @@ export const entries: Record<Exclude<Lang, "en">, Record<string, string>> = { zh
 export const PATS: Record<New, Record<string, string>> = { si: SI.PAT, dz: DZ.PAT, ne: NE.PAT };
 for (const row of [...ROWS1, ...ROWS2, ...ROWS3, ...ROWS4, ...ROWS5, ...ROWS6, ...ROWS7, ...ROWS8, ...ROWS9, ...ROWS10, ...ROWS11, ...ROWS12, ...ROWS13, ...ROWS14]) for (const l of ["zh", "fa", "id"] as const) entries[l][row[0]] = row[IDX[l]];
 for (const r of ROWS15) { entries.zh[r[0]] = r[1]; entries.fa[r[0]] = r[2]; entries.id[r[0]] = r[3]; entries.ne[r[0]] = r[4]; }
+for (const r of ROWS16) { entries.zh[r[0]] = r[1]; entries.fa[r[0]] = r[2]; entries.id[r[0]] = r[3]; entries.ne[r[0]] = r[4]; }
 export { EXTRA14 };
