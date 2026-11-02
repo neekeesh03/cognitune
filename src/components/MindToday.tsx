@@ -4,6 +4,7 @@ import { useState } from "react";
 import { pickMindAll, type Pick } from "@/engine/mind";
 import { adaptivePick, bestWindow, loadState, toolEfficacy, topInsightCached as topInsight } from "@/engine/insights";
 import { loadPickFb, recordPick, retune } from "@/engine/pickfb";
+import { nextGame } from "@/engine/games";
 import { loadLog } from "@/lib/startlog";
 import { openMind } from "@/components/MindTab";
 
@@ -17,8 +18,12 @@ export function MindToday({ go, onStart }: { go: (t: string) => void; onStart?: 
   const letterPick: Pick[] = sunday ? [{ view: "letter", title: "Your weekly letter is ready", line: "A kind write-up of your week from your own data, plus one thing to try.", cta: "Read", why: "Your data" }] : [];
   const win = bestWindow(mind, starts); const winDone = (() => { try { return localStorage.getItem("lagomo.window.day") === new Date().toDateString(); } catch { return false; } })(); const h = new Date().getHours();
   const winPick: Pick[] = win && !winDone && (h >= 17 || h < 9) && starts.length >= 3 ? [{ view: "window", title: "Put your hardest task in your best window", line: `Your energy is highest ${win.phrase}. Schedule the task you dread there.`, cta: "Schedule", why: "Your own data" }] : [];
+  const ng = nextGame(); const gh = new Date().getHours(); const gameInfo = { focustap: ["Focus tap", "A 40-second game: tap when the circle turns green. Shows how alert you are."], holdback: ["Hold back", "A 40-second game: tap green, not red. Shows how rushed or steady you are."], recall: ["Pattern recall", "A short memory game. Shows how roomy your head is today."] } as const;
+  const gamePick: Pick[] = ng && gh >= 8 && gh < 21 && starts.length >= 1 ? [{ view: ng, title: gameInfo[ng][0], line: gameInfo[ng][1], cta: "Play", why: "Behavioural measure" }] : [];
+  const quietDue = starts.length >= 8 && (() => { try { return Date.now() - +(localStorage.getItem("lagomo.quiet.ts") || 0) > 3 * 864e5; } catch { return false; } })();
+  const quietPick: Pick[] = quietDue ? [{ view: "quiet", title: "Quiet read", line: "See how you seem to be from your own timing, with nothing to answer.", cta: "Read", why: "Your data" }] : [];
   const adapt = adaptivePick(mind); const base = pickMindAll(mind, starts);
-  const all = hidden ? [] : retune([...lightPicks, ...letterPick, ...base.slice(0, 1), ...winPick, ...(adapt ? [adapt] : []), ...base.slice(1)], loadPickFb(), lightPicks.length + letterPick.length); const pick = all.length ? all[skip % all.length] : null;
+  const all = hidden ? [] : retune([...lightPicks, ...letterPick, ...base.slice(0, 1), ...winPick, ...(adapt ? [adapt] : []), ...gamePick, ...quietPick, ...base.slice(1)], loadPickFb(), lightPicks.length + letterPick.length); const pick = all.length ? all[skip % all.length] : null;
   const insight = hidden ? null : topInsight(mind, starts); const ld = loadState(mind, starts);
   const woop = mind.woop[mind.woop.length - 1]; const today = woop && new Date(woop.ts).toDateString() === new Date().toDateString() ? woop : null;
   const parked = (mind.park ?? []).filter(p => !p.resumed && Date.now() - p.ts < 2 * 864e5).slice(-1)[0];
