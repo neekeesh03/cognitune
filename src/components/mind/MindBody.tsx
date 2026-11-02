@@ -3,24 +3,25 @@ import { Card, Help, Screen, type MindProps } from "@/components/mind/MindParts"
 import { analyseTremor, type TremorResult } from "@/engine/tremor";
 import { analyseBlinks, type BlinkResult, type Frame } from "@/engine/blink";
 import { gameStore, saveGame } from "@/engine/games";
+import { SteadyCursor } from "@/components/mind/MindCursor";
 
 const ghost = "rounded-full border border-border px-4 py-2 text-sm"; const prim = "rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground";
 const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; };
 
 // ---- Steady hand: hold the phone still, the motion sensor reads the tiny shake ----
 const HDUR = 20;
-export function SteadyHand({ done, back, go }: MindProps) {
+function SteadyPhone({ done, back, go, onNoSensor }: MindProps & { onNoSensor: () => void }) {
   const [phase, setPhase] = useState<"idle" | "count" | "run" | "end">("idle"); const [secs, setSecs] = useState(0); const [err, setErr] = useState(""); const [res, setRes] = useState<TremorResult | null>(null);
   const buf = useRef<{ t: number[]; x: number[]; y: number[]; z: number[] }>({ t: [], x: [], y: [], z: [] }); const timers = useRef<number[]>([]); const handler = useRef<((e: DeviceMotionEvent) => void) | null>(null); const prior = useRef(gameStore("hand"));
   const cleanup = () => { timers.current.forEach(t => window.clearTimeout(t)); timers.current = []; if (handler.current) window.removeEventListener("devicemotion", handler.current); handler.current = null; };
   useEffect(() => cleanup, []);
   const begin = async () => {
     setErr("");
-    if (typeof DeviceMotionEvent === "undefined") { setErr("This device has no motion sensor. Try it on your phone."); return; }
+    if (typeof DeviceMotionEvent === "undefined") { setErr("This device has no motion sensor."); onNoSensor(); return; }
     const D = DeviceMotionEvent as unknown as { requestPermission?: () => Promise<string> };
     try { if (D.requestPermission && (await D.requestPermission()) !== "granted") { setErr("Motion access was not allowed. You can allow it in your browser settings, or skip this one."); return; } } catch { setErr("Motion access was not allowed."); return; }
     let got = false; const probe = (e: DeviceMotionEvent) => { if (e.accelerationIncludingGravity?.x != null) got = true; }; window.addEventListener("devicemotion", probe);
-    await new Promise(r => setTimeout(r, 600)); window.removeEventListener("devicemotion", probe); if (!got) { setErr("No motion readings came through. This works on phones, not on most computers."); return; }
+    await new Promise(r => setTimeout(r, 600)); window.removeEventListener("devicemotion", probe); if (!got) { setErr("No motion readings came through. Phones have this sensor, most laptops do not."); onNoSensor(); return; }
     setPhase("count"); setSecs(3); [1, 2].forEach(i => timers.current.push(window.setTimeout(() => setSecs(3 - i), i * 1000)));
     timers.current.push(window.setTimeout(() => {
       buf.current = { t: [], x: [], y: [], z: [] }; const t0 = performance.now();
@@ -101,4 +102,11 @@ export function EyeCheck({ done, back, go }: MindProps) {
         : <Card className="space-y-2"><p className="text-sm">{res.reason}</p><button onClick={() => { setRes(null); setPhase("idle"); }} className={ghost}>Try again</button></Card>)}
     </Screen>
   );
+}
+
+/** Phone: motion sensor. Laptop (no sensor): pointer steadiness instead. */
+export function SteadyHand(p: MindProps) {
+  const [cursor, setCursor] = useState(() => typeof DeviceMotionEvent === "undefined" || !(navigator.maxTouchPoints > 0)); const [offer, setOffer] = useState(false);
+  if (cursor) return <SteadyCursor {...p} />;
+  return <><SteadyPhone {...p} onNoSensor={() => setOffer(true)} />{offer && <div className="mx-auto mt-3 max-w-xl"><button onClick={() => setCursor(true)} className="rounded-full bg-primary px-5 py-2.5 text-sm text-primary-foreground">Use my mouse or trackpad instead</button></div>}</>;
 }
