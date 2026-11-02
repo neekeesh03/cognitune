@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BUNDLE_IDEAS, TMT_LEVERS, WHEEL, avg, clock, energyMap, parseClock, sleepAdvice, sleepNight, sleepSummary, tmtAdvice, tmtIndex, type SleepNight } from "@/engine/mind";
-import { INSTRUMENTS, scoreOf } from "@/engine/mind";
+import { INSTRUMENTS, fmtScore, scoreOf } from "@/engine/mind";
 import { loadLog } from "@/lib/startlog";
 import { emptyMind, saveMind, sameDay } from "@/store/useMind";
 import { Card, Field, Help, Pills, Primary, Rate, Saved, Screen, Spark, type MindProps } from "@/components/mind/MindParts";
@@ -55,12 +55,12 @@ export function Compass({ mind, update, done, back, onStart }: MindProps) {
 }
 
 /** Behavioural experiment: test a prediction in real life, compare, and note what you learned. */
-export function Experiment({ mind, update, done, back }: MindProps) {
+export function Experiment({ mind, update, done, back, preset }: MindProps & { preset?: "enough" }) {
   const open = mind.exps.filter(e => e.outcome === undefined); const [pick, setPick] = useState<number | null>(open.length ? open[open.length - 1].ts : null);
   const [belief, setBelief] = useState(""); const [before, setBefore] = useState(70); const [test, setTest] = useState(""); const [outcome, setOutcome] = useState(""); const [after, setAfter] = useState(40); const [learn, setLearn] = useState(""); const [made, setMade] = useState(false); const [closed, setClosed] = useState(false);
   const cur = mind.exps.find(e => e.ts === pick);
   return (
-    <Screen title="Test a worry" sub="Thoughts get weaker when you test them, not only when you argue with them." back={back} credit="Behavioural experiments (CBT). In a 2012 trial (n = 91), one experiment shifted beliefs and behaviour about as well as a thought record, with a small early advantage.">
+    <Screen title={preset === "enough" ? "Good-enough test" : "Test a worry"} sub={preset === "enough" ? "Hand in or share a deliberately 80% version and see what really happens." : "Thoughts get weaker when you test them, not only when you argue with them."} back={back} credit="Behavioural experiments (CBT). In a 2012 trial (n = 91), one experiment shifted beliefs and behaviour about as well as a thought record, with a small early advantage. Perfectionism programmes use this kind of test; internet CBT for perfectionism helped students, with low module completion.">
       {cur && !closed ? <>
         <Card className="space-y-1 text-sm"><div className="text-xs text-muted-foreground">Your experiment</div><div><b>Prediction:</b> {cur.belief} ({cur.before}% sure)</div><div><b>Test:</b> {cur.test}</div></Card>
         <Card className="space-y-3"><div className="font-medium">After you tried it</div><Field label="What actually happened?" value={outcome} onChange={setOutcome} rows={2} /><Rate label="How sure are you of the original prediction now?" value={after} onChange={setAfter} lo="Not at all" hi="Completely" /><Field label="What did you learn?" value={learn} onChange={setLearn} rows={2} />
@@ -201,7 +201,7 @@ export function Data({ mind, back }: MindProps) {
   const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
   const summary = () => {
     const f = (ts: number) => new Date(ts).toLocaleDateString(); const rows: string[] = [];
-    (["who5", "phq9", "gad7", "asrs6"] as const).forEach(id => { const h = mind.checks.filter(c => c.id === id); if (!h.length) return; rows.push(`<h2>${esc(INSTRUMENTS[id].title)}</h2><table><tr><th>Date</th><th>Score</th><th>Band</th></tr>${h.map(c => { const r = scoreOf(id, c.a); return `<tr><td>${f(c.ts)}</td><td>${id === "who5" ? r.score + "%" : r.score}</td><td>${esc(r.band)}</td></tr>`; }).join("")}</table><p class="s">${esc(INSTRUMENTS[id].credit)}</p>`); });
+    (Object.keys(INSTRUMENTS) as (keyof typeof INSTRUMENTS)[]).forEach(id => { const h = mind.checks.filter(c => c.id === id); if (!h.length) return; rows.push(`<h2>${esc(INSTRUMENTS[id].title)}</h2><table><tr><th>Date</th><th>Score</th><th>Band</th></tr>${h.map(c => { const r = scoreOf(id, c.a); return `<tr><td>${f(c.ts)}</td><td>${fmtScore(id, r)}</td><td>${esc(r.band)}</td></tr>`; }).join("")}</table><p class="s">${esc(INSTRUMENTS[id].credit)}</p>`); });
     if (mind.sleep.length) rows.push(`<h2>Sleep diary (last 14)</h2><table><tr><th>Date</th><th>Time asleep</th><th>Efficiency</th><th>Rested (1-5)</th></tr>${mind.sleep.slice(-14).map(n => { const s = sleepNight(n); return `<tr><td>${n.day}</td><td>${Math.floor(s.tst / 60)}h ${s.tst % 60}m</td><td>${s.se}%</td><td>${n.q}</td></tr>`; }).join("")}</table>`);
     if (mind.tlx.length) rows.push(`<h2>Task load (NASA-TLX raw, last 10)</h2><table><tr><th>Date</th><th>Task</th><th>Score</th></tr>${mind.tlx.slice(-10).map(t => `<tr><td>${f(t.ts)}</td><td>${esc(t.task)}</td><td>${t.raw}</td></tr>`).join("")}</table>`);
     if (mind.wheel.length) rows.push(`<h2>Wellbeing wheel (latest)</h2><p>${WHEEL.map((w, i) => `${w.label} ${mind.wheel[mind.wheel.length - 1].v[i]}/10`).join(", ")}</p>`);

@@ -72,7 +72,7 @@ const useTheme = () => {
 };
 
 const Index = () => {
-  const auth = useAuth(); useTheme(); const [rabbitMet, setRabbitMet] = useState(false);
+  const auth = useAuth(); useTheme(); useEffect(() => { document.documentElement.classList.toggle("lowstim", localStorage.getItem("lagomo.lowstim") === "1"); }, [auth.user?.id]); const [rabbitMet, setRabbitMet] = useState(false);
   // A rabbit named on this account follows you here. Keep this device in step with it.
   useEffect(() => { if (auth.user?.pet) savePetLocal(auth.user.pet); }, [auth.user?.pet?.name, auth.user?.pet?.coat]); // eslint-disable-line react-hooks/exhaustive-deps
   if (auth.loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-12 w-12 animate-morph" style={{ background: "radial-gradient(circle at 35% 30%, hsl(var(--primary)), hsl(var(--primary) / .3))" }} /></div>;

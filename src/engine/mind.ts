@@ -2,10 +2,11 @@
 // Sources and licences are listed in the "Mind plan" and in each instrument's `credit` line.
 
 export interface Option { v: number; label: string }
-export interface Instrument { id: "who5" | "phq9" | "gad7" | "asrs6"; title: string; blurb: string; window: string; items: string[]; options: Option[]; credit: string; adult?: boolean; max: number }
+export type InstId = "who5" | "phq9" | "gad7" | "asrs6" | "k6" | "cbi" | "lone3" | "rses" | "ipipc";
+export interface Instrument { id: InstId; title: string; blurb: string; window: string; items: string[]; options: Option[]; credit: string; adult?: boolean; max: number }
 
 const FREQ4: Option[] = [{ v: 0, label: "Not at all" }, { v: 1, label: "Several days" }, { v: 2, label: "More than half the days" }, { v: 3, label: "Nearly every day" }];
-export const INSTRUMENTS: Record<Instrument["id"], Instrument> = {
+export const INSTRUMENTS: Record<InstId, Instrument> = {
   who5: {
     id: "who5", title: "Wellbeing (WHO-5)", blurb: "Five quick questions about how the last two weeks felt.", window: "Over the last two weeks",
     items: ["I have felt cheerful and in good spirits", "I have felt calm and relaxed", "I have felt active and vigorous", "I woke up feeling fresh and rested", "My daily life has been filled with things that interest me"],
@@ -27,6 +28,35 @@ export const INSTRUMENTS: Record<Instrument["id"], Instrument> = {
     items: ["How often do you have trouble wrapping up the final details of a project, once the challenging parts have been done?", "How often do you have difficulty getting things in order when you have to do a task that requires organization?", "How often do you have problems remembering appointments or obligations?", "When you have a task that requires a lot of thought, how often do you avoid or delay getting started?", "How often do you fidget or squirm with your hands or feet when you have to sit down for a long time?", "How often do you feel overly active and compelled to do things, like you were driven by a motor?"],
     options: [{ v: 0, label: "Never" }, { v: 1, label: "Rarely" }, { v: 2, label: "Sometimes" }, { v: 3, label: "Often" }, { v: 4, label: "Very often" }],
     credit: "Adult ADHD Self-Report Scale (ASRS-v1.1) Screener. Kessler RC et al., developed with the World Health Organization. Used with attribution, unmodified.", adult: true, max: 6,
+  },
+  k6: {
+    id: "k6", title: "Stress and distress (K6)", blurb: "Six quick questions about the past month.", window: "During the past 30 days, about how often did you feel:",
+    items: ["Nervous", "Hopeless", "Restless or fidgety", "So depressed that nothing could cheer you up", "That everything was an effort", "Worthless"],
+    options: [{ v: 0, label: "None of the time" }, { v: 1, label: "A little of the time" }, { v: 2, label: "Some of the time" }, { v: 3, label: "Most of the time" }, { v: 4, label: "All of the time" }],
+    credit: "Kessler K6 (Kessler et al., 2002). Free to use without permission, with attribution.", adult: true, max: 24,
+  },
+  cbi: {
+    id: "cbi", title: "Tiredness and burnout (CBI)", blurb: "Six questions on how worn out you feel.", window: "Thinking about the past few weeks:",
+    items: ["How often do you feel tired?", "How often are you physically exhausted?", "How often are you emotionally exhausted?", "How often do you think: \"I can't take it anymore\"?", "How often do you feel worn out?", "How often do you feel weak and susceptible to illness?"],
+    options: [{ v: 100, label: "Always" }, { v: 75, label: "Often" }, { v: 50, label: "Sometimes" }, { v: 25, label: "Seldom" }, { v: 0, label: "Never or almost never" }],
+    credit: "Copenhagen Burnout Inventory, personal burnout scale (Kristensen et al., 2005). Free to use with the source cited.", adult: true, max: 100,
+  },
+  lone3: {
+    id: "lone3", title: "Connection (3 questions)", blurb: "Three questions about feeling connected to people.", window: "",
+    items: ["How often do you feel that you lack companionship?", "How often do you feel left out?", "How often do you feel isolated from others?"],
+    options: [{ v: 1, label: "Hardly ever" }, { v: 2, label: "Some of the time" }, { v: 3, label: "Often" }], credit: "Three-Item Loneliness Scale (Hughes et al., 2004). Not a copyrighted scale.", max: 9,
+  },
+  rses: {
+    id: "rses", title: "Self-worth (Rosenberg)", blurb: "Ten statements about how you see yourself.", window: "How much do you agree?",
+    items: ["On the whole, I am satisfied with myself.", "At times, I think I am no good at all.", "I feel that I have a number of good qualities.", "I am able to do things as well as most other people.", "I feel I do not have much to be proud of.", "I certainly feel useless at times.", "I feel that I'm a person of worth, at least on an equal plane with others.", "I wish I could have more respect for myself.", "All in all, I am inclined to feel that I am a failure.", "I take a positive attitude toward myself."],
+    options: [{ v: 3, label: "Strongly agree" }, { v: 2, label: "Agree" }, { v: 1, label: "Disagree" }, { v: 0, label: "Strongly disagree" }],
+    credit: "Rosenberg Self-Esteem Scale (Rosenberg, 1965). In the public domain.", max: 30,
+  },
+  ipipc: {
+    id: "ipipc", title: "Your start style (organisation)", blurb: "Ten statements about how you organise and follow through. No right answers.", window: "Describe yourself as you generally are now:",
+    items: ["I am always prepared.", "I leave my belongings around.", "I pay attention to details.", "I make a mess of things.", "I get chores done right away.", "I often forget to put things back in their proper place.", "I like order.", "I shirk my duties.", "I follow a schedule.", "I am exacting in my work."],
+    options: [{ v: 5, label: "Very accurate" }, { v: 4, label: "Moderately accurate" }, { v: 3, label: "Neither" }, { v: 2, label: "Moderately inaccurate" }, { v: 1, label: "Very inaccurate" }],
+    credit: "Conscientiousness items from the International Personality Item Pool (ipip.ori.org), public domain.", max: 50,
   },
 };
 
@@ -58,7 +88,42 @@ export function scoreAsrs(answers: number[]): Result {
     ? { score: pos, band: "Worth discussing", tone: "watch", line: `${pos} of 6 answers are in the range that professionals look at. This is a screen, not a diagnosis: many things (sleep, stress, low mood) look the same. If these have been a struggle for years, a doctor can look properly. Meanwhile, the Start tools here are built for exactly this.`, care: false }
     : { score: pos, band: "Below the usual cut-off", tone: "ok", line: `${pos} of 6 answers are in the range that professionals look at (4 or more is the usual flag). Everyone struggles to start sometimes. That is what this app is for.`, care: false };
 }
-export function scoreOf(id: Instrument["id"], a: number[]): Result { return id === "who5" ? scoreWho5(a) : id === "phq9" ? scorePhq9(a) : id === "gad7" ? scoreGad7(a) : scoreAsrs(a); }
+export function scoreK6(a: number[]): Result {
+  const s = a.reduce((x, y) => x + y, 0);
+  return s >= 13 ? { score: s, band: "High", tone: "care", line: "A score of 13 or more is the usual flag for serious psychological distress. This is a screen, not a diagnosis. " + TALK, care: true, urgent: s >= 19 }
+    : s >= 8 ? { score: s, band: "Raised", tone: "watch", line: "Some distress over the past month. The breathing, Wind-down and Pleasure and mastery tools are good places to start.", care: false }
+    : { score: s, band: "Low", tone: "good", line: "Little distress over the past month.", care: false };
+}
+export function scoreCbi(a: number[]): Result {
+  const s = Math.round(a.reduce((x, y) => x + y, 0) / Math.max(1, a.length));
+  return s >= 75 ? { score: s, band: "Very tired", tone: "care", line: "You are running very low. Rest is not a reward here, it is the task. Protect sleep, drop one thing this week, and tell someone. " + TALK, care: true }
+    : s >= 50 ? { score: s, band: "Worn down", tone: "watch", line: "You are carrying a lot of tiredness. Check the Sleep diary and Task load tools, and plan one real break.", care: false }
+    : { score: s, band: "Okay", tone: "good", line: "Tiredness looks manageable right now. There is no official cut-off, so watch the trend over time.", care: false };
+}
+export function scoreLone3(a: number[]): Result {
+  const s = a.reduce((x, y) => x + y, 0);
+  return s >= 6 ? { score: s, band: "Often lonely", tone: "watch", line: "You often feel disconnected. That is common and it can change. One small reach-out helps more than you expect: people underestimate how much others value hearing from them. Try starting something with a friend.", care: false }
+    : { score: s, band: "Mostly connected", tone: "good", line: "You mostly feel connected. Keep the people you care about in your week.", care: false };
+}
+const RSES_REV = [1, 4, 5, 7, 8];
+export function scoreRses(a: number[]): Result {
+  const s = a.reduce((x, v, i) => x + (RSES_REV.includes(i) ? 3 - v : v), 0);
+  return { score: s, band: s >= 15 ? "Steady" : "Tender", tone: s >= 15 ? "ok" : "watch", line: "Scores run from 0 to 30 and there are no official cut-offs, so the useful comparison is with your own earlier score. " + (s < 15 ? "Being hard on yourself makes starting harder. The Kind reset and Thought unhooker are built for this. If it feels heavy most days, " + TALK : "Notice what supports this and keep it."), care: false };
+}
+const IPIP_REV = [1, 3, 5, 7];
+export function scoreIpipc(a: number[]): Result {
+  const s = a.reduce((x, v, i) => x + (IPIP_REV.includes(i) ? 6 - v : v), 0);
+  const band = s >= 36 ? "Planner" : s >= 25 ? "Mixed" : "Flexible";
+  const line = s >= 36 ? "You like order and plans. Strengths: reliability. Watch for: waiting until it is perfect before starting. The Good-enough test and 2-minute starts help." : s >= 25 ? "You mix structure with flexibility. Use structure where it matters (deadlines) and stay loose elsewhere." : "You run on flexibility and the moment. Strengths: adaptability. Watch for: things slipping. External structure helps you: Park my place, WOOP and the Wind-down list do the remembering so your head does not have to.";
+  return { score: s, band, tone: "ok", line: line + " This describes a style, not a ranking: there is no right score.", care: false };
+}
+export function scoreOf(id: InstId, a: number[]): Result { return id === "who5" ? scoreWho5(a) : id === "phq9" ? scorePhq9(a) : id === "gad7" ? scoreGad7(a) : id === "asrs6" ? scoreAsrs(a) : id === "k6" ? scoreK6(a) : id === "cbi" ? scoreCbi(a) : id === "lone3" ? scoreLone3(a) : id === "rses" ? scoreRses(a) : scoreIpipc(a); }
+/** How a result is written on a card. */
+export const fmtScore = (id: InstId, r: Result) => (id === "who5" ? `${r.score}%` : id === "asrs6" ? `${r.score} of 6` : id === "cbi" ? `${r.score}/100` : `${r.score} of ${INSTRUMENTS[id].max}`);
+/** The point on a trend line (WHO-5 is stored as its raw 0 to 25 score). */
+export const trendValue = (id: InstId, stored: number) => (id === "who5" ? stored * 4 : stored);
+/** Instruments where a lower score is better (for the colour of the trend line). */
+export const lowerIsBetter = (id: InstId) => id !== "who5" && id !== "rses" && id !== "ipipc";
 export const SUPPORT = "If you might hurt yourself or are in danger, please contact your local emergency number or someone near you right now. findahelpline.com lists free lines by country.";
 
 // ---- NASA-TLX, raw scoring (Hart and Staveland). Six ratings, 0 to 100, averaged. ----
@@ -76,7 +141,7 @@ export function tlxLoads(v: number[]): number[] { return v.map((x, i) => (TLX_DI
 export const tlxRaw = (v: number[]) => Math.round(tlxLoads(v).reduce((a, b) => a + b, 0) / v.length);
 export const tlxBand = (raw: number) => (raw < 35 ? "Light" : raw < 55 ? "Moderate" : raw < 75 ? "Heavy" : "Very heavy");
 export interface Advice { id: TlxId; why: string; fix: string; tool: MindView; toolLabel: string }
-export type MindView = "home" | "wheel" | "checks" | "tlx" | "woop" | "thoughts" | "pm" | "wind" | "breathe" | "kind" | "report" | "sleep" | "compass" | "exp" | "ladder" | "why" | "bundle" | "good" | "urge" | "review" | "pulse" | "data";
+export type MindView = "home" | "wheel" | "checks" | "tlx" | "woop" | "thoughts" | "pm" | "wind" | "breathe" | "kind" | "report" | "sleep" | "compass" | "exp" | "ladder" | "why" | "bundle" | "good" | "urge" | "review" | "pulse" | "data" | "deck" | "guess" | "feel" | "worry" | "loop" | "enough" | "exam" | "brk" | "park" | "trial";
 const ADVICE: Record<TlxId, Advice> = {
   mental: { id: "mental", why: "It asked a lot of your thinking.", fix: "Get it out of your head: write the next action as one plain sentence and do only that. Park every other decision.", tool: "wind", toolLabel: "Empty your head (Wind-down)" },
   physical: { id: "physical", why: "Your body took the strain.", fix: "Stand, drink water, stretch your neck and hands for one minute before the next round.", tool: "breathe", toolLabel: "One minute of slow breathing" },
@@ -152,6 +217,7 @@ export function pickMind(m: Mind, starts: number[], now = Date.now()): Pick | nu
   if (slot === "morning" && !(m.sleep ?? []).some(s => same(s.ts, now))) return { view: "sleep", title: "Log last night's sleep", line: "Thirty seconds. After a week you will see what your sleep really looks like, and one thing to change.", cta: "Log sleep", why: "Sleep diary (core of CBT for insomnia)" };
   if (slot === "morning" && !m.woop.some(w => same(w.ts, now))) return { view: "woop", title: "Plan around the obstacle", line: "One minute: name a wish, the thing most likely to get in the way, and your if-then answer.", cta: "WOOP it", why: "Mental contrasting with if-then plans" };
   if (slot === "night" && m.wind.some(w => same(w.ts, now)) && !(m.good ?? []).some(g => same(g.ts, now))) return { view: "good", title: "Three good things", line: "Name three things that went okay today, and why. A small, steady way to lift mood.", cta: "Name them", why: "Positive psychology (modest, steady effect)" };
+  const dueN = (m.deck ?? []).filter(c => c.seen > 0 && c.due <= now).length + Math.min(5, (m.deck ?? []).filter(c => c.seen === 0).length); if (dueN > 0 && slot !== "night" && !(m.deckLog ?? []).some(d => same(d.ts, now))) return { view: "deck", title: `${Math.min(dueN, 12)} card${dueN > 1 ? "s" : ""} to recall`, line: "Two minutes of self-testing. This is the study method with the strongest evidence.", cta: "Recall", why: "Spaced retrieval practice (g = 0.74)" };
   if ((slot === "evening" || slot === "night") && !m.wind.some(w => same(w.ts, now))) return { view: "wind", title: "Empty your head for tomorrow", line: "Five minutes writing a specific list helps you fall asleep faster, and sets your first step for tomorrow.", cta: "Wind down", why: "Bedtime to-do list study (Scullin, 2018)" };
   const rv = last(m.reviews ?? []); if (new Date(now).getDay() === 0 && (!rv || now - rv.ts > 5 * 864e5)) return { view: "review", title: "Weekly review", line: "Three minutes: what worked, what was hard, and one focus for next week.", cta: "Review", why: "Reflection and planning" };
   if (slot === "day" && !(m.pulse ?? []).some(p => now - p.ts < 4 * 36e5) && (m.pulse ?? []).length < 60) return { view: "pulse", title: "10-second pulse", line: "Energy and mood in two taps. It builds your own energy map by time of day.", cta: "Tap in", why: "Experience sampling" };

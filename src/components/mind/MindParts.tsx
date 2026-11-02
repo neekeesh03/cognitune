@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { Mind } from "@/store/useMind";
+import { useState } from "react";
+import { loadMind, saveMind, type Mind } from "@/store/useMind";
 
 /** What every Mind screen receives. `done` gives sparks and returns to the hub; `go` jumps to another tool. */
 export interface MindProps {
@@ -15,6 +16,7 @@ export function Screen({ title, sub, back, children, credit }: { title: string; 
         <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>{sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}</div>
       {children}
       {credit && <p className="px-1 text-[11px] leading-snug text-muted-foreground">{credit}</p>}
+      <Worse tool={title} />
     </section>
   );
 }
@@ -67,3 +69,10 @@ export const SupportCard = ({ strong }: { strong?: boolean }) => (
     <p className="mt-1"><a className="underline" href="https://findahelpline.com" target="_blank" rel="noreferrer">findahelpline.com</a> lists free, confidential lines by country.</p>
   </div>
 );
+
+/** One tap on every Mind screen: "this made me feel worse". Kept on the device; shows support. Self-monitoring can backfire for some people. */
+function Worse({ tool }: { tool: string }) {
+  const [on, setOn] = useState(false);
+  return on ? <div className="space-y-2"><p className="text-xs text-muted-foreground">Thank you for telling us. Stop if this is not helping. It is fine to skip any tool.</p><SupportCard /></div>
+    : <button onClick={() => { const m = loadMind(); saveMind({ ...m, worse: [...m.worse, { ts: Date.now(), tool }] }); setOn(true); }} className="px-1 text-[11px] text-muted-foreground underline">This made me feel worse</button>;
+}

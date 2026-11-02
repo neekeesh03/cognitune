@@ -1,4 +1,5 @@
 import { TLX_DIMS, WHEEL, avg, energyMap, sleepAdvice, sleepSummary, TMT_LEVERS, pmRank, tlxLoads } from "@/engine/mind";
+import { analyseTrial, multiplier, trialVerdict } from "@/engine/mind2";
 import { loadLog } from "@/lib/startlog";
 import { dayKeyOf } from "@/engine/pattern";
 import { Card, Help, Screen, Spark, type MindProps } from "@/components/mind/MindParts";
@@ -27,6 +28,12 @@ export function Report({ mind, back, go }: MindProps) {
   const tm = mind.tmt.slice(-5); if (tm.length >= 2) { const s = { e: avg(tm.map(h => h.e)), v: avg(tm.map(h => h.v)), d: 10 - avg(tm.map(h => h.d)), i: 10 - avg(tm.map(h => h.i)) }; const k = (Object.keys(s) as (keyof typeof s)[]).sort((a, b) => s[a] - s[b])[0]; rows.push({ t: "Why you avoid", body: <p className="text-sm">Across your last {tm.length} checks, the usual weak spot is <b>{TMT_LEVERS[k].name.toLowerCase()}</b>. {TMT_LEVERS[k].fix}</p> }); }
   const xs = mind.exps.filter(e => e.after != null); if (xs.length) rows.push({ t: "Worries you tested", body: <p className="text-sm">{xs.length} tested. Certainty fell by {avg(xs.map(e => e.before - e.after!))} points on average.</p> });
   const ur = mind.urges; if (ur.length >= 2) rows.push({ t: "Urges", body: <p className="text-sm">{ur.length} ridden. The pull fell by {avg(ur.map(u => u.start - u.end))} points on average.</p> });
+  const ml = multiplier(mind.guesses); if (ml) rows.push({ t: "Planning", body: <p className="text-sm">Things take you about <b>{ml.x}x</b> your guess ({ml.n} tasks). Plan with that.</p> });
+  if (mind.deckLog.length) rows.push({ t: "Recall deck", body: <p className="text-sm">{mind.deckLog.length} sessions, {mind.deck.length} cards, {Math.round((100 * mind.deckLog.reduce((a, d) => a + d.good, 0)) / Math.max(1, mind.deckLog.reduce((a, d) => a + d.n, 0)))}% felt solid.</p> });
+  if (mind.feelings.length >= 2) rows.push({ t: "Feelings you handled", body: <p className="text-sm">{mind.feelings.length} named. Average intensity fell from {avg(mind.feelings.map(f => f.before))} to {avg(mind.feelings.map(f => f.after))}.</p> });
+  const pw = mind.worries.filter(w => w.status === "parked"); if (mind.worries.length >= 2) rows.push({ t: "Worries", body: <p className="text-sm">{mind.worries.length} sorted: {mind.worries.filter(w => w.status === "acted").length} turned into steps, {mind.worries.filter(w => w.status === "released").length} let go, {pw.length} still parked.</p> });
+  if (mind.breaks.length >= 2) { const l = avg(mind.breaks.map(b => b.after - b.before)); rows.push({ t: "Breaks", body: <p className="text-sm">{mind.breaks.length} breaks, energy changed by {l >= 0 ? "+" : ""}{l} on average.</p> }); }
+  const tr = mind.trials.filter(t => t.closed || t.days.filter(d => d.val != null).length >= 6)[0]; if (tr) { const an = analyseTrial(tr); if (an.ready) rows.push({ t: "Your experiment", body: <p className="text-sm">{trialVerdict(an.pAbetter, tr.a, tr.b)}</p> }); }
   const best = pmRank(mind.pm).slice(0, 2); if (best.length) rows.push({ t: "What lifts you", body: <p className="text-sm">{best.map(b => `${b.what} (pleasure ${b.p}, mastery ${b.m})`).join(" and ")}</p> });
   const wheel = mind.wheel; if (wheel.length > 1) { const a = wheel[wheel.length - 1].v, b = wheel[wheel.length - 2].v; const d = a.map((x, i) => x - b[i]); const up = d.indexOf(Math.max(...d)), dn = d.indexOf(Math.min(...d)); rows.push({ t: "Wheel since last time", body: <p className="text-sm">{d[up] > 0 ? `Up most: ${WHEEL[up].label} (+${d[up]}). ` : ""}{d[dn] < 0 ? `Down most: ${WHEEL[dn].label} (${d[dn]}).` : ""}{d[up] <= 0 && d[dn] >= 0 ? "Steady." : ""}</p> }); }
   return (

@@ -208,3 +208,6 @@ html[lang="dz"] body { font-family: "Inter Tight", "Noto Serif Tibetan", "Noto S
 .rb-eyes { transform-box: fill-box; transform-origin: 50% 50%; transition: transform .12s ease-out; }
 .rb-eyes.rb-blink { transform: scaleY(.08); }
 @media (prefers-reduced-motion: reduce) { .rb-live .rb-body, .rb-ear.rb-twitch { animation: none; } .rb-eyes { transition: none; } }
+
+/* Low-stimulation mode (Me > Settings): no motion, no confetti */
+.lowstim *, .lowstim *::before, .lowstim *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

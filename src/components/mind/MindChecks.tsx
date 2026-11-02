@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { INSTRUMENTS, WHEEL, scoreOf, type Instrument } from "@/engine/mind";
+import { INSTRUMENTS, WHEEL, fmtScore, lowerIsBetter, scoreOf, trendValue, type InstId, type Instrument } from "@/engine/mind";
 import { daysAgo } from "@/store/useMind";
 import { Card, Help, Pills, Primary, Radar, Rate, Saved, Screen, Spark, SupportCard, type MindProps } from "@/components/mind/MindParts";
 
-const ORDER: Instrument["id"][] = ["who5", "phq9", "gad7", "asrs6"];
+const ORDER: InstId[] = ["who5", "ipipc", "lone3", "rses", "k6", "cbi", "phq9", "gad7", "asrs6"];
+const SOON: Partial<Record<InstId, number>> = { phq9: 14, gad7: 14, k6: 14, cbi: 14, who5: 14 };
 const when = (ts: number) => (daysAgo(ts) === 0 ? "today" : daysAgo(ts) === 1 ? "yesterday" : `${daysAgo(ts)} days ago`);
 
 /** Four validated questionnaires. Each is run one question at a time, scored on this device, and kept as a trend. */
 export function Checks({ mind, update, done, back, go }: MindProps) {
-  const [open, setOpen] = useState<Instrument["id"] | null>(null);
+  const [open, setOpen] = useState<InstId | null>(null);
   const [adult, setAdult] = useState(false);
   if (open) return <Run id={open} update={update} done={done} back={() => setOpen(null)} go={go} adult={adult} setAdult={setAdult} />;
   return (
@@ -19,10 +20,10 @@ export function Checks({ mind, update, done, back, go }: MindProps) {
           <Card key={id}>
             <div className="flex items-start justify-between gap-3">
               <div><div className="font-semibold">{ins.title}</div><div className="text-xs text-muted-foreground">{ins.blurb}</div>
-                {last && r && <div className="mt-2 text-sm"><b>{id === "who5" ? `${r.score}%` : id === "asrs6" ? `${r.score} of 6` : `${r.score} of ${ins.max}`}</b> · {r.band} <span className="text-muted-foreground">· {when(last.ts)}</span></div>}</div>
+                {last && r && <div className="mt-2 text-sm"><b>{fmtScore(id, r)}</b> · {r.band} <span className="text-muted-foreground">· {when(last.ts)}</span></div>}{last && SOON[id] && daysAgo(last.ts) < SOON[id]! && <div className="mt-1 text-[11px] text-muted-foreground">Repeating this too often can make you watch the score instead of your life. About every {SOON[id]} days is typical.</div>}</div>
               <button onClick={() => setOpen(id)} className="shrink-0 rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">{last ? "Again" : "Start"}</button>
             </div>
-            {h.length > 1 && <div className="mt-2"><Spark values={h.slice(-8).map(c => (id === "who5" ? c.score * 4 : c.score))} min={0} max={id === "who5" ? 100 : ins.max} good={id === "who5" ? "high" : "low"} /></div>}
+            {h.length > 1 && <div className="mt-2"><Spark values={h.slice(-8).map(c => trendValue(id, c.score))} min={0} max={id === "who5" ? 100 : ins.max} good={lowerIsBetter(id) ? "low" : "high"} /></div>}
           </Card>
         );
       })}
@@ -31,11 +32,11 @@ export function Checks({ mind, update, done, back, go }: MindProps) {
   );
 }
 
-function Run({ id, update, done, back, go, adult, setAdult }: { id: Instrument["id"]; update: MindProps["update"]; done: MindProps["done"]; back: () => void; go: MindProps["go"]; adult: boolean; setAdult: (b: boolean) => void }) {
+function Run({ id, update, done, back, go, adult, setAdult }: { id: InstId; update: MindProps["update"]; done: MindProps["done"]; back: () => void; go: MindProps["go"]; adult: boolean; setAdult: (b: boolean) => void }) {
   const ins = INSTRUMENTS[id]; const [i, setI] = useState(0); const [a, setA] = useState<number[]>([]); const [fin, setFin] = useState(false);
   if (ins.adult && !adult) return (
     <Screen title={ins.title} back={back} credit={ins.credit}>
-      <Card><p className="text-sm">This questionnaire is made for adults. Lagomo is for ages 16 and up, so please confirm.</p>
+      <Card><p className="text-sm">This questionnaire is written for adults. Lagomo is for ages 16 and up, so please confirm.</p>
         <div className="mt-3 flex gap-2"><button onClick={() => setAdult(true)} className="rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">I am 18 or older</button><button onClick={back} className="rounded-full border border-border px-4 py-2 text-sm">Not now</button></div></Card>
       <Help>The wellbeing check (WHO-5) and the other tools in Mind are fine for everyone 16 and over.</Help>
     </Screen>
@@ -51,16 +52,20 @@ function Run({ id, update, done, back, go, adult, setAdult }: { id: Instrument["
       <Screen title={ins.title} back={back} credit={ins.credit}>
         {(hurt || r.urgent) && <SupportCard strong={hurt} />}
         <Card><div className="text-sm text-muted-foreground">Your result</div>
-          <div className={`text-3xl font-semibold ${tone}`}>{id === "who5" ? `${r.score}%` : id === "asrs6" ? `${r.score} of 6` : `${r.score} of ${ins.max}`}</div><div className="font-medium">{r.band}</div>
+          <div className={`text-3xl font-semibold ${tone}`}>{fmtScore(id, r)}</div><div className="font-medium">{r.band}</div>
           <p className="mt-2 text-sm">{r.line}</p></Card>
         <Saved text="Saved on this device. It will show in your trend." />
         <div className="flex flex-wrap gap-2">
           {(id === "phq9" || id === "who5") && <button onClick={() => go("pm")} className="rounded-full border border-border px-4 py-2 text-sm">Try Pleasure and mastery</button>}
+          {(id === "k6" || id === "cbi") && <button onClick={() => go(id === "cbi" ? "sleep" : "wind")} className="rounded-full border border-border px-4 py-2 text-sm">{id === "cbi" ? "Look at your sleep" : "Try Wind-down"}</button>}
+          {id === "lone3" && <button onClick={() => go("kind")} className="rounded-full border border-border px-4 py-2 text-sm">Kind reset</button>}
+          {(id === "rses") && <button onClick={() => go("thoughts")} className="rounded-full border border-border px-4 py-2 text-sm">Unhook from a thought</button>}
+          {id === "ipipc" && <button onClick={() => go("park")} className="rounded-full border border-border px-4 py-2 text-sm">Park my place</button>}
           {id === "gad7" && <button onClick={() => go("breathe")} className="rounded-full border border-border px-4 py-2 text-sm">Try slow breathing</button>}
           {id === "asrs6" && <button onClick={() => go("woop")} className="rounded-full border border-border px-4 py-2 text-sm">Try a WOOP plan</button>}
           <button onClick={back} className="rounded-full border border-border px-4 py-2 text-sm">Done</button>
         </div>
-        <Help>This is a screening check, not a diagnosis. It cannot tell you what is going on, and a high or low score does not decide anything about you.</Help>
+        <Help>{id === "ipipc" || id === "rses" || id === "lone3" ? "This describes a moment and a style, not who you are. It can change." : "This is a screening check, not a diagnosis. It cannot tell you what is going on, and a high or low score does not decide anything about you."}</Help>
       </Screen>
     );
   }

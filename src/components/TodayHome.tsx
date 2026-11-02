@@ -121,7 +121,7 @@ export function TodayHome({ j, name, avatar, go, game, plan, agenda, onStart, on
         {coach && <CoachSheet task={coach} onStart={onStart} onClose={() => setCoach(null)} friends={friends.map(f => ({ id: f.id, name: f.name }))} onPledge={onPinky} />}
         {!firstRun && <NextMove moves={moves} />}
         {!firstRun && <MomentumRing steps={ringSteps} boxReady={boxReady} onBox={game.openBox} />}
-        {!firstRun && <MindToday go={go} />}
+        {!firstRun && <MindToday go={go} onStart={onStart} />}
         <div className="grid grid-cols-3 gap-2" role="group" aria-label={tr("Quick links")}>
           {([["circle", "Start together", Users], ["plan", "Plan my day", CalendarCheck], ["me", "Write a line", PenLine]] as const).map(([id, label, I]) => (
             <button key={id} onClick={() => go(id)} className="glass flex items-center justify-center gap-2 rounded-2xl px-2 py-2.5 text-xs text-foreground transition hover:scale-[1.03]"><I className="h-4 w-4 text-primary" />{tr(label)}</button>))}
