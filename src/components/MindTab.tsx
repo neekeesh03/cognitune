@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MoodMap, FocusTap } from "@/components/mind/MindSense";
 import { Brain, ClipboardCheck, Compass, Feather, Gauge, HeartHandshake, Moon, Smile, Sparkles, Wind, Activity, BedDouble, LifeBuoy, Flame, Smartphone, Anchor as AnchorIcon, Trophy, Send, Gift as GiftIcon, Layers, Timer, Smile as SmileIcon, CloudRain, Repeat, ShieldCheck, GraduationCap, Coffee, Bookmark, Beaker, Target, FlaskConical, Footprints, HelpCircle, Gift, Sun, Waves, CalendarCheck, Zap, Shield } from "lucide-react";
 import { useMind } from "@/store/useMind";
 import { pickMind, type MindView } from "@/engine/mind";
@@ -25,6 +26,8 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
     { id: "letter", title: "Your weekly letter", line: "What your week says, kindly", icon: Send, tag: "weekly" },
     { id: "wheel", title: "Wellbeing wheel", line: "Eight areas, thirty seconds", icon: Compass, tag: "weekly" },
     { id: "checks", title: "Check-ins", line: "Wellbeing, stress, tiredness, connection, style", icon: ClipboardCheck, tag: "9 validated" },
+    { id: "moodmap", title: "Mood map", line: "One tap on a picture, no questions", icon: Zap, tag: "5 sec" },
+    { id: "focustap", title: "Focus tap", line: "A 40-second game that reads your alertness", icon: Activity, tag: "game" },
     { id: "pulse", title: "10-second pulse", line: "Energy and mood, your own map", icon: Zap, tag: "daily" },
     { id: "sleep", title: "Sleep diary", line: "Your real sleep, and one fix", icon: BedDouble, tag: "CBT-I" },
     { id: "review", title: "Weekly review", line: "Look back, set one focus", icon: CalendarCheck, tag: "3 min" },
@@ -78,7 +81,7 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
     { id: "data", title: "Your data", line: "Export, print, or delete", icon: Shield, tag: "private" },
   ] },
 ];
-const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, letter: Letter, window: WindowTool, insights: Insights, skills: Skills, anger: Anger, phone: Phone, anchor: Anchor, ledger: Ledger, reach: Reach, kindness: KindThing, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, data: Data };
+const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, letter: Letter, window: WindowTool, insights: Insights, skills: Skills, anger: Anger, phone: Phone, anchor: Anchor, ledger: Ledger, reach: Reach, kindness: KindThing, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, moodmap: MoodMap, focustap: FocusTap, data: Data };
 
 interface Props { schedule?: (title: string, day: string, start: number, dur: number) => void; tasks?: { id: string; title: string }[]; onStart: (title: string, step: string) => void; onSpark: () => void; friends?: { id: string; name: string; last: number | null }[]; openChat?: (id: string, draft: string) => void }
 /** The Mind tab: a hub of short, evidence-based tools. Everything is stored on this device. */
