@@ -32,7 +32,7 @@ export function HeartCheck({ done, back, go }: MindProps) {
           drawWave(disp);
         }
         setSecs(Math.min(DUR, Math.round(now / 1000)));
-        if (now >= DUR * 1000) { stop(); const out = analysePpg(T, V); setRes(out); setPhase("end"); if (out.ok) { saveGame("heartf", { ts: Date.now(), a: out.hr, b: out.rmssd, c: out.quality }); done("heart"); } return; }
+        if (now >= DUR * 1000) { stop(); const out = analysePpg(T, V); setRes(out); setPhase("end"); if (out.ok && out.rmssd > 0) { saveGame("heartf", { ts: Date.now(), a: out.hr, b: out.rmssd, c: out.quality }); done("heart"); } return; }
         if (vv.requestVideoFrameCallback) vv.requestVideoFrameCallback(step); else rafId.current = requestAnimationFrame(step);
       };
       if (vv.requestVideoFrameCallback) vv.requestVideoFrameCallback(step); else rafId.current = requestAnimationFrame(step);
@@ -54,14 +54,14 @@ export function HeartCheck({ done, back, go }: MindProps) {
         if (cov && now > 4000) { T.push(now); V.push(r); disp.push(r); if (disp.length > 150) disp.shift(); }
         const cv = wave.current; if (cv && disp.length > 5) { const x = cv.getContext("2d")!; x.clearRect(0, 0, cv.width, cv.height); const mn = Math.min(...disp), mx = Math.max(...disp) || 1; x.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--primary") ? `hsl(${getComputedStyle(document.documentElement).getPropertyValue("--primary").trim()})` : "#447d58"; x.lineWidth = 2; x.beginPath(); disp.forEach((p, i) => { const px = (i / 150) * cv.width, py = cv.height - ((p - mn) / (mx - mn || 1)) * (cv.height - 8) - 4; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.stroke(); }
         setSecs(Math.min(DUR, Math.round(now / 1000)));
-        if (now >= DUR * 1000) { stop(); const out = analysePpg(T, V); setRes(out); setPhase("end"); if (out.ok) { saveGame(paceRef.current ? "heartp" : "heart", { ts: Date.now(), a: out.hr, b: out.rmssd, c: out.quality }); done("heart"); } }
+        if (now >= DUR * 1000) { stop(); const out = analysePpg(T, V); setRes(out); setPhase("end"); if (out.ok && out.rmssd > 0) { saveGame(paceRef.current ? "heartp" : "heart", { ts: Date.now(), a: out.hr, b: out.rmssd, c: out.quality }); done("heart"); } }
       };
       type Meta = { mediaTime: number; captureTime?: number }; const vv = v as HTMLVideoElement & { requestVideoFrameCallback?: (cb: (n: number, m: Meta) => void) => number };
       if (vv.requestVideoFrameCallback) { let m0 = -1; const cbk = (_n: number, m: Meta) => { if (m0 < 0) m0 = m.mediaTime; tick(m.captureTime ?? t0 + (m.mediaTime - m0) * 1000); if (stream.current) vv.requestVideoFrameCallback!(cbk); }; vv.requestVideoFrameCallback(cbk); } else loop.current = window.setInterval(() => tick(performance.now()), 33);
     } catch { stop(); setErr("I could not open the camera. Allow camera access in your browser, or skip this one. Nothing else in the app needs it."); setPhase("idle"); }
   };
   const used = mode === "face" ? priorF : pace ? priorP : prior; const base = used.current.length >= 3 ? median(used.current.slice(-15).map(g => g.b)) : null; const bhr = used.current.length >= 3 ? median(used.current.slice(-15).map(g => g.a)) : null;
-  const verdict = res?.ok && base ? (res.rmssd < base * 0.75 ? "low" : res.rmssd > base * 1.25 ? "high" : "usual") : null;
+  const verdict = res?.ok && res.rmssd > 0 && base ? (res.rmssd < base * 0.75 ? "low" : res.rmssd > base * 1.25 ? "high" : "usual") : null;
   return (
     <Screen title="Heart check" sub="45 seconds with the camera on your fingertip or your face. Your pulse shows how wound up or settled your body is." back={back} credit="Method: photoplethysmography (the camera sees blood move in your fingertip). Heart rate variability (RMSSD) tends to be lower when the body is under strain and higher when settled. Face mode (remote photoplethysmography from the forehead) works best when you sit very still in even light and is the roughest of the two. Phone cameras are good for heart rate and rougher for variability, so the numbers are only meaningful against your own usual, taken at the same time and posture. This is not a medical device. The camera feed stays on your phone and is never saved or sent.">
       <Card className="flex flex-col items-center gap-3">
@@ -76,11 +76,12 @@ export function HeartCheck({ done, back, go }: MindProps) {
           <p className="text-sm text-muted-foreground" role="status">{!covered ? (mode === "face" ? "I cannot see your forehead. Face the screen in good light." : "Cover the camera fully with your fingertip.") : secs < 4 ? "Settling..." : "Good. Keep still and breathe normally."}</p></>}
         {err && <p className="text-sm text-[hsl(var(--v-notready))]" role="alert">{err}</p>}
       </Card>
-      {res && (res.ok ? <Card className="space-y-2"><div className="flex flex-wrap gap-6"><div><div className="text-3xl font-semibold">{res.hr}</div><div className="text-xs text-muted-foreground">beats per minute</div></div><div><div className="text-3xl font-semibold">{res.rmssd}</div><div className="text-xs text-muted-foreground">variability (ms)</div></div></div>
+      {res && (res.ok ? <Card className="space-y-2"><div className="flex flex-wrap gap-6"><div><div className="text-3xl font-semibold">{res.hr}</div><div className="text-xs text-muted-foreground">beats per minute</div></div><div><div className="text-3xl font-semibold">{res.rmssd > 0 ? res.rmssd : "-"}</div><div className="text-xs text-muted-foreground">{res.rmssd > 0 ? "variability (ms)" : "variability not reliable this time"}</div></div></div>
         {verdict === "low" && <p className="text-sm">Your variability is lower than your usual ({Math.round(base!)}). Your body looks a bit more strained than normal. It is information, not a verdict. Slow breathing is a quick way to nudge it back.</p>}
         {verdict === "high" && <p className="text-sm">Higher than your usual ({Math.round(base!)}): your body looks settled and ready.</p>}
         {verdict === "usual" && <p className="text-sm">About your usual ({Math.round(base!)} ms, resting rate near {Math.round(bhr!)}).</p>}
-        {!base && <Help>After 3 checks on different days it compares you with your own usual. Try to take it at the same time of day.</Help>}
+        {res.rmssd === 0 && <Help>The signal was a little too noisy to trust the beat-to-beat variability, so I only kept your heart rate and did not save this run. Sit stiller, in steadier light, and try again.</Help>}
+        {!base && res.rmssd > 0 && <Help>After 3 checks on different days it compares you with your own usual. Try to take it at the same time of day.</Help>}
         <Help>Clean beats used: {res.beats}. Signal quality: {res.quality}%. If you just walked, drank coffee or are anxious, expect a higher rate.</Help>
         <div className="flex flex-wrap gap-2"><button onClick={() => { setRes(null); setPhase("idle"); }} className={ghost}>Again</button>{verdict === "low" && <button onClick={() => go("breathe")} className={ghost}>Slow breathing</button>}</div></Card>
         : <Card className="space-y-2"><p className="text-sm">{res.reason}</p><button onClick={() => { setRes(null); setPhase("idle"); }} className={ghost}>Try again</button></Card>)}
