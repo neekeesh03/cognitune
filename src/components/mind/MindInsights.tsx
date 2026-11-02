@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Share2 } from "lucide-react";
 import { loadLog } from "@/lib/startlog";
 import { activeDays, dayTable, driverLine, drivers, loadState, profile, toolEfficacy, trends, trialFromDriver } from "@/engine/insights";
+import { loadPickFb, pickSummary } from "@/engine/pickfb";
 import { energyMap } from "@/engine/mind";
 import { Card, Help, Saved, Screen, type MindProps } from "@/components/mind/MindParts";
 
@@ -55,6 +56,10 @@ export function Insights({ mind, update, done, back, go }: MindProps) {
 
       {(em.length > 0 || prof.startHour != null) && <Card><div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your time of day</div>
         {em.length > 0 && <p className="mt-1 text-sm">Highest energy: <b>{em.sort((a, b) => b.e! - a.e!)[0].n.split(" (")[0].toLowerCase()}</b>.</p>}{prof.startHour != null && <p className="text-sm">You most often start around <b>{hourText(prof.startHour)}</b>.</p>}<Help>Put the hardest task in your high-energy window, and your most common start hour is a good anchor for a tiny habit.</Help></Card>}
+
+      {(() => { const ps = pickSummary(loadPickFb()); return <Card><div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">How Today learns from you</div>
+        {ps.length === 0 ? <Help>Each time you open a suggestion on Today, or tap "Another idea" or "Not today", Lagomo notes it on this device only. After 3 answers on one kind of suggestion, the ones you take move up and the ones you skip move down. Nothing is ever hidden for good.</Help>
+          : <ul className="mt-2 space-y-1 text-sm">{ps.map(x => <li key={x.view} className="flex items-center justify-between gap-2"><span>{x.title}</span><span className="text-xs text-muted-foreground">{x.acc} taken, {x.skip} skipped · {x.score > 0.15 ? "shown earlier" : x.score < -0.15 ? "shown later" : "neutral"}</span></li>)}</ul>}</Card>; })()}
 
       <Card><div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your start profile</div>
         <ul className="mt-2 space-y-1 text-sm"><li><b>Style:</b> {prof.style ?? "take the Start style check"}</li><li><b>Holds you back most:</b> {prof.lever ?? "run Why am I avoiding it? twice"}</li><li><b>Best time:</b> {prof.window ?? "tap the 10-second pulse at different times"}</li><li><b>Calms you best:</b> {prof.tool ?? "use a few tools and rate them"}</li></ul>
