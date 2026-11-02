@@ -33,7 +33,8 @@ export function TalkTab({ myName, ctx, onStart, onCoach, onPlan, onCircle }: Tal
   // Messages typed while the rabbit is still replying are queued, never dropped.
   const send = (raw: string, via: "typed" | "chip" = "typed") => {
     const t = raw.trim().slice(0, 300); if (!t) return; setText(""); window.setTimeout(() => void upgradeTalk(), 4000); // they use Talk, so fetch the larger model quietly
-    queue.current.push({ t, via }); setMsgs(m => [...m.map(x => ({ ...x, chips: undefined })), { id: uid(), from: "me", text: t, ts: Date.now() }]); void drain();
+    let notice: Msg[] = []; try { const last = +(localStorage.getItem("lagomo.talk.notice") || 0); if (Date.now() - last > 3 * 36e5) { localStorage.setItem("lagomo.talk.notice", String(Date.now())); notice = [{ id: uid(), from: "pip", text: "A quick note: I'm a small program that runs on your device, not a person. If you need a person, try the Friends tab, or findahelpline.com for free lines by country.", ts: Date.now() }]; } } catch { /* ignore */ }
+    queue.current.push({ t, via }); setMsgs(m => [...m.map(x => ({ ...x, chips: undefined })), { id: uid(), from: "me", text: t, ts: Date.now() }, ...notice]); void drain();
   };
   const chip = (c: Chip) => {
     if (c.act === "start") { onStart(c.task ?? "Something small", c.step ?? "Open it and look at it for two minutes."); return; }

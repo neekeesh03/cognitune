@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Brain, ClipboardCheck, Compass, Feather, Gauge, HeartHandshake, Moon, Smile, Sparkles, Wind, Activity, BedDouble, Layers, Timer, Smile as SmileIcon, CloudRain, Repeat, ShieldCheck, GraduationCap, Coffee, Bookmark, Beaker, Target, FlaskConical, Footprints, HelpCircle, Gift, Sun, Waves, CalendarCheck, Zap, Shield } from "lucide-react";
+import { Brain, ClipboardCheck, Compass, Feather, Gauge, HeartHandshake, Moon, Smile, Sparkles, Wind, Activity, BedDouble, LifeBuoy, Flame, Smartphone, Anchor as AnchorIcon, Trophy, Send, Gift as GiftIcon, Layers, Timer, Smile as SmileIcon, CloudRain, Repeat, ShieldCheck, GraduationCap, Coffee, Bookmark, Beaker, Target, FlaskConical, Footprints, HelpCircle, Gift, Sun, Waves, CalendarCheck, Zap, Shield } from "lucide-react";
 import { useMind } from "@/store/useMind";
 import { pickMind, type MindView } from "@/engine/mind";
 import { loadLog } from "@/lib/startlog";
@@ -9,6 +9,7 @@ import { Pm, Thoughts, Tlx, Woop } from "@/components/mind/MindTools";
 import { Breathe, Kind, Wind as WindDown } from "@/components/mind/MindCalm";
 import { Report } from "@/components/mind/MindReport";
 import { Bundle, Compass as ValuesCompass, Data, Experiment, Good, Ladder, Pulse, Review, Sleep, Urge, Why } from "@/components/mind/MindMore";
+import { Anchor, Anger, KindThing, Ledger, Phone, Reach, Skills } from "@/components/mind/MindMore3";
 import { Break, Deck, Exam, Feel, GuessTime, Loop, Park, TrialTool, Worry } from "@/components/mind/MindMore2";
 import { Card, type MindProps } from "@/components/mind/MindParts";
 
@@ -52,6 +53,17 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
     { id: "loop", title: "Break a thought loop", line: "From why to what next", icon: SmileIcon, tag: "RF-CBT" },
     { id: "enough", title: "Good-enough test", line: "Try 80% and see what happens", icon: ShieldCheck, tag: "perfectionism" },
     { id: "brk", title: "Take a break", line: "Learn which breaks help you", icon: Coffee, tag: "energy" },
+    { id: "skills", title: "Skills for hard moments", line: "Pick the urge, get a skill", icon: LifeBuoy, tag: "DBT-style" },
+    { id: "anger", title: "Anger pause", line: "Cool down before you send", icon: Flame, tag: "20-min delay" },
+  ] },
+  { title: "Habits and focus", sub: "Make the good thing easier", items: [
+    { id: "anchor", title: "Tiny anchor", line: "30 seconds after something you already do", icon: AnchorIcon, tag: "if-then" },
+    { id: "ledger", title: "Proof ledger", line: "What each start proved", icon: Trophy, tag: "wins" },
+    { id: "phone", title: "Phone friction", line: "Make distraction a bit harder", icon: Smartphone, tag: "RCT-backed" },
+  ] },
+  { title: "With people", sub: "Small, kind, no pressure", items: [
+    { id: "reach", title: "Reach out", line: "Message someone you care about", icon: Send, tag: "weekly" },
+    { id: "kindness", title: "One kind thing", line: "A small kindness, no streak", icon: GiftIcon, tag: "wellbeing" },
   ] },
   { title: "End of day", sub: "Let the day go", items: [
     { id: "wind", title: "Wind-down", line: "Tomorrow's list and worry time", icon: Moon, tag: "5 min" },
@@ -61,11 +73,11 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
     { id: "data", title: "Your data", line: "Export, print, or delete", icon: Shield, tag: "private" },
   ] },
 ];
-const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, data: Data };
+const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, skills: Skills, anger: Anger, phone: Phone, anchor: Anchor, ledger: Ledger, reach: Reach, kindness: KindThing, deck: Deck, guess: GuessTime, feel: Feel, worry: Worry, loop: Loop, enough: (p: MindProps) => <Experiment {...p} preset="enough" />, exam: Exam, brk: Break, park: Park, trial: TrialTool, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, data: Data };
 
-interface Props { onStart: (title: string, step: string) => void; onSpark: () => void }
+interface Props { onStart: (title: string, step: string) => void; onSpark: () => void; friends?: { id: string; name: string; last: number | null }[]; openChat?: (id: string, draft: string) => void }
 /** The Mind tab: a hub of short, evidence-based tools. Everything is stored on this device. */
-export function MindTab({ onStart, onSpark }: Props) {
+export function MindTab({ onStart, onSpark, friends, openChat }: Props) {
   const { mind, update } = useMind();
   const [view, setView] = useState<MindView>(() => { try { const v = sessionStorage.getItem(OPEN) as MindView | null; sessionStorage.removeItem(OPEN); return v ?? "home"; } catch { return "home"; } });
   useEffect(() => { const f = () => { try { const v = sessionStorage.getItem(OPEN) as MindView | null; if (v) { sessionStorage.removeItem(OPEN); setView(v); } } catch { /* ignore */ } }; f(); window.addEventListener("lagomo:mindopen", f); return () => window.removeEventListener("lagomo:mindopen", f); }, []);
@@ -76,7 +88,7 @@ export function MindTab({ onStart, onSpark }: Props) {
     const day = new Date().toDateString(); const n = d.day === day ? d.n : 0; if (n < 3) { onSpark(); localStorage.setItem(k, JSON.stringify({ day, n: n + 1 })); }
     track("mind_done", { tool: (note ?? "x").replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 12) });
   };
-  const props: MindProps = { mind, update, done, back: () => go("home"), go, onStart };
+  const props: MindProps = { mind, update, done, back: () => go("home"), go, onStart, friends, openChat };
   if (view !== "home") { const V = VIEWS[view]; return <V {...props} />; }
   const pick = pickMind(mind, loadLog().starts.map(s => s.ts));
   const used = mind.checks.length + mind.tlx.length + mind.woop.length + mind.thoughts.length + mind.pm.length + mind.wind.length + mind.calm.length + mind.wheel.length + mind.sleep.length + mind.tmt.length + mind.good.length + mind.pulse.length + mind.urges.length + mind.exps.length + mind.ladders.length + mind.bundles.length + mind.compass.length + mind.reviews.length + mind.deckLog.length + mind.guesses.length + mind.feelings.length + mind.worries.length + mind.loops.length + mind.exams.length + mind.breaks.length + mind.park.length + mind.trials.length;

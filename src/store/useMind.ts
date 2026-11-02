@@ -33,13 +33,19 @@ export interface Mind {
   park: { id: string; ts: number; task: string; line: string; resumed?: number }[];
   trials: import("@/engine/mind2").Trial[];
   worse: { ts: number; tool: string }[];
+  skills: { ts: number; urge: string; skill: string; helped: number }[];
+  anger: { ts: number; trigger: string; need: string; before: number; after: number; delayed: boolean }[];
+  phone: { ts: number; done: string[]; helped?: number }[];
+  anchors: { id: string; ts: number; anchor: string; act: string; days: string[]; auto?: number }[];
+  ledger: { ts: number; text: string; size: number }[];
+  kind: { ts: number; type: string }[];
 }
 const KEY = "lagomo.mind.v1"; const EV = "lagomo:mind";
-export const emptyMind = (): Mind => ({ checks: [], wheel: [], tlx: [], woop: [], thoughts: [], pm: [], wind: [], calm: [], values: [], sleep: [], compass: [], exps: [], ladders: [], tmt: [], bundles: [], good: [], urges: [], reviews: [], pulse: [], deck: [], deckLog: [], guesses: [], feelings: [], worries: [], loops: [], exams: [], breaks: [], park: [], trials: [], worse: [] });
+export const emptyMind = (): Mind => ({ checks: [], wheel: [], tlx: [], woop: [], thoughts: [], pm: [], wind: [], calm: [], values: [], sleep: [], compass: [], exps: [], ladders: [], tmt: [], bundles: [], good: [], urges: [], reviews: [], pulse: [], deck: [], deckLog: [], guesses: [], feelings: [], worries: [], loops: [], exams: [], breaks: [], park: [], trials: [], worse: [], skills: [], anger: [], phone: [], anchors: [], ledger: [], kind: [] });
 export const loadMind = (): Mind => { try { return { ...emptyMind(), ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { return emptyMind(); } };
 const cap = <T,>(a: T[], n: number) => a.slice(-n);
 export const saveMind = (m: Mind) => {
-  localStorage.setItem(KEY, JSON.stringify({ ...m, checks: cap(m.checks, 200), wheel: cap(m.wheel, 120), tlx: cap(m.tlx, 300), woop: cap(m.woop, 120), thoughts: cap(m.thoughts, 200), pm: cap(m.pm, 400), wind: cap(m.wind, 120), calm: cap(m.calm, 300), sleep: cap(m.sleep, 400), compass: cap(m.compass, 60), exps: cap(m.exps, 100), ladders: cap(m.ladders, 30), tmt: cap(m.tmt, 150), bundles: cap(m.bundles, 60), good: cap(m.good, 200), urges: cap(m.urges, 300), reviews: cap(m.reviews, 80), pulse: cap(m.pulse, 400), deck: m.deck.slice(-1000), deckLog: cap(m.deckLog, 400), guesses: cap(m.guesses, 300), feelings: cap(m.feelings, 300), worries: cap(m.worries, 200), loops: cap(m.loops, 200), exams: cap(m.exams, 60), breaks: cap(m.breaks, 300), park: cap(m.park, 60), trials: cap(m.trials, 30), worse: cap(m.worse, 100) }));
+  localStorage.setItem(KEY, JSON.stringify({ ...m, checks: cap(m.checks, 200), wheel: cap(m.wheel, 120), tlx: cap(m.tlx, 300), woop: cap(m.woop, 120), thoughts: cap(m.thoughts, 200), pm: cap(m.pm, 400), wind: cap(m.wind, 120), calm: cap(m.calm, 300), sleep: cap(m.sleep, 400), compass: cap(m.compass, 60), exps: cap(m.exps, 100), ladders: cap(m.ladders, 30), tmt: cap(m.tmt, 150), bundles: cap(m.bundles, 60), good: cap(m.good, 200), urges: cap(m.urges, 300), reviews: cap(m.reviews, 80), pulse: cap(m.pulse, 400), deck: m.deck.slice(-1000), deckLog: cap(m.deckLog, 400), guesses: cap(m.guesses, 300), feelings: cap(m.feelings, 300), worries: cap(m.worries, 200), loops: cap(m.loops, 200), exams: cap(m.exams, 60), breaks: cap(m.breaks, 300), park: cap(m.park, 60), trials: cap(m.trials, 30), worse: cap(m.worse, 100), skills: cap(m.skills, 200), anger: cap(m.anger, 100), phone: cap(m.phone, 30), anchors: cap(m.anchors, 20), ledger: cap(m.ledger, 300), kind: cap(m.kind, 300) }));
   window.dispatchEvent(new Event(EV));
 };
 export function useMind() {

@@ -2,12 +2,14 @@ import type { ReactNode } from "react";
 import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { looksUnsafe } from "@/engine/coachNlu";
 import { loadMind, saveMind, type Mind } from "@/store/useMind";
 
 /** What every Mind screen receives. `done` gives sparks and returns to the hub; `go` jumps to another tool. */
 export interface MindProps {
   mind: Mind; update: (fn: (m: Mind) => Mind) => void; done: (note?: string) => void; back: () => void;
   go: (v: import("@/engine/mind").MindView) => void; onStart: (title: string, step: string) => void;
+  friends?: { id: string; name: string; last: number | null }[]; openChat?: (id: string, draft: string) => void;
 }
 export function Screen({ title, sub, back, children, credit }: { title: string; sub?: string; back: () => void; children: ReactNode; credit?: string }) {
   return (
@@ -34,9 +36,11 @@ export function Rate({ label, ask, value, onChange, lo, hi, max = 100, step = 5 
     </div>
   );
 }
+/** Free text in Mind is checked on this device: if it points to self-harm, a support card appears right under the box. */
 export const Field = ({ label, hint, value, onChange, rows = 2, ph }: { label: string; hint?: string; value: string; onChange: (s: string) => void; rows?: number; ph?: string }) => (
-  <label className="block"><span className="text-sm font-medium">{label}</span>{hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
+  <div><label className="block"><span className="text-sm font-medium">{label}</span>{hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
     <textarea value={value} onChange={e => onChange(e.target.value.slice(0, 400))} rows={rows} placeholder={ph} className="mt-1 w-full resize-none rounded-2xl border border-input bg-background/70 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring" /></label>
+    {value.length > 8 && looksUnsafe(value) && <div className="mt-2"><SupportCard strong /></div>}</div>
 );
 export const Primary = ({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) => <Button variant="hero" className="w-full rounded-full" disabled={disabled} onClick={onClick}>{children}</Button>;
 export const Saved = ({ text }: { text: string }) => <div role="status" className="flex items-center gap-2 rounded-2xl bg-primary/10 px-3 py-2 text-sm text-primary"><Check className="h-4 w-4" />{text}</div>;

@@ -1,10 +1,10 @@
 // Rewards, levels, badges and a forgiving streak. Plain-language by design.
-export type EventKind = "checkin" | "started" | "journal" | "chat" | "step" | "task" | "block" | "timer" | "nudge" | "buddy" | "box" | "pinky" | "mind";
+export type EventKind = "checkin" | "started" | "journal" | "chat" | "step" | "task" | "block" | "timer" | "nudge" | "buddy" | "box" | "pinky" | "mind" | "comeback";
 export const SPARKS: Record<EventKind, { n: number; label: string }> = {
   checkin: { n: 5, label: "Checked in" }, started: { n: 15, label: "You started!" }, journal: { n: 8, label: "Wrote it down" },
   chat: { n: 2, label: "Talked it out" }, step: { n: 3, label: "Tiny step done" }, task: { n: 10, label: "Task finished" },
   pinky: { n: 10, label: "Pinky kept" }, block: { n: 10, label: "Time block done" }, timer: { n: 10, label: "Focus session done" }, nudge: { n: 4, label: "Reached out" },
-  buddy: { n: 12, label: "Focused together" }, mind: { n: 5, label: "Looked after your mind" }, box: { n: 0, label: "Spark box" },
+  buddy: { n: 12, label: "Focused together" }, mind: { n: 5, label: "Looked after your mind" }, comeback: { n: 10, label: "Welcome back" }, box: { n: 0, label: "Spark box" },
 };
 /** Events that count as "you showed up today" for the streak. */
 export const STREAK_EVENTS: EventKind[] = ["started", "journal", "step", "task", "block", "timer", "buddy", "pinky", "mind"];

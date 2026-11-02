@@ -150,6 +150,8 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []); const [err, setErr] = useState(""); const [started, setStarted] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null); const end = useRef<HTMLDivElement>(null); const tt = useRef(0); const ta = useRef<HTMLTextAreaElement>(null);
   const [reactFor, setReactFor] = useState<string | null>(null);
+  const [cheerOpen, setCheerOpen] = useState(false);
+  useEffect(() => { try { const d = sessionStorage.getItem("lagomo.draft:" + f.id); if (d) { sessionStorage.removeItem("lagomo.draft:" + f.id); setText(d); setTimeout(() => ta.current?.focus(), 300); } } catch { /* ignore */ } }, [f.id]);
   const [replyTo, setReplyTo] = useState<ChatMsg | null>(null); const [pend, setPend] = useState<{ file: File; url: string } | null>(null); const [mediaOpen, setMediaOpen] = useState(false);
   const stage = (file: File) => { setPend(old => { if (old) URL.revokeObjectURL(old.url); return { file, url: URL.createObjectURL(file) }; }); setTimeout(() => ta.current?.focus(), 0); };
   const snip = (m: ChatMsg) => (m.kind === "file" ? (m.file?.type.startsWith("image/") ? "Photo" : m.file?.name ?? "File") : m.text).slice(0, 120);
@@ -253,8 +255,10 @@ function Conversation({ f, me, people, game, plan, startSession, startPinky, bac
           {!pickDur && <Button size="sm" variant="outline" className="rounded-full" disabled={!!activeP && !pinkyOpen} title={activeP ? "A Pinky is already open with this friend" : undefined} onClick={() => setPinkyOpen(o => !o)}><HeartHandshake className="mr-1 h-3.5 w-3.5" />Promise</Button>}
           {!pickDur && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPlanOpen(o => !o)}><CalendarPlus className="mr-1 h-3.5 w-3.5" />Plan together</Button>}
           {!pickDur ? <Button size="sm" variant="outline" className="rounded-full" onClick={() => setPickDur(true)}><Timer className="mr-1 h-3.5 w-3.5" />Focus together</Button> : [15, 25, 45].map(d => <Button key={d} size="sm" variant="hero" className="rounded-full" onClick={() => { setPickDur(false); run(() => chat.invite(d)); }}>{d} min</Button>)}
+          {!pickDur && <Button size="sm" variant="outline" className="rounded-full" onClick={() => setCheerOpen(o => !o)}><Sparkles className="mr-1 h-3.5 w-3.5" />Quiet cheer</Button>}
           {pacts.length > 0 && !pickDur && <Button size="sm" variant="ghost" className="rounded-full text-muted-foreground" onClick={() => setBurrowOpen(o => !o)}>Together {rhythm(pacts, now).thisWeek}/{rhythm(pacts, now).goal}</Button>}
         </div>
+        {cheerOpen && <div className="flex flex-wrap gap-2" role="group" aria-label="Quiet cheers">{["Rooting for you.", "You've got this.", "Proud of you.", "No pressure. I'm here.", "Thinking of you."].map(x => <button key={x} onClick={() => { setCheerOpen(false); run(async () => { await chat.sendText(x); game.earn("nudge"); }); }} className="rounded-full border border-border bg-background px-3 py-1.5 text-sm hover:bg-secondary">{x}</button>)}</div>}
         {pacts.length > 0 && burrowOpen && <Burrow first={first} kept={keptN} r={rhythm(pacts, now)} />}
         {pinkyOpen && !activeP && <PinkyForm first={first} onClose={() => setPinkyOpen(false)} onSend={pinkyMake} />}
         {planOpen && <PlanTogetherForm first={first} onClose={() => setPlanOpen(false)} onSend={async (p, addMine) => { await chat.sendPlan(p); if (addMine) plan.addBlock({ title: p.title, day: p.day, start: p.start, dur: p.dur, remind: 10, sharedId: p.id, ...(p.date ? { date: { friendId: f.id, name: f.name } } : {}) }); game.earn("chat"); track("plan_send"); }} />}

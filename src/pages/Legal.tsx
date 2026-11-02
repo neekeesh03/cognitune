@@ -92,6 +92,14 @@ export function Safety() {
         <li>Pinky photos are blurred until the other person taps, and disappear from our server after 48 hours.</li>
         <li>We cannot give emergency help. If you or someone else is in danger, contact your local emergency services. findahelpline.com lists free lines by country.</li>
       </ul>
+      <h2>If someone writes about hurting themselves</h2>
+      <ul>
+        <li>In Talk, messages that point to self-harm or crisis are checked on your device, not sent to us. They get a fixed, calm message: you deserve support from a person, a reminder of your local emergency number, and a link to findahelpline.com. The small chat model never writes replies to these messages. The same check runs on the text boxes in the Mind tab and shows a support card under the box.</li>
+        <li>In the PHQ-9 check, any answer above zero to the last question (thoughts of being better off dead or of hurting yourself) shows the support card first, before any score. High scores on PHQ-9, GAD-7, K6 and the burnout check also show "talk to someone" wording. These checks are screening tools, not diagnoses.</li>
+        <li>Every Mind screen has a "This made me feel worse" link that shows support. Taps are kept on your device only.</li>
+        <li>Lago is a program, not a person. The chat says so at the start of a session and again after about three hours of use. Lagomo does not give medical advice, diagnose, or replace a doctor or counsellor.</li>
+        <li>We cannot see anything you write in Talk or Mind unless you choose to share it. That is why we cannot send help to you. If you or someone else is in danger, contact local emergency services right away.</li>
+      </ul>
       <h2>Risks we thought about</h2>
       <ul>
         <li><b>Harassment between friends:</b> block, remove, report. Blocking stops them messaging you.</li>
