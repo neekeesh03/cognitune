@@ -43,7 +43,7 @@ export function LagunLab({ back, go, done }: MindProps) {
   const missing = m ? VAR_KEYS.filter(k => !m.parts.some(p => p.v === k)) : [...VAR_KEYS];
   const inc = an.inc; const ci = inc.beta != null && inc.se != null ? [inc.beta - 1.96 * inc.se, inc.beta + 1.96 * inc.se] : null;
   return (
-    <Screen title="Lagun's Law, measured" sub="The six forces behind starting, read from your games, camera and phone sensors. No sliders, no questions." back={back} credit={"Experimental research tool, not a diagnosis. Method version " + PROTOCOL + ". Each signal is compared with your own earlier readings, so a number means better or worse than your usual. All data stays on this device unless you choose to share it."}>
+    <Screen title="Lagun's Law, measured" sub="The six forces behind starting, read from your typing, games, camera and sensors. No sliders, no questions." back={back} credit={"Experimental research tool, not a diagnosis. Method version " + PROTOCOL + ". Each signal is compared with your own earlier readings, so a number means better or worse than your usual. All data stays on this device unless you choose to share it."}>
       <Card className="space-y-3">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your six forces right now</div>
         {!m ? <p className="text-sm">Not enough has been measured yet. Play a game or two and tap the mood map, then come back. Three of the six forces are enough to start.</p> : null}
