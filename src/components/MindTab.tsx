@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Brain, ClipboardCheck, Compass, Feather, Gauge, HeartHandshake, Moon, Smile, Sparkles, Wind, Activity } from "lucide-react";
+import { Brain, ClipboardCheck, Compass, Feather, Gauge, HeartHandshake, Moon, Smile, Sparkles, Wind, Activity, BedDouble, Target, FlaskConical, Footprints, HelpCircle, Gift, Sun, Waves, CalendarCheck, Zap, Shield } from "lucide-react";
 import { useMind } from "@/store/useMind";
 import { pickMind, type MindView } from "@/engine/mind";
 import { loadLog } from "@/lib/startlog";
@@ -8,6 +8,7 @@ import { Checks, Wheel } from "@/components/mind/MindChecks";
 import { Pm, Thoughts, Tlx, Woop } from "@/components/mind/MindTools";
 import { Breathe, Kind, Wind as WindDown } from "@/components/mind/MindCalm";
 import { Report } from "@/components/mind/MindReport";
+import { Bundle, Compass as ValuesCompass, Data, Experiment, Good, Ladder, Pulse, Review, Sleep, Urge, Why } from "@/components/mind/MindMore";
 import { Card, type MindProps } from "@/components/mind/MindParts";
 
 const OPEN = "lagomo.mind.open";
@@ -18,23 +19,36 @@ const GROUPS: { title: string; sub: string; items: { id: MindView; title: string
   { title: "Know where you are", sub: "Measure it, then watch it change", items: [
     { id: "wheel", title: "Wellbeing wheel", line: "Eight areas, thirty seconds", icon: Compass, tag: "weekly" },
     { id: "checks", title: "Check-ins", line: "WHO-5, mood, worry, focus", icon: ClipboardCheck, tag: "validated" },
+    { id: "pulse", title: "10-second pulse", line: "Energy and mood, your own map", icon: Zap, tag: "daily" },
+    { id: "sleep", title: "Sleep diary", line: "Your real sleep, and one fix", icon: BedDouble, tag: "CBT-I" },
+    { id: "review", title: "Weekly review", line: "Look back, set one focus", icon: CalendarCheck, tag: "3 min" },
     { id: "report", title: "Mind report", line: "Your data, joined up", icon: Activity, tag: "insight" },
   ] },
   { title: "Before and during a task", sub: "Make starting easier", items: [
     { id: "woop", title: "WOOP plan", line: "Wish, outcome, obstacle, plan", icon: Sparkles, tag: "1 min" },
+    { id: "why", title: "Why am I avoiding it?", line: "Find the lever that helps most", icon: HelpCircle, tag: "motivation" },
     { id: "tlx", title: "Task load", line: "Why did that feel so heavy?", icon: Gauge, tag: "NASA-TLX" },
+    { id: "bundle", title: "Reward pairing", line: "A treat only during the task", icon: Gift, tag: "bundling" },
+    { id: "compass", title: "Values compass", line: "Give the task a reason", icon: Target, tag: "ACT" },
   ] },
   { title: "When it is hard", sub: "Small tools that change how you feel", items: [
     { id: "thoughts", title: "Unhook from a thought", line: "Defuse it or check it", icon: Feather, tag: "CBT + ACT" },
     { id: "kind", title: "Kind reset", line: "Stop being your own critic", icon: HeartHandshake, tag: "1 min" },
     { id: "breathe", title: "Slow breathing", line: "Cyclic sighing, grounding", icon: Wind, tag: "2 min" },
     { id: "pm", title: "Pleasure and mastery", line: "Find what lifts your mood", icon: Smile, tag: "activation" },
+    { id: "exp", title: "Test a worry", line: "Check a prediction in real life", icon: FlaskConical, tag: "CBT" },
+    { id: "ladder", title: "Step ladder", line: "Face something avoided, in tiny steps", icon: Footprints, tag: "exposure" },
+    { id: "urge", title: "Ride the urge", line: "90 seconds instead of scrolling", icon: Waves, tag: "mixed evidence" },
   ] },
   { title: "End of day", sub: "Let the day go", items: [
     { id: "wind", title: "Wind-down", line: "Tomorrow's list and worry time", icon: Moon, tag: "5 min" },
+    { id: "good", title: "Three good things", line: "End on what went okay", icon: Sun, tag: "modest effect" },
+  ] },
+  { title: "Yours", sub: "You own it", items: [
+    { id: "data", title: "Your data", line: "Export, print, or delete", icon: Shield, tag: "private" },
   ] },
 ];
-const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report };
+const VIEWS: Record<Exclude<MindView, "home">, (p: MindProps) => JSX.Element> = { wheel: Wheel, checks: Checks, tlx: Tlx, woop: Woop, thoughts: Thoughts, pm: Pm, wind: WindDown, breathe: Breathe, kind: Kind, report: Report, sleep: Sleep, compass: ValuesCompass, exp: Experiment, ladder: Ladder, why: Why, bundle: Bundle, good: Good, urge: Urge, review: Review, pulse: Pulse, data: Data };
 
 interface Props { onStart: (title: string, step: string) => void; onSpark: () => void }
 /** The Mind tab: a hub of short, evidence-based tools. Everything is stored on this device. */
@@ -52,7 +66,7 @@ export function MindTab({ onStart, onSpark }: Props) {
   const props: MindProps = { mind, update, done, back: () => go("home"), go, onStart };
   if (view !== "home") { const V = VIEWS[view]; return <V {...props} />; }
   const pick = pickMind(mind, loadLog().starts.map(s => s.ts));
-  const used = mind.checks.length + mind.tlx.length + mind.woop.length + mind.thoughts.length + mind.pm.length + mind.wind.length + mind.calm.length + mind.wheel.length;
+  const used = mind.checks.length + mind.tlx.length + mind.woop.length + mind.thoughts.length + mind.pm.length + mind.wind.length + mind.calm.length + mind.wheel.length + mind.sleep.length + mind.tmt.length + mind.good.length + mind.pulse.length + mind.urges.length + mind.exps.length + mind.ladders.length + mind.bundles.length + mind.compass.length + mind.reviews.length;
   return (
     <section className="mx-auto max-w-2xl space-y-5">
       <div><h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight"><Brain className="h-7 w-7 text-primary" />Mind</h1>

@@ -1,4 +1,4 @@
-import { TLX_DIMS, WHEEL, avg, pmRank, tlxLoads } from "@/engine/mind";
+import { TLX_DIMS, WHEEL, avg, energyMap, sleepAdvice, sleepSummary, TMT_LEVERS, pmRank, tlxLoads } from "@/engine/mind";
 import { loadLog } from "@/lib/startlog";
 import { dayKeyOf } from "@/engine/pattern";
 import { Card, Help, Screen, Spark, type MindProps } from "@/components/mind/MindParts";
@@ -22,6 +22,11 @@ export function Report({ mind, back, go }: MindProps) {
   if (tl.length) { const sums = TLX_DIMS.map((_, i) => avg(tl.map(t => tlxLoads(t.v)[i]))); const i = sums.indexOf(Math.max(...sums)); rows.push({ t: "Task load this week", body: <p className="text-sm">{tl.length} check{tl.length > 1 ? "s" : ""}, average {avg(tl.map(t => t.raw))}/100. The heaviest part was <b>{TLX_DIMS[i].label.toLowerCase()}</b> ({sums[i]}/100).</p> }); }
   if (th.length) rows.push({ t: "Thoughts", body: <p className="text-sm">{th.length} worked on in 4 weeks. Belief in them dropped by <b>{avg(th.map(t => t.before - t.after))}</b> points on average.</p> });
   if (calm.length) rows.push({ t: "Calming", body: <p className="text-sm">{calm.length} practice{calm.length > 1 ? "s" : ""} with a before and after rating. You felt better afterwards in {calm.filter(c => (c.kind === "kind" ? c.after! < c.before! : c.after! > c.before!)).length} of them.</p> });
+  const sl = sleepSummary(mind.sleep); if (sl) rows.push({ t: "Sleep (last 7 nights)", body: <p className="text-sm">{sl.tst} h average, efficiency {sl.se}%, wake-up varies about {sl.wakeSd} min. {sleepAdvice(sl)[0]}</p> });
+  const em = energyMap(mind.pulse).filter(b => b.e != null && b.count >= 2).sort((a, z) => z.e! - a.e!)[0]; if (em) rows.push({ t: "Your best time of day", body: <p className="text-sm">Highest energy in the <b>{em.n.split(" (")[0].toLowerCase()}</b> ({em.e}/5 over {em.count} taps). Put hard tasks there.</p> });
+  const tm = mind.tmt.slice(-5); if (tm.length >= 2) { const s = { e: avg(tm.map(h => h.e)), v: avg(tm.map(h => h.v)), d: 10 - avg(tm.map(h => h.d)), i: 10 - avg(tm.map(h => h.i)) }; const k = (Object.keys(s) as (keyof typeof s)[]).sort((a, b) => s[a] - s[b])[0]; rows.push({ t: "Why you avoid", body: <p className="text-sm">Across your last {tm.length} checks, the usual weak spot is <b>{TMT_LEVERS[k].name.toLowerCase()}</b>. {TMT_LEVERS[k].fix}</p> }); }
+  const xs = mind.exps.filter(e => e.after != null); if (xs.length) rows.push({ t: "Worries you tested", body: <p className="text-sm">{xs.length} tested. Certainty fell by {avg(xs.map(e => e.before - e.after!))} points on average.</p> });
+  const ur = mind.urges; if (ur.length >= 2) rows.push({ t: "Urges", body: <p className="text-sm">{ur.length} ridden. The pull fell by {avg(ur.map(u => u.start - u.end))} points on average.</p> });
   const best = pmRank(mind.pm).slice(0, 2); if (best.length) rows.push({ t: "What lifts you", body: <p className="text-sm">{best.map(b => `${b.what} (pleasure ${b.p}, mastery ${b.m})`).join(" and ")}</p> });
   const wheel = mind.wheel; if (wheel.length > 1) { const a = wheel[wheel.length - 1].v, b = wheel[wheel.length - 2].v; const d = a.map((x, i) => x - b[i]); const up = d.indexOf(Math.max(...d)), dn = d.indexOf(Math.min(...d)); rows.push({ t: "Wheel since last time", body: <p className="text-sm">{d[up] > 0 ? `Up most: ${WHEEL[up].label} (+${d[up]}). ` : ""}{d[dn] < 0 ? `Down most: ${WHEEL[dn].label} (${d[dn]}).` : ""}{d[up] <= 0 && d[dn] >= 0 ? "Steady." : ""}</p> }); }
   return (

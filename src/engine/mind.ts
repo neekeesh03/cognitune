@@ -76,7 +76,7 @@ export function tlxLoads(v: number[]): number[] { return v.map((x, i) => (TLX_DI
 export const tlxRaw = (v: number[]) => Math.round(tlxLoads(v).reduce((a, b) => a + b, 0) / v.length);
 export const tlxBand = (raw: number) => (raw < 35 ? "Light" : raw < 55 ? "Moderate" : raw < 75 ? "Heavy" : "Very heavy");
 export interface Advice { id: TlxId; why: string; fix: string; tool: MindView; toolLabel: string }
-export type MindView = "home" | "wheel" | "checks" | "tlx" | "woop" | "thoughts" | "pm" | "wind" | "breathe" | "kind" | "report";
+export type MindView = "home" | "wheel" | "checks" | "tlx" | "woop" | "thoughts" | "pm" | "wind" | "breathe" | "kind" | "report" | "sleep" | "compass" | "exp" | "ladder" | "why" | "bundle" | "good" | "urge" | "review" | "pulse" | "data";
 const ADVICE: Record<TlxId, Advice> = {
   mental: { id: "mental", why: "It asked a lot of your thinking.", fix: "Get it out of your head: write the next action as one plain sentence and do only that. Park every other decision.", tool: "wind", toolLabel: "Empty your head (Wind-down)" },
   physical: { id: "physical", why: "Your body took the strain.", fix: "Stand, drink water, stretch your neck and hands for one minute before the next round.", tool: "breathe", toolLabel: "One minute of slow breathing" },
@@ -149,10 +149,64 @@ export function pickMind(m: Mind, starts: number[], now = Date.now()): Pick | nu
   const lastStart = starts.length ? Math.max(...starts) : 0; const tl = last(m.tlx);
   if (lastStart && now - lastStart < 4 * 36e5 && now - lastStart > 5 * 60e3 && (!tl || tl.ts < lastStart)) return { view: "tlx", title: "How heavy was that?", line: "Rate it in 30 seconds. The heaviest part tells you what would make the next start easier.", cta: "Rate it", why: "NASA Task Load Index" };
   const who = last(m.checks.filter(c => c.id === "who5"));
+  if (slot === "morning" && !(m.sleep ?? []).some(s => same(s.ts, now))) return { view: "sleep", title: "Log last night's sleep", line: "Thirty seconds. After a week you will see what your sleep really looks like, and one thing to change.", cta: "Log sleep", why: "Sleep diary (core of CBT for insomnia)" };
   if (slot === "morning" && !m.woop.some(w => same(w.ts, now))) return { view: "woop", title: "Plan around the obstacle", line: "One minute: name a wish, the thing most likely to get in the way, and your if-then answer.", cta: "WOOP it", why: "Mental contrasting with if-then plans" };
+  if (slot === "night" && m.wind.some(w => same(w.ts, now)) && !(m.good ?? []).some(g => same(g.ts, now))) return { view: "good", title: "Three good things", line: "Name three things that went okay today, and why. A small, steady way to lift mood.", cta: "Name them", why: "Positive psychology (modest, steady effect)" };
   if ((slot === "evening" || slot === "night") && !m.wind.some(w => same(w.ts, now))) return { view: "wind", title: "Empty your head for tomorrow", line: "Five minutes writing a specific list helps you fall asleep faster, and sets your first step for tomorrow.", cta: "Wind down", why: "Bedtime to-do list study (Scullin, 2018)" };
+  const rv = last(m.reviews ?? []); if (new Date(now).getDay() === 0 && (!rv || now - rv.ts > 5 * 864e5)) return { view: "review", title: "Weekly review", line: "Three minutes: what worked, what was hard, and one focus for next week.", cta: "Review", why: "Reflection and planning" };
+  if (slot === "day" && !(m.pulse ?? []).some(p => now - p.ts < 4 * 36e5) && (m.pulse ?? []).length < 60) return { view: "pulse", title: "10-second pulse", line: "Energy and mood in two taps. It builds your own energy map by time of day.", cta: "Tap in", why: "Experience sampling" };
   if (!who || now - who.ts > 14 * 864e5) return { view: "checks", title: "Two-minute wellbeing check", line: who ? "It has been two weeks. A quick look at the trend." : "Five questions that show how you have really been. Your baseline starts here.", cta: "Check in", why: "WHO-5 Well-Being Index" };
   if (!m.pm.some(e => same(e.ts, now)) && slot !== "morning") return { view: "pm", title: "One thing that lifts you", line: "Log something small you did. Over time you will see which activities actually raise your mood.", cta: "Log one", why: "Behavioural activation" };
   const w = last(m.wheel); if (!w || now - w.ts > 7 * 864e5) return { view: "wheel", title: "Weekly wellbeing wheel", line: "Eight areas, thirty seconds. See which one needs attention.", cta: "Rate the week", why: "Broad check across life areas" };
   return null;
 }
+
+// ---- Sleep diary (CBT-I basics) ----
+export interface SleepNight { ts: number; day: string; bed: number; latency: number; awake: number; wake: number; up: number; q: number }
+const span = (a: number, b: number) => (b - a + 1440) % 1440;
+export const clock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(Math.round(min) % 60).padStart(2, "0")}`;
+export const parseClock = (s: string) => { const [h, mm] = s.split(":").map(Number); return (h || 0) * 60 + (mm || 0); };
+/** Time in bed, time asleep and efficiency from one night's diary (all minutes). */
+export function sleepNight(n: SleepNight) {
+  const tib = span(n.bed, n.up); const tst = Math.max(0, span(n.bed, n.wake) - n.latency - n.awake); const se = tib > 0 ? Math.min(100, Math.round((tst / tib) * 100)) : 0; return { tib, tst, se };
+}
+export function sleepSummary(ns: SleepNight[]) {
+  const l = ns.slice(-7); if (!l.length) return null; const st = l.map(sleepNight); const wakes = l.map(n => n.wake);
+  const ref = wakes[0]; const dev = wakes.map(w => ((w - ref + 720 + 1440) % 1440) - 720); const mean = dev.reduce((a, b) => a + b, 0) / dev.length; const sd = Math.round(Math.sqrt(dev.reduce((a, b) => a + (b - mean) ** 2, 0) / dev.length));
+  return { n: l.length, tst: avg(st.map(s => s.tst / 60)), se: Math.round(st.reduce((a, s) => a + s.se, 0) / st.length), wakeSd: sd, latency: Math.round(l.reduce((a, n) => a + n.latency, 0) / l.length), q: avg(l.map(n => n.q)) };
+}
+export function sleepAdvice(s: NonNullable<ReturnType<typeof sleepSummary>>): string[] {
+  const out: string[] = [];
+  if (s.n < 3) return ["Log a few more nights. Patterns show up after about a week."];
+  if (s.wakeSd > 45) out.push("Your wake-up time varies by about " + s.wakeSd + " minutes. Pick one wake-up time and keep it every day, including weekends. It is the strongest single lever for body-clock rhythm.");
+  if (s.se < 85) out.push("You spend a lot of bed time awake (efficiency " + s.se + "%). Go to bed only when sleepy. If you are awake for what feels like 20 minutes, get up, do something quiet in dim light, and return when sleepy. Keep the bed for sleep.");
+  if (s.latency > 30) out.push("It takes you about " + s.latency + " minutes to fall asleep. Try the Wind-down list earlier in the evening and slow breathing in bed.");
+  if (s.tst < 6) out.push("You average " + s.tst + " hours of sleep. Protect a longer window, and keep naps short and before mid-afternoon.");
+  if (!out.length) out.push("Your diary looks steady. Keep the same wake-up time and notice what helps.");
+  out.push("If poor sleep has lasted more than about three months, or it is hurting your days, please see a doctor. Do not restrict your sleep on your own without guidance.");
+  return out;
+}
+
+// ---- Why am I avoiding it? (Temporal Motivation Theory, Steel and Koenig 2006) ----
+export interface Tmt { e: number; v: number; d: number; i: number }
+/** Motivation share: (expectancy x value) against (impulsiveness x delay). 50 means the pulls are even. A framework, not a validated test. */
+export const tmtIndex = (t: Tmt) => { const up = Math.max(0.5, t.e) * Math.max(0.5, t.v), down = Math.max(0.5, t.i) * Math.max(0.5, t.d); return Math.round((100 * up) / (up + down)); };
+export const TMT_LEVERS = {
+  e: { name: "Confidence", fix: "Make the first step so small it is almost silly (2 minutes, or just open the file). Ask for one hint or a worked example.", tool: "woop" as MindView, label: "Plan the first step (WOOP)" },
+  v: { name: "Meaning", fix: "Attach a reason you actually care about: who benefits, which value it serves, what it unlocks. Write one sentence.", tool: "compass" as MindView, label: "Connect it to a value" },
+  d: { name: "A closer payoff", fix: "Pull the finish line closer: a mini-deadline today, tell a friend what you will finish by when, or give yourself a small reward right after.", tool: "bundle" as MindView, label: "Add a reward now" },
+  i: { name: "Taming distraction", fix: "Make distraction harder than the task: phone in another room, one tab, headphones on. When the urge hits, ride it for 90 seconds.", tool: "urge" as MindView, label: "Ride the urge" },
+};
+export function tmtAdvice(t: Tmt) {
+  const base = tmtIndex(t); const opts = ([["e", { ...t, e: Math.min(10, t.e + 3) }], ["v", { ...t, v: Math.min(10, t.v + 3) }], ["d", { ...t, d: Math.max(0, t.d - 3) }], ["i", { ...t, i: Math.max(0, t.i - 3) }]] as const)
+    .map(([k, x]) => ({ k, gain: tmtIndex(x) - base })).sort((a, b) => b.gain - a.gain);
+  return { base, top: opts.slice(0, 2).map(o => ({ ...TMT_LEVERS[o.k], gain: o.gain, key: o.k })) };
+}
+
+// ---- Quick pulse (10-second energy and mood taps) and your own energy map ----
+export interface Pulse { ts: number; e: number; m: number }
+export function energyMap(ps: Pulse[]) {
+  const blocks = [{ n: "Early (5-9)", a: 5, b: 9 }, { n: "Morning (9-12)", a: 9, b: 12 }, { n: "Midday (12-15)", a: 12, b: 15 }, { n: "Afternoon (15-18)", a: 15, b: 18 }, { n: "Evening (18-22)", a: 18, b: 22 }];
+  return blocks.map(b => { const xs = ps.filter(p => { const h = new Date(p.ts).getHours(); return h >= b.a && h < b.b; }); return { ...b, n: b.n, count: xs.length, e: xs.length ? avg(xs.map(x => x.e)) : null, m: xs.length ? avg(xs.map(x => x.m)) : null }; });
+}
+export const BUNDLE_IDEAS = { wants: ["A favourite playlist", "A podcast episode", "A coffee or tea", "A snack I like", "A comfy spot", "A show episode afterwards", "A walk outside afterwards", "A message to a friend afterwards"], };
